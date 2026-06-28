@@ -1,0 +1,2524 @@
+{% extends "base.html" %}
+
+{% block title %}EWU Admin Portal{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* ── Admin Nav Items ────────────────────────────── */
+.adm-nav-item {
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:9px 12px; border-radius:10px; font-size:.82rem; font-weight:500; color:#64748b;
+  transition:all .2s cubic-bezier(.4,0,.2,1); cursor:pointer; border:none; background:none; text-align:left;
+  position:relative; overflow:hidden;
+}
+.adm-nav-item:hover { background:rgba(16,185,129,.08); color:#e2e8f0; }
+.adm-nav-item.active {
+  background:linear-gradient(135deg,rgba(16,185,129,.16),rgba(59,130,246,.08));
+  color:#34d399; border:1px solid rgba(16,185,129,.25); box-shadow:0 0 16px rgba(16,185,129,.07);
+}
+.adm-sub-item {
+  display:flex; align-items:center; gap:8px; width:100%; padding:7px 10px 7px 34px;
+  border-radius:8px; font-size:.76rem; font-weight:500; color:#4b5563;
+  transition:all .18s ease; cursor:pointer; border:none; background:none; text-align:left; font-family:inherit;
+}
+.adm-sub-item:hover { background:rgba(255,255,255,.05); color:#cbd5e1; }
+.adm-sub-item.active { color:#34d399; background:rgba(16,185,129,.09); border-left:2px solid rgba(16,185,129,.45); }
+
+/* ── Stat Cards ─────────────────────────────────── */
+.stat-card {
+  background:linear-gradient(140deg,rgba(11,17,32,.97) 0%,rgba(17,26,50,.92) 100%);
+  border:1px solid rgba(255,255,255,.07); border-radius:20px; padding:22px;
+  position:relative; overflow:hidden;
+  transition:transform .28s cubic-bezier(.34,1.56,.64,1), box-shadow .28s ease, border-color .28s ease;
+}
+.stat-card:hover { transform:translateY(-6px) scale(1.01); box-shadow:0 28px 70px rgba(0,0,0,.55); }
+.stat-card::before {
+  content:''; position:absolute; top:-40px; right:-40px; width:140px; height:140px;
+  border-radius:50%; opacity:.06; transition:opacity .3s, transform .3s;
+}
+.stat-card:hover::before { opacity:.15; transform:scale(1.2); }
+.stat-card::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
+  opacity:0; transition:opacity .3s; border-radius:0 0 20px 20px;
+}
+.stat-card:hover::after { opacity:1; }
+.stat-card.emerald::before { background:radial-gradient(circle,#10b981,transparent); }
+.stat-card.emerald::after  { background:linear-gradient(90deg,#10b981,rgba(16,185,129,0)); }
+.stat-card.emerald:hover   { border-color:rgba(16,185,129,.3); box-shadow:0 28px 70px rgba(0,0,0,.55),0 0 40px rgba(16,185,129,.07); }
+.stat-card.violet::before  { background:radial-gradient(circle,#8b5cf6,transparent); }
+.stat-card.violet::after   { background:linear-gradient(90deg,#8b5cf6,rgba(139,92,246,0)); }
+.stat-card.violet:hover    { border-color:rgba(139,92,246,.3); }
+.stat-card.amber::before   { background:radial-gradient(circle,#f59e0b,transparent); }
+.stat-card.amber::after    { background:linear-gradient(90deg,#f59e0b,rgba(245,158,11,0)); }
+.stat-card.amber:hover     { border-color:rgba(245,158,11,.3); }
+.stat-card.blue::before    { background:radial-gradient(circle,#3b82f6,transparent); }
+.stat-card.blue::after     { background:linear-gradient(90deg,#3b82f6,rgba(59,130,246,0)); }
+.stat-card.blue:hover      { border-color:rgba(59,130,246,.3); }
+
+/* ── Chart Cards ────────────────────────────────── */
+.chart-card {
+  background:linear-gradient(140deg,rgba(11,17,32,.96) 0%,rgba(15,22,42,.92) 100%);
+  border:1px solid rgba(255,255,255,.07); border-radius:20px; padding:24px; transition:border-color .25s;
+}
+.chart-card:hover { border-color:rgba(255,255,255,.11); }
+.glass-card { background:rgba(255,255,255,.03); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.07); border-radius:20px; }
+
+/* ── Status Pills ────────────────────────────────── */
+.status-on  { background:rgba(16,185,129,.12); color:#34d399; border:1px solid rgba(16,185,129,.22); }
+.status-off { background:rgba(239,68,68,.1);   color:#f87171; border:1px solid rgba(239,68,68,.2); }
+
+/* ── Animations ─────────────────────────────────── */
+@keyframes pulse-ring { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.6);opacity:.3} }
+.pulse-dot { animation:pulse-ring 2.2s ease infinite; }
+@keyframes countPop { from{opacity:0;transform:translateY(8px) scale(.85)} to{opacity:1;transform:none} }
+.counter-animate { animation:countPop .65s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
+.fade-up { animation:fadeUp .5s ease both; }
+.fade-up:nth-child(1){animation-delay:.05s} .fade-up:nth-child(2){animation-delay:.12s}
+.fade-up:nth-child(3){animation-delay:.19s} .fade-up:nth-child(4){animation-delay:.26s}
+.tab-content { display:none; }
+.tab-content:not(.hidden) { display:block; animation:fadeUp .3s ease both; }
+@keyframes modalPop { from{opacity:0;transform:scale(.94)} to{opacity:1;transform:scale(1)} }
+#report-modal-content { animation:modalPop .28s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes progressFill { from{width:0} }
+.bar-fill { animation:progressFill .9s cubic-bezier(.4,0,.2,1) both; }
+
+/* ── Activity feed ───────────────────────────────── */
+.activity-row { padding:10px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+.activity-row:last-child { border-bottom:none; }
+
+/* ── Quick action rows ───────────────────────────── */
+.quick-action {
+  display:flex; align-items:center; gap:.6rem; width:100%; text-align:left;
+  padding:.6rem .9rem; border-radius:10px; background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.06); color:#94a3b8; font-size:.76rem;
+  font-weight:600; cursor:pointer; transition:all .18s; font-family:inherit;
+}
+.quick-action:hover { background:rgba(255,255,255,.07); color:#e2e8f0; border-color:rgba(255,255,255,.12); transform:translateX(3px); }
+
+/* ── Toggle row ──────────────────────────────────── */
+.toggle-row {
+  background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06);
+  border-radius:14px; padding:1rem 1.1rem; transition:border-color .2s, background .2s;
+}
+.toggle-row:hover { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); }
+
+/* ── Filter bar ──────────────────────────────────── */
+.filter-bar {
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;
+  background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06);
+  border-radius:16px; padding:1rem 1.25rem;
+}
+
+/* ── Tab header gradient text ────────────────────── */
+.tab-title {
+  font-size:1.55rem; font-weight:900; letter-spacing:-.03em;
+  background:linear-gradient(135deg,#f0f6ff 0%,#94a3b8 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.modal-scroll::-webkit-scrollbar { width:4px; }
+.modal-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:99px; }
+</style>
+
+{% endblock %}
+
+{% block sidebar_nav %}
+<!-- 1. Dashboard -->
+<button onclick="switchTab('dashboard')" id="nav-dashboard" class="adm-nav-item active">
+  <i data-lucide="layout-dashboard" class="w-4 h-4 flex-shrink-0"></i>
+  <span>Dashboard</span>
+</button>
+
+<!-- 2. User Management -->
+<button onclick="toggleMenu('submenu-users')" class="adm-nav-item justify-between w-full">
+  <div class="flex items-center gap-2.5">
+    <i data-lucide="users-round" class="w-4 h-4 flex-shrink-0"></i>
+    <span>User Management</span>
+  </div>
+  <i data-lucide="chevron-right" class="w-3.5 h-3.5 nav-arrow transition-transform duration-200" id="submenu-users-arrow"></i>
+</button>
+<div class="submenu pl-4" id="submenu-users">
+  <button onclick="switchTab('students')" id="nav-students" class="adm-sub-item">
+    <i data-lucide="graduation-cap" class="w-3 h-3"></i> Student Management
+  </button>
+  <button onclick="switchTab('faculty')" id="nav-faculty" class="adm-sub-item">
+    <i data-lucide="user-round" class="w-3 h-3"></i> Faculty Management
+  </button>
+  <button onclick="switchTab('advisor-assign')" id="nav-advisor-assign" class="adm-sub-item">
+    <i data-lucide="user-check" class="w-3 h-3"></i> Advisor Assignment
+  </button>
+</div>
+
+<!-- 3. Curriculum & Timeline -->
+<button onclick="toggleMenu('submenu-curriculum')" class="adm-nav-item justify-between w-full">
+  <div class="flex items-center gap-2.5">
+    <i data-lucide="book-open" class="w-4 h-4 flex-shrink-0"></i>
+    <span>Curriculum &amp; Timeline</span>
+  </div>
+  <i data-lucide="chevron-right" class="w-3.5 h-3.5 nav-arrow transition-transform duration-200" id="submenu-curriculum-arrow"></i>
+</button>
+<div class="submenu pl-4" id="submenu-curriculum">
+  <button onclick="switchTab('pre-advising')" id="nav-pre-advising" class="adm-sub-item">
+    <i data-lucide="book" class="w-3 h-3"></i> Course Management
+  </button>
+  <button onclick="switchTab('final-advising')" id="nav-final-advising" class="adm-sub-item">
+    <i data-lucide="layers" class="w-3 h-3"></i> Section Management
+  </button>
+  <button onclick="switchTab('settings')" id="nav-settings" class="adm-sub-item">
+    <i data-lucide="settings-2" class="w-3 h-3"></i> System Settings
+  </button>
+</div>
+
+<!-- 4. Advising -->
+<button onclick="toggleMenu('submenu-advising')" class="adm-nav-item justify-between w-full">
+  <div class="flex items-center gap-2.5">
+    <i data-lucide="calendar-check" class="w-4 h-4 flex-shrink-0"></i>
+    <span>Advising</span>
+  </div>
+  <i data-lucide="chevron-right" class="w-3.5 h-3.5 nav-arrow transition-transform duration-200" id="submenu-advising-arrow"></i>
+</button>
+<div class="submenu pl-4" id="submenu-advising">
+  <button onclick="switchTab('pre-advising')" id="nav-preadvising" class="adm-sub-item">
+    <i data-lucide="clock" class="w-3 h-3"></i> Pre-Advising Setup
+  </button>
+  <button onclick="switchTab('final-advising')" id="nav-finaladvising" class="adm-sub-item">
+    <i data-lucide="clock-4" class="w-3 h-3"></i> Final Advising Setup
+  </button>
+  <button onclick="switchTab('requests')" id="nav-requests" class="adm-sub-item">
+    <i data-lucide="clipboard-list" class="w-3 h-3"></i> Course Requests
+  </button>
+</div>
+
+<!-- 5. Academic Records -->
+<button onclick="switchTab('academic-records')" id="nav-academic-records" class="adm-nav-item">
+  <i data-lucide="file-text" class="w-4 h-4 flex-shrink-0"></i>
+  <span>Academic Records</span>
+</button>
+
+<!-- 6. Reports -->
+<button onclick="switchTab('reports')" id="nav-reports" class="adm-nav-item">
+  <i data-lucide="bar-chart-3" class="w-4 h-4 flex-shrink-0"></i>
+  <span>Reports</span>
+</button>
+
+<!-- 7. Theme Collapsible -->
+<button onclick="toggleMenu('submenu-theme')" class="adm-nav-item justify-between w-full">
+  <div class="flex items-center gap-2.5">
+    <i data-lucide="palette" class="w-4 h-4 flex-shrink-0" style="color:#ec4899;"></i>
+    <span>Theme</span>
+  </div>
+  <i data-lucide="chevron-right" class="w-3.5 h-3.5 nav-arrow transition-transform duration-200" id="submenu-theme-arrow"></i>
+</button>
+<div class="submenu pl-4" id="submenu-theme">
+  <button onclick="applyTheme('light')" id="theme-btn-light" class="adm-sub-item">Light</button>
+  <button onclick="applyTheme('cosmic')" id="theme-btn-cosmic" class="adm-sub-item">Cosmic</button>
+  <button onclick="applyTheme('image')" id="theme-btn-image" class="adm-sub-item">University Theme</button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- ═══════════════════════════════════════════════════════════
+     DASHBOARD TAB
+═══════════════════════════════════════════════════════════ -->
+<div id="tab-dashboard" class="tab-content space-y-6">
+
+  <!-- ── DASHBOARD HERO HEADER ─────────────────────────── -->
+  <div class="flex flex-wrap justify-between items-center gap-4 pb-2">
+    <div>
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+          <i data-lucide="layout-dashboard" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-black tracking-tight" style="background:linear-gradient(135deg,#f0f6ff 0%,#34d399 60%,#60a5fa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">University Administration Portal</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Central control hub — <span class="text-emerald-400 font-bold">{{ current_semester }}</span></p>
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+        <span class="pulse-dot w-2 h-2 bg-emerald-400 rounded-full inline-block"></span>
+        <span class="text-[0.72rem] font-bold text-emerald-400">Live</span>
+        <span id="live-time" class="font-mono text-[0.72rem] font-bold text-slate-300"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STAT CARDS ─────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
+    <!-- Students -->
+    <div class="stat-card emerald fade-up">
+      <div class="flex justify-between items-start mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center">
+          <i data-lucide="graduation-cap" class="w-5 h-5 text-emerald-400"></i>
+        </div>
+        <span class="text-[0.6rem] font-black px-2.5 py-1 rounded-full status-on tracking-widest">ENROLLED</span>
+      </div>
+      <p class="text-4xl font-black text-white counter-animate" data-target="{{ students | length }}">0</p>
+      <p class="text-[0.72rem] text-slate-500 mt-1.5 font-semibold uppercase tracking-wider">Total Students</p>
+      <div class="mt-3 h-px bg-gradient-to-r from-emerald-500/30 to-transparent"></div>
+    </div>
+    <!-- Faculty -->
+    <div class="stat-card violet fade-up">
+      <div class="flex justify-between items-start mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20 flex items-center justify-center">
+          <i data-lucide="users-round" class="w-5 h-5 text-violet-400"></i>
+        </div>
+        <span class="text-[0.6rem] font-black px-2.5 py-1 rounded-full bg-violet-500/12 text-violet-300 border border-violet-500/25 tracking-widest">FACULTY</span>
+      </div>
+      <p class="text-4xl font-black text-white counter-animate" data-target="{{ faculties | length }}">0</p>
+      <p class="text-[0.72rem] text-slate-500 mt-1.5 font-semibold uppercase tracking-wider">Faculty Members</p>
+      <div class="mt-3 h-px bg-gradient-to-r from-violet-500/30 to-transparent"></div>
+    </div>
+    <!-- Courses -->
+    <div class="stat-card amber fade-up">
+      <div class="flex justify-between items-start mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20 flex items-center justify-center">
+          <i data-lucide="book-open" class="w-5 h-5 text-amber-400"></i>
+        </div>
+        <span class="text-[0.6rem] font-black px-2.5 py-1 rounded-full bg-amber-500/12 text-amber-300 border border-amber-500/25 tracking-widest">CATALOG</span>
+      </div>
+      <p class="text-4xl font-black text-white counter-animate" data-target="{{ pre_courses | length }}">0</p>
+      <p class="text-[0.72rem] text-slate-500 mt-1.5 font-semibold uppercase tracking-wider">Registered Courses</p>
+      <div class="mt-3 h-px bg-gradient-to-r from-amber-500/30 to-transparent"></div>
+    </div>
+    <!-- Windows -->
+    <div class="stat-card blue fade-up">
+      <div class="flex justify-between items-start mb-4">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20 flex items-center justify-center">
+          <i data-lucide="calendar-clock" class="w-5 h-5 text-blue-400"></i>
+        </div>
+        <span class="text-[0.6rem] font-black px-2.5 py-1 rounded-full bg-blue-500/12 text-blue-300 border border-blue-500/25 tracking-widest">WINDOWS</span>
+      </div>
+      <p class="text-4xl font-black text-white counter-animate" data-target="{{ windows | length }}">0</p>
+      <p class="text-[0.72rem] text-slate-500 mt-1.5 font-semibold uppercase tracking-wider">Advising Windows</p>
+      <div class="mt-3 h-px bg-gradient-to-r from-blue-500/30 to-transparent"></div>
+    </div>
+  </div>
+
+  <!-- ── MAIN GRID: Chart + System Status ──────────────────── -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- Enrollment Chart (2/3 width) -->
+    <div class="chart-card lg:col-span-2 space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h3 class="font-bold text-sm text-white">Student Enrollment by Department</h3>
+          <p class="text-[0.7rem] text-slate-400 mt-0.5">{{ current_semester }} — headcount per faculty</p>
+        </div>
+        <button onclick="switchTab('students')" class="text-[0.7rem] px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors font-bold">
+          View All →
+        </button>
+      </div>
+      <div style="position:relative;height:210px">
+        <canvas id="enrollmentChart"></canvas>
+      </div>
+    </div>
+
+    <!-- System Status Panel (1/3 width) -->
+    <div class="chart-card space-y-4">
+      <h3 class="font-bold text-sm text-white flex items-center gap-2 pb-2 border-b border-white/5">
+        <div class="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+          <i data-lucide="activity" class="w-3.5 h-3.5 text-emerald-400"></i>
+        </div>
+        System Phase Control
+      </h3>
+
+      <!-- Pre-Advising toggle -->
+      <div class="toggle-row space-y-2">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-2">
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-blue-400"></i>
+            <span class="text-xs font-semibold text-slate-300">Pre-Advising</span>
+          </div>
+          <span class="text-[0.6rem] font-black px-2 py-0.5 rounded-full tracking-widest {{ 'status-on' if pre_advising_active else 'status-off' }}">
+            {{ 'ACTIVE' if pre_advising_active else 'OFF' }}
+          </span>
+        </div>
+        <form action="/admin/toggle-setting/pre_advising_active" method="POST">
+          <button type="submit" class="w-full text-[0.7rem] py-1.5 rounded-lg font-bold transition-all {{ 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20' if pre_advising_active else 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20' }}">
+            {{ 'Close Phase' if pre_advising_active else 'Open Phase' }}
+          </button>
+        </form>
+      </div>
+
+      <!-- Final Advising toggle -->
+      <div class="toggle-row space-y-2">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-2">
+            <i data-lucide="clock-4" class="w-3.5 h-3.5 text-violet-400"></i>
+            <span class="text-xs font-semibold text-slate-300">Final Advising</span>
+          </div>
+          <span class="text-[0.6rem] font-black px-2 py-0.5 rounded-full tracking-widest {{ 'status-on' if final_advising_active else 'status-off' }}">
+            {{ 'ACTIVE' if final_advising_active else 'OFF' }}
+          </span>
+        </div>
+        <form action="/admin/toggle-setting/final_advising_active" method="POST">
+          <button type="submit" class="w-full text-[0.7rem] py-1.5 rounded-lg font-bold transition-all {{ 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20' if final_advising_active else 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20' }}">
+            {{ 'Close Phase' if final_advising_active else 'Open Phase' }}
+          </button>
+        </form>
+      </div>
+
+      <!-- Request Phase toggle -->
+      <div class="toggle-row space-y-2">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-2">
+            <i data-lucide="clipboard-list" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span class="text-xs font-semibold text-slate-300">Override Requests</span>
+          </div>
+          <span class="text-[0.6rem] font-black px-2 py-0.5 rounded-full tracking-widest {{ 'status-on' if request_phase_active else 'status-off' }}">
+            {{ 'ACTIVE' if request_phase_active else 'OFF' }}
+          </span>
+        </div>
+        <form action="/admin/toggle-setting/request_phase_active" method="POST">
+          <button type="submit" class="w-full text-[0.7rem] py-1.5 rounded-lg font-bold transition-all {{ 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20' if request_phase_active else 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20' }}">
+            {{ 'Close Phase' if request_phase_active else 'Open Phase' }}
+          </button>
+        </form>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="space-y-1.5 pt-1">
+        <p class="text-[0.62rem] font-black text-slate-600 uppercase tracking-widest mb-2">Quick Actions</p>
+        <button onclick="switchTab('students')" class="quick-action">
+          <i data-lucide="user-plus" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>
+          <span>Enroll New Student</span>
+        </button>
+        <button onclick="switchTab('faculty')" class="quick-action">
+          <i data-lucide="user-plus" class="w-3.5 h-3.5 text-violet-400 flex-shrink-0"></i>
+          <span>Add Faculty Member</span>
+        </button>
+        <button onclick="switchTab('pre-advising')" class="quick-action">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i>
+          <span>Add New Course</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM GRID: Course Demand + Notice Form + Advising Windows ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- Course Demand -->
+    <div class="chart-card space-y-3">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+          <i data-lucide="trending-up" class="w-4 h-4 text-amber-400"></i> Top Course Demand
+        </h3>
+        <span class="text-[0.62rem] text-slate-500">Pre-Advising Picks</span>
+      </div>
+      <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
+        {% for course_code, count in demand_data[:8] %}
+        <div class="flex items-center gap-3">
+          <span class="font-mono text-[0.7rem] font-bold text-slate-300 w-20 flex-shrink-0">{{ course_code }}</span>
+          <div class="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-700"
+                 style="width: {{ [((count / (demand_data[0][1] if (demand_data and demand_data[0][1] > 0) else 1)) * 100) | round | int, 100] | min }}%"></div>
+          </div>
+          <span class="text-[0.68rem] font-bold text-amber-400 w-6 text-right flex-shrink-0">{{ count }}</span>
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+          <i data-lucide="inbox" class="w-8 h-8 text-slate-600 mx-auto mb-2"></i>
+          <p class="text-xs text-slate-500">No pre-advising demand yet</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Notice Form -->
+    <div class="chart-card space-y-3">
+      <h3 class="font-bold text-sm text-white flex items-center gap-2">
+        <i data-lucide="megaphone" class="w-4 h-4 text-blue-400"></i> Publish Notice
+      </h3>
+      <form action="{{ url_for('post_announcement') }}" method="POST" class="space-y-3">
+        <input type="text" name="title" required placeholder="Notice title…"
+          class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/8 text-xs text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:bg-white/7 transition-all">
+        <select name="target_role" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/8 text-xs text-slate-200 outline-none focus:border-emerald-500/50 transition-all">
+          <option value="all">Everyone</option>
+          <option value="student">Students Only</option>
+          <option value="faculty">Faculty Only</option>
+        </select>
+        <textarea name="content" required rows="4" placeholder="Notice details…"
+          class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/8 text-xs text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 resize-none transition-all"></textarea>
+        <button type="submit" class="w-full py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-500/20">
+          Publish Now
+        </button>
+      </form>
+    </div>
+
+    <!-- Advising Windows -->
+    <div class="chart-card space-y-3">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+          <i data-lucide="clock" class="w-4 h-4 text-violet-400"></i> Advising Windows
+        </h3>
+        <button onclick="switchTab('pre-advising')" class="text-[0.65rem] px-2 py-1 rounded-lg bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 font-bold transition-colors">Add +</button>
+      </div>
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+        {% for w in windows %}
+        <div class="p-3 rounded-xl bg-white/3 border border-white/5 flex justify-between items-center">
+          <div>
+            <p class="text-xs font-bold text-slate-200">{{ w.label }}</p>
+            <p class="text-[0.65rem] text-slate-500 mt-0.5">{{ w.credit_min }} – {{ w.credit_max }} credits</p>
+          </div>
+          <form action="{{ url_for('delete_window', win_id=w.id) }}" method="POST">
+            <button type="submit" class="text-red-400 hover:text-red-300 transition-colors">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </form>
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+          <i data-lucide="clock" class="w-8 h-8 text-slate-600 mx-auto mb-2"></i>
+          <p class="text-xs text-slate-500">No advising windows created</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #tab-dashboard -->
+
+
+<!-- PRE-ADVISING TAB -->
+<div id="tab-pre-advising" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">Pre-Advising Control Engine</h1>
+        <p class="text-xs text-slate-500 mt-1">Set credits timeframes, populate course lists, and examine real-time student demand metrics</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Configuration forms -->
+        <div class="space-y-6 lg:col-span-2">
+            <!-- Staggering slot configuration -->
+            <div class="glass-card p-6 space-y-4">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Create Pre-Advising Bracket Window</h3>
+                <form action="{{ url_for('create_window') }}" method="POST" class="space-y-4">
+                    <input type="hidden" name="type" value="pre">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Bracket Label</label>
+                            <input type="text" name="label" required placeholder="e.g. Group A (0-30 credits)" class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Credits completed bracket</label>
+                            <div class="flex gap-2 items-center">
+                                <input type="number" step="0.1" name="credit_min" placeholder="Min" class="input text-xs w-full" required>
+                                <span>to</span>
+                                <input type="number" step="0.1" name="credit_max" placeholder="Max" class="input text-xs w-full" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Start Date/Time</label>
+                            <input type="datetime-local" name="start_date_time" required class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">End Date/Time</label>
+                            <input type="datetime-local" name="end_date_time" required class="input text-xs w-full">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-4">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Add Bracket Window
+                    </button>
+                </form>
+            </div>
+
+            <!-- Course Catalog setup -->
+            <div class="glass-card p-6 space-y-4">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Add Course to Pre-Advising Catalog</h3>
+                <form action="{{ url_for('create_pre_course') }}" method="POST" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Course Code</label>
+                            <input type="text" name="code" required placeholder="e.g. CSE103" class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Title</label>
+                            <input type="text" name="title" required placeholder="e.g. Structured Programming" class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Credits</label>
+                            <select name="credits" class="input text-xs">
+                                <option value="3.0">3.0 Credits</option>
+                                <option value="1.0">1.0 Credit</option>
+                                <option value="1.5">1.5 Credits</option>
+                                <option value="4.0">4.0 Credits</option>
+                                <option value="4.5">4.5 Credits</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Department</label>
+                            <select name="department_id" class="input text-xs">
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Prerequisite (Course Code)</label>
+                            <input type="text" name="prerequisites" placeholder="e.g. CSE103 (Leave blank for none)" class="input text-xs w-full">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary rounded-lg text-xs py-2.5 px-4">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Add Course
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Demand Metrics Column -->
+        <div class="glass-card p-6 space-y-4">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Pre-Advising Demand Statistics</h3>
+            
+            <div class="space-y-4 max-h-[460px] overflow-y-auto pr-2">
+                {% for course_code, count in demand_data %}
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-bold">
+                        <span>{{ course_code }}</span>
+                        <span class="text-blue-600">{{ count }} requests</span>
+                    </div>
+                    <div class="w-full bg-[#f1f5f9] dark:bg-[#1e293b] h-2.5 rounded-full overflow-hidden">
+                        {% set total_req = demand_data | map(attribute=1) | sum %}
+                        {% set percentage = (count / total_req * 100) if total_req > 0 else 0 %}
+                        <div class="bg-blue-600 h-full rounded-full" style="width: {{ [percentage, 1] | max }}%"></div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-xs text-[#94a3b8] text-center py-6">No request data found.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Active brackets list -->
+    <div class="glass-card p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Active Pre-Advising Windows</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th>Credit Range</th>
+                        <th>Starts</th>
+                        <th>Ends</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for w in windows if w.type == 'pre' %}
+                    <tr>
+                        <td class="font-bold">{{ w.label }}</td>
+                        <td>{{ w.credit_min }} - {{ w.credit_max }} Credits</td>
+                        <td>{{ w.start_date_time }}</td>
+                        <td>{{ w.end_date_time }}</td>
+                        <td>
+                            <form action="{{ url_for('delete_window', win_id=w.id) }}" method="POST">
+                                <button type="submit" class="text-red-500 hover:text-red-700 bg-none border-none cursor-pointer">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-[#94a3b8] py-4">No pre-advising timelines defined.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- FINAL ADVISING TAB -->
+<div id="tab-final-advising" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">Final Advising Sections Control</h1>
+        <p class="text-xs text-slate-500 mt-1">Define staggered enrollment timings, schedule section courses, and link theory+labs</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Configurations -->
+        <div class="space-y-6 lg:col-span-2">
+            <!-- Staggering slot configuration -->
+            <div class="glass-card p-6 space-y-4">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Create Final Advising Bracket Window</h3>
+                <form action="{{ url_for('create_window') }}" method="POST" class="space-y-4">
+                    <input type="hidden" name="type" value="final">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Bracket Label</label>
+                            <input type="text" name="label" required placeholder="e.g. Group A (0-30 credits)" class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Credits completed bracket</label>
+                            <div class="flex gap-2 items-center">
+                                <input type="number" step="0.1" name="credit_min" placeholder="Min" class="input text-xs w-full" required>
+                                <span>to</span>
+                                <input type="number" step="0.1" name="credit_max" placeholder="Max" class="input text-xs w-full" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Start Date/Time</label>
+                            <input type="datetime-local" name="start_date_time" required class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">End Date/Time</label>
+                            <input type="datetime-local" name="end_date_time" required class="input text-xs w-full">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-4">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Add Bracket Window
+                    </button>
+                </form>
+            </div>
+
+            <!-- Create Section Offering Form -->
+            <div class="glass-card p-6 space-y-4">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Add Section Offering</h3>
+                <form action="{{ url_for('create_section_offering') }}" method="POST" class="space-y-4" onsubmit="return validateSectionForm(this)">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Course Code</label>
+                            <input type="text" name="course_code" required placeholder="e.g. CSE103" class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Section Number</label>
+                            <input type="text" name="section_number" required placeholder="e.g. 01" class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Credits</label>
+                            <select name="credits" class="input text-xs">
+                                <option value="3.0">3.0 Credits</option>
+                                <option value="1.0">1.0 Credit</option>
+                                <option value="1.5">1.5 Credits</option>
+                                <option value="4.0">4.0 Credits</option>
+                                <option value="4.5">4.5 Credits</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Capacity</label>
+                            <input type="number" name="capacity" value="30" class="input text-xs w-full" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Schedule Time</label>
+                            <input type="text" name="schedule" required placeholder="e.g. MW:10.10-11.40 or S:8.00-11.00" class="input text-xs w-full">
+                            <span class="text-[0.62rem] text-slate-400 font-medium block mt-1">Days: S,M,T,W,R only</span>
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Building & Room</label>
+                            <input type="text" name="room" required placeholder="e.g. AB2-702" class="input text-xs w-full">
+                            <span class="text-[0.62rem] text-slate-400 font-medium block mt-1">Building must start with AB1, AB2, AB3, FUB, Main</span>
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Assigned Faculty ID</label>
+                            <select name="faculty_id" class="input text-xs">
+                                <option value="">-- Assign Faculty --</option>
+                                {% for fac in faculties %}
+                                <option value="{{ fac.id }}">{{ fac.name }} ({{ fac.id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Dedicated Department(s)</label>
+                            <input type="text" name="dedicated_departments" placeholder="e.g. CSE or MAT-CSE-EEE" class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Prerequisites</label>
+                            <input type="text" name="prerequisites" placeholder="e.g. CSE103" class="input text-xs w-full">
+                        </div>
+                        <div class="flex items-center gap-4 mt-6">
+                            <label class="flex items-center gap-2 cursor-pointer text-xs font-bold">
+                                <input type="checkbox" name="is_lab" class="w-4 h-4 rounded border-[#e2e8f0]">
+                                <span>This is a Lab Section</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Link with Section ID (Optional)</label>
+                        <select name="linked_section_id" class="input text-xs">
+                            <option value="">-- Link to Lab/Theory section --</option>
+                            {% for sec in section_offerings %}
+                            <option value="{{ sec.id }}">{{ sec.course_code }} Sec {{ sec.section_number }} ({{ sec.id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-primary rounded-lg text-xs py-2.5 px-4">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Add Section Offering
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Side Panel: Windows -->
+        <div class="glass-card p-6 space-y-4">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Active Final Brackets</h3>
+            <div class="space-y-3">
+                {% for w in windows if w.type == 'final' %}
+                <div class="p-3 bg-[#f8fafc] dark:bg-[#1e293b]/50 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl flex justify-between items-center text-xs">
+                    <div>
+                        <p class="font-bold">{{ w.label }}</p>
+                        <p class="text-[0.68rem] text-[#94a3b8]">{{ w.credit_min }} to {{ w.credit_max }} CR</p>
+                    </div>
+                    <form action="{{ url_for('delete_window', win_id=w.id) }}" method="POST">
+                        <button type="submit" class="text-red-500 hover:text-red-700 bg-none border-none cursor-pointer">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="text-xs text-[#94a3b8] text-center">No timelines created.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Offered sections table -->
+    <div class="glass-card p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Section Offerings List</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Sec</th>
+                        <th>Schedule</th>
+                        <th>Room</th>
+                        <th>Capacity Control</th>
+                        <th>Linked</th>
+                        <th>Dept Limits</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sec in section_offerings %}
+                    <tr>
+                        <td>
+                            <p class="font-bold text-xs">{{ sec.course_code }}</p>
+                            <p class="text-[0.65rem] text-[#94a3b8]">{{ sec.course_title }}</p>
+                        </td>
+                        <td>
+                            Section {{ sec.section_number }}
+                            {% if sec.is_lab %}
+                            <span class="badge badge-warning text-[0.6rem]">Lab</span>
+                            {% else %}
+                            <span class="badge badge-info text-[0.6rem]">Theory</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ sec.schedule }}</td>
+                        <td>{{ sec.room }}</td>
+                        <td>
+                            <form action="{{ url_for('edit_section_capacity', sec_id=sec.id) }}" method="POST" class="flex items-center gap-2">
+                                <span class="text-xs">{{ sec.enrolled_count }} / </span>
+                                <input type="number" name="capacity" value="{{ sec.capacity }}" class="w-16 px-1.5 py-1 text-center bg-slate-100 dark:bg-slate-800 rounded border border-[#e2e8f0] dark:border-[#1e293b] text-xs font-bold">
+                                <button type="submit" class="text-blue-500 hover:text-blue-700 bg-none border-none p-1" title="Update seat capacity">
+                                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+                        </td>
+                        <td class="text-xs text-blue-600">{{ sec.linked_section_id or 'None' }}</td>
+                        <td>
+                            {% if sec.dedicated_departments %}
+                            <span class="badge badge-neutral text-[0.65rem]">{{ sec.dedicated_departments | join(', ') }}</span>
+                            {% else %}
+                            <span class="text-[#94a3b8] text-xs">All</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form action="{{ url_for('delete_section_offering', sec_id=sec.id) }}" method="POST">
+                                <button type="submit" class="text-red-500 hover:text-red-700 bg-none border-none cursor-pointer">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-[#94a3b8] py-4">No sections scheduled.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- STUDENT MANAGEMENT TAB -->
+<div id="tab-students" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">Student Management</h1>
+        <p class="text-xs text-slate-500 mt-1">Create new student accounts, manage portal access, and update academic records</p>
+    </div>
+
+    <!-- Create Student Form -->
+    <div class="card bg-slate-900/40 border border-white/5 rounded-2xl p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Create New Student Account</h3>
+        <form action="{{ url_for('create_student') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <!-- Profile Picture Upload Area (Top) -->
+            <div class="flex flex-col md:flex-row gap-4 items-center p-4 bg-slate-950/40 border border-white/5 rounded-xl">
+                <div class="w-16 h-16 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-500 overflow-hidden flex-shrink-0" id="std-pic-preview">
+                    <i data-lucide="user" class="w-8 h-8"></i>
+                </div>
+                <div class="flex-1 w-full">
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Profile Picture (Optional)</label>
+                    <input type="file" name="profile_pic" id="std_pic_input" accept="image/*" onchange="previewImage(this, 'std-pic-preview')" class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/10 file:text-emerald-400 hover:file:bg-emerald-500/20 file:cursor-pointer">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Student ID</label>
+                    <input type="text" name="student_id" required placeholder="e.g. 2023-2-60-010" class="input text-xs w-full">
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
+                    <input type="text" name="name" required placeholder="e.g. Belal Hossain" class="input text-xs w-full">
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Department</label>
+                    <select name="department_id" class="input text-xs">
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
+                    <input type="email" name="email" required placeholder="e.g. belal@std.ewubd.edu" class="input text-xs w-full">
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Completed Credits</label>
+                    <input type="number" step="0.5" name="completed_credits" value="0.0" class="input text-xs w-full" required>
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">CGPA</label>
+                    <input type="number" step="0.01" name="cgpa" value="0.00" class="input text-xs w-full" required>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Outstanding Dues (Tk.)</label>
+                    <input type="number" name="outstanding_balance" value="0" class="input text-xs w-40" required>
+                </div>
+                <div class="flex items-center gap-2 mt-5">
+                    <input type="checkbox" name="financial_cleared" id="fc_check" checked class="w-4 h-4 rounded">
+                    <label for="fc_check" class="text-xs font-bold cursor-pointer">Financial Cleared</label>
+                </div>
+            </div>
+
+            <!-- About Section (Bottom) -->
+            <div>
+                <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">About (Biography / Notes)</label>
+                <textarea name="about" id="std_about" maxlength="500" rows="3" oninput="updateCharCount(this, 'std-about-char-count')" placeholder="Brief biography or academic notes (max 500 characters)..." class="input text-xs resize-none"></textarea>
+                <div class="text-[0.65rem] text-slate-500 text-right mt-1"><span id="std-about-char-count">0</span> / 500 characters</div>
+            </div>
+
+            <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-5">
+                <i data-lucide="user-plus" class="w-4 h-4"></i> Create Student Account
+            </button>
+        </form>
+    </div>
+
+    <!-- Students Roster -->
+    <div class="glass-card p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Enrolled Students Roster ({{ students | length }} total)</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Credits</th>
+                        <th>CGPA</th>
+                        <th>Financial</th>
+                        <th>Portal Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for std in students %}
+                    {% set usr = users_map.get(std.user_id) %}
+                    <tr>
+                        <td class="font-bold text-xs font-mono">{{ std.id }}</td>
+                        <td class="font-medium text-xs">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
+                                    {% if std.profile_pic %}
+                                    <img src="/static/uploads/{{ std.profile_pic }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="text-left">
+                                    <p class="font-bold text-slate-200">{{ std.name }}</p>
+                                    {% if std.about %}
+                                    <p class="text-[0.65rem] text-slate-500 max-w-[200px] truncate" title="{{ std.about }}">{{ std.about }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-neutral text-[0.62rem]">{{ std.department_id }}</span></td>
+                        <td class="text-xs font-semibold">{{ std.completed_credits }} CR</td>
+                        <td class="text-xs font-semibold">{{ "%.2f"|format(std.cgpa) }}</td>
+                        <td>
+                            {% if std.financial_cleared and std.outstanding_balance == 0 %}
+                            <span class="badge badge-success text-[0.62rem]">Cleared</span>
+                            {% else %}
+                            <span class="badge badge-danger text-[0.62rem]">Hold â€“ {{ std.outstanding_balance }} Tk</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if usr %}
+                                {% if usr.is_active and usr.is_activated %}
+                                <span class="badge badge-success text-[0.62rem]">Active</span>
+                                {% elif usr.is_active and not usr.is_activated %}
+                                <span class="badge badge-warning text-[0.62rem]">Not Activated</span>
+                                {% else %}
+                                <span class="badge badge-danger text-[0.62rem]">Disabled</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="flex gap-2 items-center">
+                            {% if usr %}
+                            <form action="{{ url_for('toggle_user_status', user_id=std.user_id) }}" method="POST">
+                                <button type="submit" class="text-[0.65rem] px-2 py-1 font-bold rounded transition-colors {% if usr.is_active %}bg-amber-100 hover:bg-amber-200 text-amber-700{% else %}bg-green-100 hover:bg-green-200 text-green-700{% endif %}">
+                                    {{ 'Disable' if usr.is_active else 'Enable' }}
+                                </button>
+                            </form>
+                            {% endif %}
+                            <form action="{{ url_for('delete_student', std_id=std.id) }}" method="POST" onsubmit="return confirm('Delete student {{ std.id }}? This cannot be undone.')">
+                                <button type="submit" class="text-[0.65rem] px-2 py-1 font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center text-[#94a3b8] py-4">No students registered yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- FACULTY MANAGEMENT TAB -->
+<div id="tab-faculty" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">Faculty Management</h1>
+        <p class="text-xs text-slate-500 mt-1">Create faculty accounts, assign departments, and manage portal access</p>
+    </div>
+
+    <!-- Create Faculty Form -->
+    <div class="card bg-slate-900/40 border border-white/5 rounded-2xl p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Create New Faculty Account</h3>
+        <form action="{{ url_for('create_faculty') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <!-- Profile Picture Upload Area (Top) -->
+            <div class="flex flex-col md:flex-row gap-4 items-center p-4 bg-slate-950/40 border border-white/5 rounded-xl">
+                <div class="w-16 h-16 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-500 overflow-hidden flex-shrink-0" id="fac-pic-preview">
+                    <i data-lucide="user" class="w-8 h-8"></i>
+                </div>
+                <div class="flex-1 w-full">
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Profile Picture (Optional)</label>
+                    <input type="file" name="profile_pic" id="fac_pic_input" accept="image/*" onchange="previewImage(this, 'fac-pic-preview')" class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Faculty Initials / ID</label>
+                    <input type="text" name="faculty_id" required placeholder="e.g. NYA or SHM" class="input text-xs w-full">
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
+                    <input type="text" name="name" required placeholder="e.g. Dr. Nawab Yousuf Ali" class="input text-xs w-full">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Portal Email</label>
+                    <input type="email" name="email" required placeholder="e.g. nawab@faculty.ewubd.edu" class="input text-xs w-full">
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Department</label>
+                    <select name="department_id" class="input text-xs">
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- About Section (Bottom) -->
+            <div>
+                <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">About (Biography / Notes)</label>
+                <textarea name="about" id="fac_about" maxlength="500" rows="3" oninput="updateCharCount(this, 'fac-about-char-count')" placeholder="Brief biography or professional summary (max 500 characters)..." class="input text-xs resize-none"></textarea>
+                <div class="text-[0.65rem] text-slate-500 text-right mt-1"><span id="fac-about-char-count">0</span> / 500 characters</div>
+            </div>
+
+            <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-5">
+                <i data-lucide="user-plus" class="w-4 h-4"></i> Create Faculty Account
+            </button>
+        </form>
+    </div>
+
+    <!-- Faculty Roster -->
+    <div class="glass-card p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Faculty Members Roster ({{ faculties | length }} total)</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Faculty ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Email</th>
+                        <th>Portal Status</th>
+                        <th>Advisees</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fac in faculties %}
+                    {% set usr = users_map.get(fac.user_id) %}
+                    {% set advisee_count = students | selectattr('advisor_id', 'equalto', fac.id) | list | length %}
+                    <tr>
+                        <td class="font-bold text-xs font-mono">{{ fac.id }}</td>
+                        <td class="font-medium text-xs">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
+                                    {% if fac.profile_pic %}
+                                    <img src="/static/uploads/{{ fac.profile_pic }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="text-left">
+                                    <p class="font-bold text-slate-200">{{ fac.name }}</p>
+                                    {% if fac.about %}
+                                    <p class="text-[0.65rem] text-slate-500 max-w-[200px] truncate" title="{{ fac.about }}">{{ fac.about }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-neutral text-[0.62rem]">{{ fac.department_id }}</span></td>
+                        <td class="text-xs text-[#475569] dark:text-[#94a3b8]">{{ usr.email if usr else 'â€”' }}</td>
+                        <td>
+                            {% if usr %}
+                                {% if usr.is_active and usr.is_activated %}
+                                <span class="badge badge-success text-[0.62rem]">Active</span>
+                                {% elif usr.is_active and not usr.is_activated %}
+                                <span class="badge badge-warning text-[0.62rem]">Not Activated</span>
+                                {% else %}
+                                <span class="badge badge-danger text-[0.62rem]">Disabled</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="text-xs font-bold text-violet-600">{{ advisee_count }} students</td>
+                        <td class="flex gap-2 items-center">
+                            {% if usr %}
+                            <form action="{{ url_for('toggle_user_status', user_id=fac.user_id) }}" method="POST">
+                                <button type="submit" class="text-[0.65rem] px-2 py-1 font-bold rounded transition-colors {% if usr.is_active %}bg-amber-100 hover:bg-amber-200 text-amber-700{% else %}bg-green-100 hover:bg-green-200 text-green-700{% endif %}">
+                                    {{ 'Disable' if usr.is_active else 'Enable' }}
+                                </button>
+                            </form>
+                            {% endif %}
+                            <form action="{{ url_for('delete_faculty', fac_id=fac.id) }}" method="POST" onsubmit="return confirm('Delete faculty {{ fac.id }}? This cannot be undone.')">
+                                <button type="submit" class="text-[0.65rem] px-2 py-1 font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center text-[#94a3b8] py-4">No faculty members created yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ADVISOR ASSIGNMENT TAB -->
+<div id="tab-advisor-assign" class="tab-content hidden space-y-6">
+    <div class="border-b border-[#e2e8f0] dark:border-[#1e293b] pb-4 flex justify-between items-start">
+        <div>
+            <h1 class="tab-title">Advisor Assignment</h1>
+            <p class="text-xs text-slate-500 mt-1">Manually assign or unassign academic advisors per student, or auto load-balance across departments</p>
+        </div>
+        <form action="{{ url_for('auto_assign_advisors') }}" method="POST">
+            <button type="submit" class="btn-primary rounded-xl text-xs py-2.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-lg shadow-indigo-500/20">
+                <i data-lucide="shuffle" class="w-4 h-4"></i> Auto-Assign (Load Balanced)
+            </button>
+        </form>
+    </div>
+
+    <!-- Manual Assignment Form -->
+    <div class="card space-y-4 max-w-2xl">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Manual Assignment</h3>
+        <form action="{{ url_for('assign_advisor') }}" method="POST" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Student</label>
+                    <select name="student_id" required class="input text-xs">
+                        <option value="">-- Choose a student --</option>
+                        {% for std in students %}
+                        <option value="{{ std.id }}">{{ std.id }} â€” {{ std.name }} ({{ std.department_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Assign Advisor</label>
+                    <select name="faculty_id" class="input text-xs">
+                        <option value="">-- Unassign / Remove advisor --</option>
+                        {% for fac in faculties %}
+                        <option value="{{ fac.id }}">{{ fac.id }} â€” {{ fac.name }} ({{ fac.department_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-5">
+                <i data-lucide="user-check" class="w-4 h-4"></i> Save Assignment
+            </button>
+        </form>
+    </div>
+
+    <div class="glass-card p-6 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2 gap-4">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Current Advisor Assignments</h3>
+            <div class="relative w-full md:w-64">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                <input type="text" id="advisor-student-search" oninput="filterAdvisorAssignments()" placeholder="Search Student ID or Name..." class="pl-9 pr-4 py-2 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs w-full focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Student Name</th>
+                        <th>Dept</th>
+                        <th>Completed Credits</th>
+                        <th>Assigned Advisor</th>
+                        <th>Advisor Dept</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for std in students %}
+                    {% set adv = faculty_map.get(std.advisor_id) %}
+                    <tr class="advisor-assignment-row" data-student-id="{{ std.id }}" data-student-name="{{ std.name }}">
+                        <td class="font-mono font-bold text-xs">{{ std.id }}</td>
+                        <td class="text-xs">{{ std.name }}</td>
+                        <td><span class="badge badge-neutral text-[0.62rem]">{{ std.department_id }}</span></td>
+                        <td class="text-xs font-semibold">{{ std.completed_credits }} CR</td>
+                        <td>
+                            {% if adv %}
+                            <span class="text-xs font-bold text-violet-600">{{ adv.name }}</span>
+                            <span class="text-[0.65rem] text-[#94a3b8] ml-1">({{ std.advisor_id }})</span>
+                            {% else %}
+                            <span class="badge badge-warning text-[0.62rem]">Not Assigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if adv %}
+                            <span class="badge badge-neutral text-[0.62rem]">{{ adv.department_id }}</span>
+                            {% else %}â€”{% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-[#94a3b8] py-4">No students found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SYSTEM SETTINGS TAB -->
+<div id="tab-settings" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">System Settings</h1>
+        <p class="text-xs text-slate-500 mt-1">Configure current active semester, advising phase statuses, and manage admin credentials</p>
+    </div>
+
+    <!-- Advising Phase Switches -->
+    <div class="glass-card p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Academic Portal Control Switches</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Pre-Advising Toggle -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-4">
+                <div>
+                    <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">Pre-Advising Status</h4>
+                    <p class="text-[0.7rem] text-slate-500 mt-1">Allows students to select courses, compile and save pre-advising carts.</p>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold uppercase {{ 'text-green-600' if pre_advising_active else 'text-red-500' }}">
+                        {{ 'ON / ACTIVE' if pre_advising_active else 'OFF / SHUT' }}
+                    </span>
+                    <form action="/admin/toggle-setting/pre_advising_active" method="POST">
+                        <button type="submit" class="text-xs px-3 py-1.5 font-bold rounded-lg transition-colors {{ 'bg-red-100 hover:bg-red-200 text-red-700' if pre_advising_active else 'bg-green-100 hover:bg-green-200 text-green-700' }}">
+                            {{ 'Close Phase' if pre_advising_active else 'Start Phase' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Final Advising Toggle -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-4">
+                <div>
+                    <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">Final Advising Status</h4>
+                    <p class="text-[0.7rem] text-slate-500 mt-1">Enables real-time student course self-registration, seating, and lab linking.</p>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold uppercase {{ 'text-green-600' if final_advising_active else 'text-red-500' }}">
+                        {{ 'ON / ACTIVE' if final_advising_active else 'OFF / SHUT' }}
+                    </span>
+                    <form action="/admin/toggle-setting/final_advising_active" method="POST">
+                        <button type="submit" class="text-xs px-3 py-1.5 font-bold rounded-lg transition-colors {{ 'bg-red-100 hover:bg-red-200 text-red-700' if final_advising_active else 'bg-green-100 hover:bg-green-200 text-green-700' }}">
+                            {{ 'Close Phase' if final_advising_active else 'Start Phase' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Requests Phase Toggle -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-4">
+                <div>
+                    <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">Advisor Swap & Add Requests</h4>
+                    <p class="text-[0.7rem] text-slate-500 mt-1">Enables post-advising request features (waivers, section swaps, overrides).</p>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold uppercase {{ 'text-green-600' if request_phase_active else 'text-red-500' }}">
+                        {{ 'ON / ACTIVE' if request_phase_active else 'OFF / SHUT' }}
+                    </span>
+                    <form action="/admin/toggle-setting/request_phase_active" method="POST">
+                        <button type="submit" class="text-xs px-3 py-1.5 font-bold rounded-lg transition-colors {{ 'bg-red-100 hover:bg-red-200 text-red-700' if request_phase_active else 'bg-green-100 hover:bg-green-200 text-green-700' }}">
+                            {{ 'Close Phase' if request_phase_active else 'Start Phase' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Semester Settings -->
+        <div class="glass-card p-6 space-y-4">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Active Semester Config</h3>
+            <form action="{{ url_for('change_semester') }}" method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Set Active Semester</label>
+                    <select name="semester" class="input text-xs">
+                        <option value="Summer2026" {% if current_semester == 'Summer2026' %}selected{% endif %}>Summer 2026</option>
+                        <option value="Spring2026" {% if current_semester == 'Spring2026' %}selected{% endif %}>Spring 2026</option>
+                        <option value="Fall2026" {% if current_semester == 'Fall2026' %}selected{% endif %}>Fall 2026</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-4">
+                    Update Semester
+                </button>
+            </form>
+        </div>
+
+        <!-- Admin Password Change -->
+        <div class="glass-card p-6 space-y-4">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Admin Security</h3>
+            <form action="{{ url_for('change_admin_password') }}" method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Change Admin Password</label>
+                    <input type="password" name="password" placeholder="Enter new password" required class="input text-xs w-full">
+                </div>
+                <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-4 bg-red-600 hover:bg-red-700">
+                    Change Password
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- DEPARTMENT MANAGEMENT TAB -->
+<div id="tab-departments" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">University Department Registry</h1>
+        <p class="text-xs text-slate-500 mt-1">Oversee the 15 official academic departments and major curriculum specifications</p>
+    </div>
+
+    <div class="glass-card p-6 space-y-4">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Department Name</th>
+                        <th>Advising Credits Limit</th>
+                        <th>Core Degree Credits</th>
+                        <th>Student Roster Count</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="font-bold text-xs">B. Sc. in CSE (Computer Science & Engineering)</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">140 CR</td>
+                        <td class="text-xs">CSE Department Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">B. Sc. in EEE (Electrical & Electronic Engineering)</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">140 CR</td>
+                        <td class="text-xs">EEE Department Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">B. Sc. in ICE (Information & Comm Engineering)</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">140 CR</td>
+                        <td class="text-xs">ICE Department Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">B. Pharm. (Pharmacy)</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">170 CR</td>
+                        <td class="text-xs">Pharmacy Department Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">B. Sc. in GEB (Genetic Eng & Biotech)</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">140 CR</td>
+                        <td class="text-xs">GEB Department Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">B.Sc. in Civil Engineering</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">140 CR</td>
+                        <td class="text-xs">CE Department Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">B.Sc. (Hons.) in Mathematics</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">130 CR</td>
+                        <td class="text-xs">Math Department Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">B.Sc. in Data Science and Analytics</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">130 CR</td>
+                        <td class="text-xs">DSA Department Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">BBA (Bachelor of Business Administration)</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">130 CR</td>
+                        <td class="text-xs">BBA Department Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">BSS in Economics</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">130 CR</td>
+                        <td class="text-xs">Economics Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">BA in English</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">130 CR</td>
+                        <td class="text-xs">English Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">BSS in Sociology</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">130 CR</td>
+                        <td class="text-xs">Sociology Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">BSS in Information Studies</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">130 CR</td>
+                        <td class="text-xs">Information Studies Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">LL.B (Honâ€™s) (Law)</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">130 CR</td>
+                        <td class="text-xs">Law Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td class="font-bold text-xs">BSS in Population and Public Health</td>
+                        <td class="text-xs">9.0 - 21.0 CR</td>
+                        <td class="text-xs font-bold text-blue-600">130 CR</td>
+                        <td class="text-xs">PPHS Students</td>
+                        <td><span class="badge badge-success text-[0.62rem]">Active</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- COURSE REQUESTS TAB -->
+<div id="tab-requests" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">Student Advising Overrides Log</h1>
+        <p class="text-xs text-slate-500 mt-1">Global system audit of advisor requests, overrides, and section swaps</p>
+    </div>
+
+    <div class="card space-y-4 bg-slate-900/40 border border-white/5 rounded-2xl p-6">
+        <div class="flex justify-between items-center border-b border-white/5 pb-3">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300">Active Advising Overrides Log</h3>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">{{ all_requests | length }} Total Requests</span>
+        </div>
+        
+        <!-- Search & Filter Controls for Requests -->
+        <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-950/20 p-4 rounded-xl border border-white/5">
+            <div class="flex items-center gap-3 flex-1 min-w-[280px]">
+                <div class="relative w-full">
+                    <i data-lucide="search" class="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400"></i>
+                    <input type="text" id="request-search-input" onkeyup="filterCourseRequests()" placeholder="Search Student ID, Name or Course Code..." class="w-full pl-10 pr-4 py-1.5 bg-white/5 border border-white/8 rounded-xl text-xs text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:bg-white/7 transition-all">
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Type:</label>
+                    <select id="request-type-filter" onchange="filterCourseRequests()" class="px-2.5 py-1.5 bg-white/5 border border-white/8 rounded-xl text-[0.7rem] text-slate-200 outline-none focus:border-emerald-500/50 transition-all">
+                        <option value="all" class="bg-[#0f172a]">All Types</option>
+                        <option value="add_course" class="bg-[#0f172a]">Add Course</option>
+                        <option value="change_section" class="bg-[#0f172a]">Section Swap</option>
+                        <option value="seat_increase" class="bg-[#0f172a]">Seat Increase</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Status:</label>
+                    <select id="request-status-filter" onchange="filterCourseRequests()" class="px-2.5 py-1.5 bg-white/5 border border-white/8 rounded-xl text-[0.7rem] text-slate-200 outline-none focus:border-emerald-500/50 transition-all">
+                        <option value="all" class="bg-[#0f172a]">All Statuses</option>
+                        <option value="pending_advisor" class="bg-[#0f172a]">Pending</option>
+                        <option value="approved" class="bg-[#0f172a]">Approved</option>
+                        <option value="rejected" class="bg-[#0f172a]">Rejected</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="w-full text-slate-300">
+                <thead>
+                    <tr class="border-b border-white/5 bg-slate-950/20">
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Student</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Course / Section</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Request Type</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Student Justification</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Advisor Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in all_requests %}
+                    {% set std = student_map.get(req.student_id) %}
+                    <tr class="request-row border-b border-white/5 hover:bg-white/5 transition-colors" data-student-id="{{ req.student_id }}" data-student-name="{{ std.name | lower if std else '' }}" data-course-id="{{ req.course_id | lower }}" data-type="{{ req.type }}" data-status="{{ req.status }}">
+                        <td class="px-4 py-3">
+                            <div class="font-mono font-bold text-xs text-emerald-400">{{ req.student_id }}</div>
+                            <div class="text-[0.7rem] text-slate-400">{{ std.name if std else 'Unknown' }}</div>
+                        </td>
+                        <td class="px-4 py-3 text-xs">
+                            <div class="font-semibold text-slate-200">{{ req.course_id }}</div>
+                            {% if req.section_id %}
+                            <div class="text-[0.65rem] text-indigo-400 font-medium">Sec: {{ req.section_id.split('-')[1] if '-' in req.section_id else req.section_id }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-xs">
+                            {% if req.type == 'add_course' %}
+                            <span class="badge badge-info text-[0.6rem] font-bold uppercase">Add Course</span>
+                            {% elif req.type == 'change_section' %}
+                            <span class="badge badge-warning text-[0.6rem] font-bold uppercase font-mono">Section Swap</span>
+                            {% else %}
+                            <span class="badge badge-neutral text-[0.6rem] font-bold uppercase">Seat Increase</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-xs">
+                            {% if req.status == 'approved' %}
+                            <span class="badge badge-success text-[0.6rem] font-bold uppercase">Approved</span>
+                            {% elif req.status == 'rejected' %}
+                            <span class="badge badge-danger text-[0.6rem] font-bold uppercase font-mono">Rejected</span>
+                            {% else %}
+                            <span class="badge badge-warning text-[0.6rem] font-bold uppercase font-mono">Pending Advisor</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-xs italic text-slate-400">
+                            "{{ req.comments }}"
+                        </td>
+                        <td class="px-4 py-3 text-xs text-slate-400">
+                            {{ req.advisor_note or '—' }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-slate-500 py-8">
+                            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-600"></i>
+                            <p class="text-xs">No active advising override requests logged.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ACADEMIC RECORDS TAB -->
+<div id="tab-academic-records" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">Academic Records &amp; Grading</h1>
+        <p class="text-xs text-slate-500 mt-1">Post official student letter grades, calculate academic GPAs, and review transcript details</p>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/40 p-4 rounded-xl border border-white/5">
+        <div class="flex items-center gap-3 flex-1 min-w-[300px]">
+            <div class="relative w-full">
+                <i data-lucide="search" class="absolute left-3.5 top-3 w-4 h-4 text-slate-400"></i>
+                <input type="text" id="student-search-input" onkeyup="filterAcademicRecords()" placeholder="Search Student ID or Name..." class="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/8 rounded-xl text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:bg-white/7 transition-all">
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Department:</label>
+            <select id="student-dept-filter" onchange="filterAcademicRecords()" class="px-3 py-2 bg-white/5 border border-white/8 rounded-xl text-xs text-slate-200 outline-none focus:border-emerald-500/50 transition-all min-w-[150px]">
+                <option value="all" class="bg-[#0f172a]">All Departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}" class="bg-[#0f172a]">{{ dept.id }} - {{ dept.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="w-full">
+        <!-- Student Roster Grid/Table (Full width) -->
+        <div class="space-y-4">
+            <div class="card bg-slate-900/40 border border-white/5 rounded-2xl p-6">
+                <div class="flex justify-between items-center border-b border-white/5 pb-3 mb-2">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300">Department Student Roster</h3>
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">Active Records</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="w-full text-slate-300">
+                        <thead>
+                            <tr class="border-b border-white/5 bg-slate-950/20">
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase">Student ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase">Department</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase">Completed Credits</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase">CGPA</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="academic-students-tbody">
+                            <!-- JS filled dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Academic Report Modal -->
+<div id="academic-report-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4 transition-all">
+    <div class="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl transition-all scale-95 opacity-0 duration-300" id="report-modal-content">
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center p-6 border-b border-white/5 bg-slate-950/20">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">Student Academic Transcript</h3>
+                    <p class="text-xs text-slate-400">Official Portal Audit &amp; Grade Report</p>
+                </div>
+            </div>
+            <button onclick="closeAcademicReportModal()" class="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="p-6 space-y-6">
+            <!-- Student Profile Card -->
+            <div class="flex flex-col md:flex-row gap-4 p-4 rounded-xl bg-white/3 border border-white/5 items-center md:items-start">
+                <div class="w-20 h-20 rounded-xl overflow-hidden border border-white/10 bg-slate-900 flex-shrink-0 flex items-center justify-center" id="modal-student-pic-container">
+                    <i data-lucide="user" class="w-10 h-10 text-slate-500"></i>
+                </div>
+                <div class="flex-1 w-full space-y-3">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">Student Name</p>
+                            <p class="text-sm font-semibold text-slate-200 mt-0.5" id="modal-student-name">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">Student ID</p>
+                            <p class="text-sm font-semibold text-mono text-slate-200 mt-0.5" id="modal-student-id">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">Department</p>
+                            <p class="text-sm font-semibold text-slate-200 mt-0.5" id="modal-student-dept">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">Academic CGPA</p>
+                            <p class="text-sm font-bold text-emerald-400 mt-0.5" id="modal-student-cgpa">-</p>
+                        </div>
+                    </div>
+                    <!-- About section inside the modal -->
+                    <div class="pt-2 border-t border-white/5 hidden" id="modal-student-about-container">
+                        <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">About / Bio</p>
+                        <p class="text-xs text-slate-300 mt-1 italic" id="modal-student-about">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Credits Breakdown -->
+                <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Degree Progress</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Completed Credits</span>
+                            <span class="text-slate-200 font-bold" id="modal-credits-completed">0.0 CR</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Remaining Credits</span>
+                            <span class="text-slate-200 font-bold" id="modal-credits-remaining">0.0 CR</span>
+                        </div>
+                        <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden mt-2">
+                            <div class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full" id="modal-progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Financial standing -->
+                <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Portal Standing</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs col-span-2">
+                            <span class="text-slate-400">Financial Clearance</span>
+                            <span class="badge text-[0.6rem]" id="modal-financial-status">Cleared</span>
+                        </div>
+                        <div class="flex justify-between text-xs col-span-2">
+                            <span class="text-slate-400">Outstanding Balance</span>
+                            <span class="text-slate-200 font-bold" id="modal-outstanding-balance">0 Tk</span>
+                        </div>
+                        <div class="flex justify-between text-xs col-span-2">
+                            <span class="text-slate-400">Advising Status</span>
+                            <span class="badge text-[0.6rem]" id="modal-advising-status">Not Started</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Grades Table & Grade Entry Form Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Grades Table (2/3 width) -->
+                <div class="space-y-2 lg:col-span-2">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="award" class="w-4 h-4 text-emerald-400"></i> Academic Grade Ledger
+                    </h4>
+                    <div class="bg-white/2 border border-white/5 rounded-xl overflow-hidden">
+                        <div class="table-wrap max-h-60 overflow-y-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-white/5 bg-slate-950/20">
+                                        <th class="px-4 py-2.5 text-left text-xs text-slate-400">Course</th>
+                                        <th class="px-4 py-2.5 text-left text-xs text-slate-400">Semester</th>
+                                        <th class="px-4 py-2.5 text-left text-xs text-slate-400">Letter Grade</th>
+                                        <th class="px-4 py-2.5 text-left text-xs text-slate-400">Points</th>
+                                        <th class="px-4 py-2.5 text-right text-xs text-slate-400">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modal-grades-tbody">
+                                    <!-- Filled dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add/Update Grade Form (1/3 width) -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> Add / Update Grade
+                    </h4>
+                    <form action="{{ url_for('add_grade') }}" method="POST" class="p-4 rounded-xl bg-white/3 border border-white/5 space-y-3">
+                        <input type="hidden" name="student_id" id="modal-form-student-id">
+                        <div>
+                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Course Code</label>
+                            <select name="course_code" required class="p-2.5 bg-slate-950 border border-white/10 rounded-lg text-xs text-slate-200 w-full focus:border-emerald-500/50 outline-none">
+                                <option value="" class="text-slate-200">-- Choose course --</option>
+                                {% for pc in pre_courses %}
+                                <option value="{{ pc.code }}" class="text-slate-200">{{ pc.code }} — {{ pc.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Grade</label>
+                                <select name="grade_letter" required class="p-2.5 bg-slate-950 border border-white/10 rounded-lg text-xs text-slate-200 w-full focus:border-emerald-500/50 outline-none">
+                                    <option value="A" class="text-slate-200">A (4.0)</option>
+                                    <option value="A-" class="text-slate-200">A- (3.7)</option>
+                                    <option value="B+" class="text-slate-200">B+ (3.3)</option>
+                                    <option value="B" class="text-slate-200">B (3.0)</option>
+                                    <option value="B-" class="text-slate-200">B- (2.7)</option>
+                                    <option value="C+" class="text-slate-200">C+ (2.3)</option>
+                                    <option value="C" class="text-slate-200">C (2.0)</option>
+                                    <option value="C-" class="text-slate-200">C- (1.7)</option>
+                                    <option value="D+" class="text-slate-200">D+ (1.3)</option>
+                                    <option value="D" class="text-slate-200">D (1.0)</option>
+                                    <option value="F" class="text-slate-200">F (0.0)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Semester</label>
+                                <select name="semester_id" required class="p-2.5 bg-slate-950 border border-white/10 rounded-lg text-xs text-slate-200 w-full focus:border-emerald-500/50 outline-none">
+                                    <option value="{{ current_semester }}" class="text-slate-200">{{ current_semester }}</option>
+                                    <option value="Spring2026" class="text-slate-200">Spring 2026</option>
+                                    <option value="Fall2025" class="text-slate-200">Fall 2025</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary rounded-lg text-[0.7rem] py-2 px-3 w-full justify-center mt-2">
+                            <i data-lucide="save" class="w-3.5 h-3.5"></i> Save Grade
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="p-6 border-t border-white/5 bg-slate-950/20 flex justify-end gap-2">
+            <button onclick="closeAcademicReportModal()" class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-200 rounded-xl text-xs font-bold transition-all">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- REPORTS TAB -->
+<div id="tab-reports" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">University Analytical Reports</h1>
+        <p class="text-xs text-slate-500 mt-1">Review dynamic charts, capacity logs, and advising completion rates</p>
+    </div>
+
+    <!-- Metrics Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Advising rate report card -->
+        <div class="stat-card emerald">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Advising Status</p>
+                    {% set approved_count = students | selectattr('advising_status', 'equalto', 'approved') | list | length %}
+                    {% set total_stds = students | length if students else 1 %}
+                    {% set advising_rate = (approved_count / total_stds * 100) | round | int %}
+                    <h3 class="text-3xl font-extrabold tracking-tight mt-1">{{ approved_count }} / {{ students | length }}</h3>
+                    <p class="text-[0.7rem] text-slate-500 mt-2">Approved advising rate: <span class="text-[#10b981] font-bold">{{ advising_rate }}%</span></p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <i data-lucide="check-square" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Offered sections capacity card -->
+        <div class="stat-card violet">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Seat Capacity</p>
+                    {% set total_capacity = section_offerings | map(attribute='capacity') | sum %}
+                    {% set total_enrolled = section_offerings | map(attribute='enrolled_count') | sum %}
+                    {% set seat_util = (total_enrolled / total_capacity * 100) | round | int if total_capacity > 0 else 0 %}
+                    <h3 class="text-3xl font-extrabold tracking-tight mt-1">{{ total_enrolled }} / {{ total_capacity }}</h3>
+                    <p class="text-[0.7rem] text-slate-500 mt-2">Seats utilized: <span class="text-violet-400 font-bold">{{ seat_util }}%</span></p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grade average card -->
+        <div class="stat-card amber">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Average CGPA</p>
+                    {% set total_cgpa = students | map(attribute='cgpa') | sum %}
+                    {% set avg_cgpa = total_cgpa / (students | length) if students else 0.0 %}
+                    <h3 class="text-3xl font-extrabold tracking-tight mt-1">{{ "%.3f"|format(avg_cgpa) }}</h3>
+                    <p class="text-[0.7rem] text-slate-500 mt-2">Combined student average</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                    <i data-lucide="line-chart" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytical Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left: Department CGPA Chart (2/3 width) -->
+        <div class="lg:col-span-2 card bg-slate-900/40 border border-white/5 rounded-2xl p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-400"></i> Department Academic Averages
+                </h3>
+                <span class="text-[0.65rem] px-2 py-0.5 rounded bg-white/5 text-slate-400 font-mono">Avg CGPA</span>
+            </div>
+            <div class="h-64 relative">
+                <canvas id="dept-cgpa-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Right: Advising Status Chart (1/3 width) -->
+        <div class="card bg-slate-900/40 border border-white/5 rounded-2xl p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Advising Completion
+                </h3>
+                <span class="text-[0.65rem] px-2 py-0.5 rounded bg-white/5 text-slate-400 font-mono">Doughnut</span>
+            </div>
+            <div class="h-64 relative flex items-center justify-center">
+                <canvas id="advising-status-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Utilization Details -->
+    <div class="card bg-slate-900/40 border border-white/5 rounded-2xl p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Offered Section Fill Rates</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
+            {% for sec in section_offerings %}
+            {% set pct = (sec.enrolled_count / sec.capacity * 100) | round | int if sec.capacity > 0 else 0 %}
+            <div class="p-4 rounded-xl border border-white/5 bg-slate-950/40 flex justify-between items-center text-xs hover:border-white/10 transition-all duration-250">
+                <div>
+                    <p class="font-bold text-slate-200">{{ sec.course_code }} - Sec {{ sec.section_number }}</p>
+                    <p class="text-[0.68rem] text-slate-400 mt-0.5">Faculty: {{ sec.faculty_id or 'Unassigned' }}</p>
+                </div>
+                <div class="flex items-center gap-3 w-48 justify-end">
+                    <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full" style="width: {{ pct }}%"></div>
+                    </div>
+                    <span class="font-mono font-bold text-emerald-400">{{ sec.enrolled_count }}/{{ sec.capacity }} ({{ pct }}%)</span>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-xs text-slate-500 text-center col-span-2 py-4">No sections offered to report.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- THEME SELECTOR TAB -->
+<div id="tab-theme" class="tab-content hidden space-y-6">
+    <div class="pb-4 mb-2 border-b border-white/5">
+        <h1 class="tab-title">Portal Style &amp; Customization</h1>
+        <p class="text-xs text-slate-500 mt-1">Select a styling system to apply custom themes or wallpapers dynamically</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+
+        <!-- 2. Dark Mode Card -->
+        <button onclick="setSystemTheme('dark')" class="card text-left space-y-3 border-2 border-transparent hover:border-emerald-500/50 focus:outline-none transition-all p-5 rounded-2xl cursor-pointer bg-[#0f172a] text-slate-100">
+            <div class="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center text-emerald-400">
+                <i data-lucide="moon" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 class="font-extrabold text-sm text-white">Midnight Premium Mode</h3>
+                <p class="text-[0.7rem] text-slate-400 mt-1">Deep blue obsidian gradient borders, tailored for premium monitors, optimized dark-mode setup.</p>
+            </div>
+        </button>
+
+        <!-- 3. Image Theme Card -->
+        <button onclick="setSystemTheme('image')" class="card text-left space-y-3 border-2 border-transparent hover:border-emerald-500/50 focus:outline-none transition-all p-5 rounded-2xl cursor-pointer relative overflow-hidden bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=600');">
+            <div class="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-amber-400">
+                <i data-lucide="image" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 class="font-extrabold text-sm text-white">EWU Campus Wallpaper</h3>
+                <p class="text-[0.7rem] text-slate-300 mt-1">Blends glassmorphic panels with an aesthetic college campus ambient backdrop.</p>
+            </div>
+        </button>
+    </div>
+</div>
+
+<script>
+    function validateSectionForm(form) {
+        // Validate building name AB1, AB2, AB3, FUB, Main
+        const room = form.room.value.trim();
+        const validPrefixes = ['AB1', 'AB2', 'AB3', 'FUB', 'Main'];
+        let buildingOk = false;
+        for (let prefix of validPrefixes) {
+            if (room.startsWith(prefix)) {
+                buildingOk = true;
+                break;
+            }
+        }
+        if (!buildingOk) {
+            alert("Error: Room name must start with a valid building (AB1, AB2, AB3, FUB, or Main). Example: AB2-702");
+            return false;
+        }
+
+        // Validate Days: schedule must only contain days code S, M, T, W, R
+        const schedule = form.schedule.value.trim();
+        if (!schedule.includes(':')) {
+            alert("Error: Schedule format must be like 'MW:10.10-11.40' or 'S:8.00-11.00'.");
+            return false;
+        }
+        const daysPart = schedule.split(':')[0];
+        const validDays = ['S', 'M', 'T', 'W', 'R'];
+        for (let char of daysPart) {
+            if (!validDays.includes(char)) {
+                alert("Error: Schedule days must only contain valid codes (S, M, T, W, R). Example: MW:10.10-11.40");
+                return false;
+            }
+        }
+        return true;
+    }
+
+
+
+    // ── TAB SWITCHER ──────────────────────────────────────────
+    function switchTab(tabId) {
+        const tabEl = document.getElementById(`tab-${tabId}`);
+        if (!tabEl) return; 
+
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        tabEl.classList.remove('hidden');
+
+        // Remove active class from all nav items & sub items
+        document.querySelectorAll('.adm-nav-item, .adm-sub-item').forEach(el => el.classList.remove('active'));
+        
+        // Find matching triggers and mark them active
+        const mainBtn = document.getElementById(`nav-${tabId}`);
+        if (mainBtn) {
+            mainBtn.classList.add('active');
+        }
+        
+        // Match sub-items dynamically
+        document.querySelectorAll('.adm-sub-item').forEach(subBtn => {
+            const onclickAttr = subBtn.getAttribute('onclick') || '';
+            if (onclickAttr.includes(`switchTab('${tabId}')`)) {
+                subBtn.classList.add('active');
+                const submenu = subBtn.closest('.submenu');
+                if (submenu && typeof toggleMenu === 'function') {
+                    toggleMenu(submenu.id, true);
+                }
+            }
+        });
+
+        localStorage.setItem('admin_active_tab', tabId);
+    }
+
+    const savedTab = localStorage.getItem('admin_active_tab') || 'dashboard';
+    switchTab(savedTab);
+
+    // ── LIVE CLOCK ───────────────────────────────────────────
+    function updateClock() {
+        const el = document.getElementById('live-time');
+        if (!el) return;
+        const now = new Date();
+        el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── STATS COUNTER ANIMATION ──────────────────────────────
+    function animateCounters() {
+        const counters = document.querySelectorAll('.counter-animate');
+        counters.forEach(counter => {
+            const target = parseInt(counter.getAttribute('data-target'), 10) || 0;
+            if (target === 0) {
+                counter.textContent = '0';
+                return;
+            }
+            let current = 0;
+            const step = Math.ceil(target / 40);
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= target) {
+                    counter.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    counter.textContent = current;
+                }
+            }, 15);
+        });
+    }
+    setTimeout(animateCounters, 100);
+
+    // ── SIDEBAR TOGGLE / 3-DOT menu action ────────────────────
+    function toggleSidebarCollapse() {
+        if (typeof toggleSidebar === 'function') {
+            toggleSidebar();
+        }
+    }
+
+    // ── CHART.JS ENROLLMENT DISTRIBUTION ─────────────────────
+    const deptCounts = {};
+    {% for s in students %}
+        deptCounts["{{ s.department_id }}"] = (deptCounts["{{ s.department_id }}"] || 0) + 1;
+    {% endfor %}
+
+    const labels = Object.keys(deptCounts);
+    const dataValues = Object.values(deptCounts);
+
+    const ctx = document.getElementById('enrollmentChart');
+    if (ctx) {
+        // Create gradients
+        const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.45)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0.08)');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels.length ? labels : ['No Students'],
+                datasets: [{
+                    label: 'Enrolled Headcount',
+                    data: dataValues.length ? dataValues : [0],
+                    backgroundColor: gradient,
+                    borderColor: '#10b981',
+                    borderWidth: 1.5,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                    barThickness: 32
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 10 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 10 }, stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+
+    // Theme Switcher API
+    function setSystemTheme(theme) {
+        localStorage.setItem('theme', theme);
+        localStorage.setItem('ewu_theme', theme);
+        if (typeof applyTheme === 'function') {
+            applyTheme(theme);
+            showToast('success', `Theme switched to ${theme.toUpperCase()} successfully!`);
+        }
+    }
+
+    // ── ACADEMIC RECORDS & TRANSCRIPT ─────────────────────────
+    const MAJOR_CREDITS = {
+        'CSE': 140.0, 'EEE': 140.0, 'ICE': 140.0, 'CEN': 140.0,
+        'GEB': 140.0, 'PHR': 170.0, 'DSA': 130.0, 'MAT': 130.0,
+        'BBA': 130.0, 'ECO': 130.0, 'ENG': 130.0, 'LAW': 130.0,
+        'SOC': 130.0, 'INF': 130.0, 'PPHS': 130.0
+    };
+
+    const studentData = [
+        {% for std in students %}
+        {
+            id: {{ std.id | tojson }},
+            name: {{ std.name | tojson }},
+            department_id: {{ std.department_id | tojson }},
+            completed_credits: {{ std.completed_credits or 0.0 }},
+            cgpa: {{ std.cgpa or 0.0 }},
+            outstanding_balance: {{ std.outstanding_balance or 0 }},
+            financial_cleared: {{ 'true' if std.financial_cleared else 'false' }},
+            advising_status: {{ (std.advising_status or 'not_started') | tojson }},
+            profile_pic: {{ (std.profile_pic or '') | tojson }},
+            about: {{ (std.about or '') | tojson }}
+        },
+        {% endfor %}
+    ];
+
+    const gradeData = [
+        {% for gr in all_grades %}
+        {
+            id: {{ gr.id | tojson }},
+            student_id: {{ gr.student_id | tojson }},
+            course_code: {{ gr.section_id | tojson }},
+            grade_letter: {{ gr.grade_letter | tojson }},
+            grade_point: {{ gr.grade_point or 0.0 }},
+            semester_id: {{ gr.semester_id | tojson }}
+        },
+        {% endfor %}
+    ];
+
+    function renderAcademicStudents(list) {
+        const tbody = document.getElementById('academic-students-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-slate-500 py-6">No students found matching filters.</td></tr>`;
+            return;
+        }
+        
+        list.forEach(std => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-white/5 border-b border-white/5 transition-colors';
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-mono font-bold text-xs text-emerald-400 cursor-pointer hover:underline" onclick="showAcademicReport('${std.id}')">${std.id}</td>
+                <td class="px-6 py-4 text-xs font-semibold text-slate-200">${std.name}</td>
+                <td class="px-6 py-4 text-xs"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">${std.department_id}</span></td>
+                <td class="px-6 py-4 text-xs font-medium text-slate-300">${std.completed_credits.toFixed(1)} CR</td>
+                <td class="px-6 py-4 text-xs font-bold text-slate-200">${std.cgpa.toFixed(2)}</td>
+                <td class="px-6 py-4 text-xs">
+                    <button onclick="showAcademicReport('${std.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 font-bold transition-all flex items-center gap-1">
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i> View Report
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    }
+    
+    function filterAcademicRecords() {
+        const query = document.getElementById('student-search-input').value.toLowerCase().trim();
+        const dept = document.getElementById('student-dept-filter').value;
+        
+        const filtered = studentData.filter(std => {
+            const matchesQuery = std.id.toLowerCase().includes(query) || std.name.toLowerCase().includes(query);
+            const matchesDept = dept === 'all' || std.department_id === dept;
+            return matchesQuery && matchesDept;
+        });
+        
+        renderAcademicStudents(filtered);
+    }
+
+    function filterCourseRequests() {
+        const query = document.getElementById('request-search-input').value.toLowerCase().trim();
+        const type = document.getElementById('request-type-filter').value;
+        const status = document.getElementById('request-status-filter').value;
+        
+        document.querySelectorAll('.request-row').forEach(row => {
+            const studentId = row.getAttribute('data-student-id').toLowerCase();
+            const studentName = row.getAttribute('data-student-name').toLowerCase();
+            const courseId = row.getAttribute('data-course-id').toLowerCase();
+            const rowType = row.getAttribute('data-type');
+            const rowStatus = row.getAttribute('data-status');
+            
+            const matchesQuery = studentId.includes(query) || studentName.includes(query) || courseId.includes(query);
+            const matchesType = type === 'all' || rowType === type;
+            const matchesStatus = status === 'all' || rowStatus === status;
+            
+            if (matchesQuery && matchesType && matchesStatus) {
+                row.classList.remove('hidden');
+            } else {
+                row.classList.add('hidden');
+            }
+        });
+    }
+
+    function filterAdvisorAssignments() {
+        const query = document.getElementById('advisor-student-search').value.toLowerCase().trim();
+        document.querySelectorAll('.advisor-assignment-row').forEach(row => {
+            const studentId = row.getAttribute('data-student-id').toLowerCase();
+            const studentName = row.getAttribute('data-student-name').toLowerCase();
+            if (studentId.includes(query) || studentName.includes(query)) {
+                row.classList.remove('hidden');
+            } else {
+                row.classList.add('hidden');
+            }
+        });
+    }
+
+    function showAcademicReport(studentId) {
+        const student = studentData.find(s => s.id === studentId);
+        if (!student) return;
+        
+        // Populate hidden input for grade update form
+        const formStudentIdInput = document.getElementById('modal-form-student-id');
+        if (formStudentIdInput) {
+            formStudentIdInput.value = studentId;
+        }
+        
+        const studentGrades = gradeData.filter(g => g.student_id === studentId);
+        
+        // Populate profile pic
+        const picContainer = document.getElementById('modal-student-pic-container');
+        if (picContainer) {
+            if (student.profile_pic) {
+                picContainer.innerHTML = `<img src="/static/uploads/${student.profile_pic}" class="w-full h-full object-cover">`;
+            } else {
+                picContainer.innerHTML = `<i data-lucide="user" class="w-10 h-10 text-slate-500"></i>`;
+            }
+        }
+
+        // Populate about bio
+        const aboutContainer = document.getElementById('modal-student-about-container');
+        const aboutText = document.getElementById('modal-student-about');
+        if (aboutContainer && aboutText) {
+            if (student.about && student.about.trim() !== '') {
+                aboutText.textContent = student.about;
+                aboutContainer.classList.remove('hidden');
+            } else {
+                aboutContainer.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('modal-student-name').textContent = student.name;
+        document.getElementById('modal-student-id').textContent = student.id;
+        document.getElementById('modal-student-dept').textContent = student.department_id;
+        document.getElementById('modal-student-cgpa').textContent = student.cgpa.toFixed(3);
+        
+        document.getElementById('modal-credits-completed').textContent = student.completed_credits.toFixed(1) + ' CR';
+        
+        const reqCredits = MAJOR_CREDITS[student.department_id] || 140.0;
+        const remCredits = Math.max(0.0, reqCredits - student.completed_credits);
+        document.getElementById('modal-credits-remaining').textContent = remCredits.toFixed(1) + ' CR';
+        
+        const progressPct = Math.min(100, Math.round((student.completed_credits / reqCredits) * 100));
+        const progressBar = document.getElementById('modal-progress-bar');
+        progressBar.style.width = progressPct + '%';
+        progressBar.className = `h-full rounded-full bg-gradient-to-r ${progressPct >= 80 ? 'from-emerald-500 to-teal-400' : progressPct >= 50 ? 'from-indigo-500 to-blue-400' : 'from-amber-500 to-orange-400'}`;
+        
+        const finStatus = document.getElementById('modal-financial-status');
+        if (student.financial_cleared && student.outstanding_balance === 0) {
+            finStatus.textContent = 'Cleared';
+            finStatus.className = 'badge badge-success text-[0.6rem]';
+        } else {
+            finStatus.textContent = 'Hold';
+            finStatus.className = 'badge badge-danger text-[0.6rem]';
+        }
+        
+        document.getElementById('modal-outstanding-balance').textContent = student.outstanding_balance.toLocaleString() + ' Tk';
+        
+        const advStatus = document.getElementById('modal-advising-status');
+        const formattedStatus = student.advising_status ? student.advising_status.replace('_', ' ').toUpperCase() : 'NOT STARTED';
+        advStatus.textContent = formattedStatus;
+        if (student.advising_status === 'approved') {
+            advStatus.className = 'badge badge-success text-[0.6rem]';
+        } else if (student.advising_status === 'planned') {
+            advStatus.className = 'badge badge-warning text-[0.6rem]';
+        } else {
+            advStatus.className = 'badge badge-neutral text-[0.6rem]';
+        }
+        
+        // Populate grades table
+        const tbody = document.getElementById('modal-grades-tbody');
+        tbody.innerHTML = '';
+        if (studentGrades.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-slate-500 py-4 text-xs">No grade entries found.</td></tr>`;
+        } else {
+            studentGrades.forEach(g => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-white/5';
+                
+                let badgeClass = 'badge-danger';
+                if (g.grade_point >= 3.0) badgeClass = 'badge-success';
+                else if (g.grade_point >= 2.0) badgeClass = 'badge-info';
+                
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5 text-xs font-semibold text-slate-300">${g.course_code}</td>
+                    <td class="px-4 py-2.5 text-xs font-mono text-slate-400">${g.semester_id}</td>
+                    <td class="px-4 py-2.5 text-xs"><span class="badge ${badgeClass} text-[0.6rem] font-bold">${g.grade_letter}</span></td>
+                    <td class="px-4 py-2.5 text-xs font-bold text-slate-300">${g.grade_point.toFixed(2)}</td>
+                    <td class="px-4 py-2.5 text-xs text-right">
+                        <form action="/admin/delete-grade/${g.id}" method="POST" onsubmit="return confirm('Remove this grade record?')" class="inline">
+                            <button type="submit" class="text-red-400 hover:text-red-600 bg-none border-none p-1 rounded hover:bg-white/5 transition-all" title="Delete Grade">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </form>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+        
+        // Show modal with animation
+        const modal = document.getElementById('academic-report-modal');
+        const content = document.getElementById('report-modal-content');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+        }, 50);
+    }
+    
+    function closeAcademicReportModal() {
+        const modal = document.getElementById('academic-report-modal');
+        const content = document.getElementById('report-modal-content');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }, 300);
+    }
+    function previewImage(input, previewId) {
+        const preview = document.getElementById(previewId);
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+            }
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            preview.innerHTML = `<i data-lucide="user" class="w-8 h-8"></i>`;
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        }
+    }
+
+    function updateCharCount(textarea, countId) {
+        const counter = document.getElementById(countId);
+        if (counter) {
+            counter.textContent = textarea.value.length;
+        }
+    }
+    
+    function initReportsCharts() {
+        const deptCgpaCanvas = document.getElementById('dept-cgpa-chart');
+        const advisingCanvas = document.getElementById('advising-status-chart');
+        if (!deptCgpaCanvas || !advisingCanvas) return;
+
+        // Process student data
+        const deptTotals = {};
+        const advisingCounts = { approved: 0, planned: 0, not_started: 0 };
+
+        studentData.forEach(std => {
+            // Department CGPA
+            const dept = std.department_id || 'Unknown';
+            if (!deptTotals[dept]) {
+                deptTotals[dept] = { sum: 0, count: 0 };
+            }
+            deptTotals[dept].sum += std.cgpa || 0;
+            deptTotals[dept].count += 1;
+
+            // Advising Status
+            const status = std.advising_status || 'not_started';
+            if (status === 'approved') {
+                advisingCounts.approved += 1;
+            } else if (status === 'planned') {
+                advisingCounts.planned += 1;
+            } else {
+                advisingCounts.not_started += 1;
+            }
+        });
+
+        // Compute averages
+        const deptLabels = [];
+        const deptAverages = [];
+        for (const [dept, data] of Object.entries(deptTotals)) {
+            deptLabels.push(dept);
+            deptAverages.push(data.count > 0 ? (data.sum / data.count).toFixed(3) : 0);
+        }
+
+        // Render Bar Chart
+        new Chart(deptCgpaCanvas, {
+            type: 'bar',
+            data: {
+                labels: deptLabels,
+                datasets: [{
+                    label: 'Avg CGPA',
+                    data: deptAverages,
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    borderColor: '#10b981',
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 4.0,
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        ticks: { color: '#94a3b8', font: { size: 10 } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { size: 10 } }
+                    }
+                }
+            }
+        });
+
+        // Render Doughnut Chart
+        new Chart(advisingCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Approved', 'Planned', 'Not Started'],
+                datasets: [{
+                    data: [advisingCounts.approved, advisingCounts.planned, advisingCounts.not_started],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.25)',
+                        'rgba(99, 102, 241, 0.25)',
+                        'rgba(239, 68, 68, 0.25)'
+                    ],
+                    borderColor: [
+                        '#10b981',
+                        '#6366f1',
+                        '#ef4444'
+                    ],
+                    borderWidth: 1.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#94a3b8', font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Initial call on DOMContentLoaded for academic records and charts
+    document.addEventListener('DOMContentLoaded', () => {
+        renderAcademicStudents(studentData);
+        initReportsCharts();
+    });
+</script>
+{% endblock %}

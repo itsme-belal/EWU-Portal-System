@@ -1,0 +1,28 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Verify Code{% endblock %}
+{% block icon %}key{% endblock %}
+{% block header_title %}Enter Reset Code{% endblock %}
+{% block header_sub %}Please enter the 6-digit password reset code generated for {{ email }}{% endblock %}
+
+{% block form_content %}
+<form action="/forgot-password/verify" method="POST" class="space-y-5">
+    <input type="hidden" name="email" value="{{ email }}">
+    <div>
+        <label for="code" class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">6-Digit Reset Code</label>
+        <input type="text" name="code" id="code" required maxLength="6" placeholder="123456"
+               class="w-full text-center tracking-widest font-mono text-lg py-3 bg-white/50 dark:bg-[#0f172a]/50 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-[#0f172a] dark:text-[#f1f5f9]">
+    </div>
+
+    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/20 active:transform active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+        <span>Verify Code</span>
+        <i data-lucide="check" class="w-4 h-4"></i>
+    </button>
+</form>
+
+<div class="mt-6 pt-4 border-t border-[#e2e8f0]/40 dark:border-[#1e293b]/40 text-center">
+    <a href="/forgot-password" class="text-xs font-bold text-blue-600 hover:underline flex items-center justify-center gap-1">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+    </a>
+</div>
+{% endblock %}

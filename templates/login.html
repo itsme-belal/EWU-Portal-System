@@ -1,0 +1,51 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Sign In{% endblock %}
+{% block icon %}graduation-cap{% endblock %}
+{% block header_title %}East West University{% endblock %}
+{% block header_sub %}Digital Advising & Academic Portal{% endblock %}
+
+{% block form_content %}
+<form action="/login" method="POST" class="space-y-5">
+    <div>
+        <label for="email" class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">University Email</label>
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#94a3b8]">
+                <i data-lucide="mail" class="w-4.5 h-4.5"></i>
+            </span>
+            <input type="email" name="email" id="email" required placeholder="e.g. 2023-2-60-010@std.ewubd.edu"
+                   class="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-[#0f172a]/50 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-[#0f172a] dark:text-[#f1f5f9]">
+        </div>
+    </div>
+
+    <div>
+        <label for="password" class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Password</label>
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#94a3b8]">
+                <i data-lucide="lock" class="w-4.5 h-4.5"></i>
+            </span>
+            <input type="password" name="password" id="password" required placeholder="••••••••"
+                   class="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-[#0f172a]/50 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-[#0f172a] dark:text-[#f1f5f9]">
+        </div>
+    </div>
+
+    <div class="flex items-center justify-between text-xs">
+        <label class="flex items-center gap-2 text-[#475569] dark:text-[#94a3b8] cursor-pointer">
+            <input type="checkbox" class="w-4 h-4 rounded border-[#e2e8f0] dark:border-[#1e293b]">
+            <span>Remember me</span>
+        </label>
+        <a href="/forgot-password" class="text-blue-600 hover:underline">Forgot password?</a>
+    </div>
+
+    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/20 active:transform active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+        <span>Sign In to Portal</span>
+        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+    </button>
+</form>
+
+<div class="mt-6 pt-4 border-t border-[#e2e8f0]/40 dark:border-[#1e293b]/40 text-center">
+    <a href="/activate" class="text-xs font-bold text-blue-600 hover:underline flex items-center justify-center gap-1">
+        <i data-lucide="shield-check" class="w-4 h-4"></i> First time here? Activate Account
+    </a>
+</div>
+{% endblock %}

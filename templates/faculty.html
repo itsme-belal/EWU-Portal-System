@@ -1,0 +1,1137 @@
+{% extends "base.html" %}
+
+{% block title %}EWU Faculty Portal{% endblock %}
+
+{% block sidebar_nav %}
+<div class="space-y-1">
+    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Dashboard</span>
+    </button>
+</div>
+
+<!-- My Courses Group -->
+<div class="mt-3 pt-2 border-t border-slate-800">
+    <button onclick="switchTab('my-courses'); toggleMenu('submenu-courses', true)" id="nav-my-courses-parent" class="nav-item flex items-center justify-between w-full">
+        <div class="flex items-center gap-2">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+            <span>My Courses</span>
+        </div>
+        <i data-lucide="chevron-right" id="submenu-courses-arrow" class="nav-arrow"></i>
+    </button>
+    <div id="submenu-courses" class="submenu">
+        <button onclick="switchTab('attendance')" id="nav-attendance" class="nav-sub-item">Attendance</button>
+        <button onclick="switchTab('grading')" id="nav-grading" class="nav-sub-item">Grade Management</button>
+    </div>
+</div>
+
+<!-- Advising Group -->
+<div class="mt-3 pt-2 border-t border-slate-800">
+    <button onclick="switchTab('advisees'); toggleMenu('submenu-advising', true)" id="nav-advising-parent" class="nav-item flex items-center justify-between w-full">
+        <div class="flex items-center gap-2">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            <span>Advising</span>
+        </div>
+        <i data-lucide="chevron-right" id="submenu-advising-arrow" class="nav-arrow"></i>
+    </button>
+    <div id="submenu-advising" class="submenu">
+        <button onclick="switchTab('advisees')" id="nav-advisees" class="nav-sub-item">My Advisee Students</button>
+        <button onclick="switchTab('advisee-advising')" id="nav-advisee-advising" class="nav-sub-item">Student Advising</button>
+        <button onclick="switchTab('requests')" id="nav-requests" class="nav-sub-item relative">
+            Course Requests
+            {% set pending_count = requests | selectattr('status', 'equalto', 'pending_advisor') | list | length %}
+            {% if pending_count > 0 %}
+            <span class="ml-1 bg-red-500 text-slate-800 dark:text-white rounded-full text-[0.55rem] font-bold px-1.5 py-0.5">{{ pending_count }}</span>
+            {% endif %}
+        </button>
+        <button onclick="switchTab('section-change')" id="nav-section-change" class="nav-sub-item">Section Change</button>
+    </div>
+</div>
+
+<div class="mt-3 pt-2 border-t border-slate-800 space-y-1">
+    <button onclick="switchTab('schedule')" id="nav-schedule" class="nav-item">
+        <i data-lucide="calendar" class="w-4 h-4"></i>
+        <span>Class Schedule</span>
+    </button>
+    <button onclick="switchTab('settings')" id="nav-settings" class="nav-item">
+        <i data-lucide="user" class="w-4 h-4"></i>
+        <span>Profile</span>
+    </button>
+</div>
+
+<!-- Theme Selector -->
+<div class="mt-3 pt-2 border-t border-slate-800">
+    <button onclick="toggleMenu('submenu-theme')" class="nav-item flex items-center justify-between w-full">
+        <div class="flex items-center gap-2">
+            <i data-lucide="palette" style="color:#ec4899;"></i>
+            <span>Theme</span>
+        </div>
+        <i data-lucide="chevron-right" id="submenu-theme-arrow" class="nav-arrow"></i>
+    </button>
+    <div id="submenu-theme" class="submenu">
+        <button onclick="applyTheme('light')" id="theme-btn-light" class="nav-sub-item theme-selector-btn">Light</button>
+        <button onclick="applyTheme('cosmic')" id="theme-btn-cosmic" class="nav-sub-item theme-selector-btn">Cosmic</button>
+        <button onclick="applyTheme('image')" id="theme-btn-image" class="nav-sub-item theme-selector-btn">University Theme</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- DASHBOARD TAB -->
+<div id="tab-dashboard" class="tab-content space-y-6">
+    <div class="stitch-card faculty-hero flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+        <div>
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-blue-100">Faculty Portal</p>
+            <h1 class="text-3xl font-extrabold tracking-tight mt-2">{{ faculty.name }}</h1>
+            <p class="text-sm text-blue-100 mt-1">{{ dept.name if dept else faculty.department_id }} | {{ active_semester }}</p>
+        </div>
+        <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
+            <div class="rounded-lg bg-white/10 border border-slate-200 dark:border-white/10 p-3 text-center">
+                <p class="text-2xl font-black">{{ advisees | length }}</p>
+                <p class="text-[0.65rem] uppercase tracking-wider text-blue-100">Advisees</p>
+            </div>
+            <div class="rounded-lg bg-white/10 border border-slate-200 dark:border-white/10 p-3 text-center">
+                <p class="text-2xl font-black">{{ sections | length }}</p>
+                <p class="text-[0.65rem] uppercase tracking-wider text-blue-100">Sections</p>
+            </div>
+            <div class="rounded-lg bg-white/10 border border-slate-200 dark:border-white/10 p-3 text-center">
+                <p class="text-2xl font-black">{{ pending_count }}</p>
+                <p class="text-[0.65rem] uppercase tracking-wider text-blue-100">Requests</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="stitch-card metric-card flex flex-col justify-between">
+            <span class="text-[0.65rem] font-bold text-[#94a3b8] uppercase tracking-wider">My Advisees</span>
+            <p class="text-2xl font-extrabold text-violet-500 mt-2">{{ advisees | length }} Students</p>
+        </div>
+        <div class="stitch-card metric-card flex flex-col justify-between">
+            <span class="text-[0.65rem] font-bold text-[#94a3b8] uppercase tracking-wider">Active Sections</span>
+            <p class="text-2xl font-extrabold text-blue-500 mt-2">{{ sections | length }} Sections</p>
+        </div>
+        <div class="stitch-card metric-card flex flex-col justify-between">
+            <span class="text-[0.65rem] font-bold text-[#94a3b8] uppercase tracking-wider">Pending Requests</span>
+            <p class="text-2xl font-extrabold text-amber-500 mt-2">
+                {{ pending_count }} Pending
+            </p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button onclick="switchTab('advisees')" class="quick-card text-left">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <p class="font-bold text-sm">Advisee Students</p>
+                    <p class="text-xs text-[#94a3b8]">Review academic and financial status.</p>
+                </div>
+            </div>
+        </button>
+        <button onclick="switchTab('requests')" class="quick-card text-left">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <p class="font-bold text-sm">Course Requests</p>
+                    <p class="text-xs text-[#94a3b8]">Approve or reject student requests.</p>
+                </div>
+            </div>
+        </button>
+        <button onclick="switchTab('schedule')" class="quick-card text-left">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                    <i data-lucide="calendar-days" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <p class="font-bold text-sm">Class Schedule</p>
+                    <p class="text-xs text-[#94a3b8]">View weekly teaching assignments.</p>
+                </div>
+            </div>
+        </button>
+    </div>
+
+    <!-- Offered Sections -->
+    <div class="stitch-card space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Offered Sections</h3>
+        {% if sections %}
+        <div class="table-container">
+            <table class="stitch-table">
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Section</th>
+                        <th>Schedule</th>
+                        <th>Room</th>
+                        <th>Enrolled</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sec in sections %}
+                    <tr>
+                        <td class="font-bold text-blue-600 dark:text-blue-400">{{ sec.course_code }}</td>
+                        <td>Section {{ sec.section_number }}</td>
+                        <td>{{ sec.schedule }}</td>
+                        <td>{{ sec.room }}</td>
+                        <td>{{ sec.enrolled_count }} / {{ sec.capacity }}</td>
+                        <td>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="openSectionTool('attendance', '{{ sec.id }}')" class="px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-[0.65rem] font-bold transition-colors">Attendance</button>
+                                <button onclick="openSectionTool('grading', '{{ sec.id }}')" class="px-2 py-1 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-[0.65rem] font-bold transition-colors">Grades</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-[#94a3b8] py-4">No teaching assignments this semester.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i data-lucide="calendar-x" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p class="font-bold text-sm text-[#0f172a] dark:text-[#f1f5f9]">No teaching assignments yet</p>
+                <p class="text-xs text-[#94a3b8] mt-1">Admin has not assigned any {{ active_semester }} sections to this faculty account.</p>
+            </div>
+            <button onclick="switchTab('advisees')" class="stitch-btn btn-secondary rounded-lg text-xs py-2 px-4">View Advisees</button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MY ADVISEES TAB -->
+<div id="tab-advisees" class="tab-content hidden space-y-6">
+    <div class="flex justify-between items-center flex-wrap gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-4">
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tight">Assigned Student Advisees</h1>
+            <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Oversee and monitor academic performance, dues, and advising completion</p>
+        </div>
+        
+        <!-- Search bar -->
+        <div class="relative w-full max-w-xs">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-[#94a3b8]">
+                <i data-lucide="search" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="advisee-search" oninput="filterAdviseeList()" placeholder="Search by name or ID..." 
+                   class="w-full pl-9 pr-4 py-2 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+        </div>
+    </div>
+
+    <!-- Advisee list roster -->
+    <div class="stitch-card space-y-4">
+        <div class="table-container">
+            <table class="stitch-table">
+                <thead>
+                    <tr>
+                        <th>Student Details</th>
+                        <th>Credits Completed</th>
+                        <th>Remaining Credits</th>
+                        <th>CGPA</th>
+                        <th>Financial Status</th>
+                        <th>Pre-Advising Status</th>
+                    </tr>
+                </thead>
+                <tbody id="advisees-list-tbody">
+                    {% for std in advisees %}
+                    <tr class="advisee-row" data-name="{{ std.name | lower }}" data-id="{{ std.id | lower }}">
+                        <td>
+                            <p class="font-bold text-xs">{{ std.name }}</p>
+                            <p class="text-[0.65rem] text-[#94a3b8] font-mono">{{ std.id }}</p>
+                        </td>
+                        <td>{{ std.completed_credits }} CR</td>
+                        <td>{{ [0.0, (dept_major_credits.get(std.department_id, 140.0) - std.completed_credits)] | max }} CR</td>
+                        <td class="font-mono font-bold">{{ "%.2f"|format(std.cgpa) }}</td>
+                        <td>
+                            {% if std.outstanding_balance > 0 %}
+                            <span class="stitch-badge badge-hold text-[0.62rem]">BDT {{ std.outstanding_balance }} Dues</span>
+                            {% else %}
+                            <span class="stitch-badge badge-active text-[0.62rem]">Cleared</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if std.id in plan_student_ids %}
+                            <span class="stitch-badge badge-active text-[0.62rem]">Completed</span>
+                            {% else %}
+                            <span class="stitch-badge bg-slate-500/15 text-slate-400 text-[0.62rem]">Missed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-[#94a3b8] py-4">No student advisees registered.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ADVISEE ADVISING TAB (Advisor Override Registration) -->
+<div id="tab-advisee-advising" class="tab-content hidden space-y-6">
+    <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Manual Registration Override</h1>
+        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Bypass pre-advising and manually schedule course sections directly for student accounts</p>
+    </div>
+
+    <div class="stitch-card space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Override Control Panel</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-4">
+            <div>
+                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Target Advisee:</label>
+                <select id="advisee-selector" class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input" onchange="selectAdviseeForRegistration(this.value)">
+                    <option value="">-- Choose Advisee --</option>
+                    {% for adv in advisees %}
+                    <option value="{{ adv.id }}">{{ adv.name }} ({{ adv.id }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end">
+                <div id="advisee-status-indicator" class="text-xs font-semibold text-[#64748b]">
+                    Status: Select student advisee
+                </div>
+            </div>
+        </div>
+
+        <div id="advisee-registration-interface" class="hidden space-y-4">
+            <h4 class="text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider">All Offered Sections ({{ active_semester }})</h4>
+            <div class="table-wrap max-h-[400px] overflow-y-auto">
+                <table class="stitch-table">
+                    <thead>
+                        <tr>
+                            <th>Enroll Status</th>
+                            <th>Course</th>
+                            <th>Section</th>
+                            <th>Schedule</th>
+                            <th>Room</th>
+                            <th>Enrolled Ratio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sec in all_sections %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" id="override-checkbox-{{ sec.id }}" value="{{ sec.id }}" class="advisee-reg-checkbox w-4 h-4 text-blue-600 rounded">
+                            </td>
+                            <td class="font-bold text-xs">{{ sec.course_code }}</td>
+                            <td>
+                                Section {{ sec.section_number }}
+                                {% if sec.is_lab %}
+                                <span class="stitch-badge bg-amber-500/15 text-amber-500 text-[0.6rem] ml-1">Lab</span>
+                                {% else %}
+                                <span class="stitch-badge bg-blue-500/15 text-blue-500 text-[0.6rem] ml-1">Theory</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ sec.schedule }}</td>
+                            <td>{{ sec.room }}</td>
+                            <td class="font-mono">{{ sec.enrolled_count }} / {{ sec.capacity }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <form id="advisee-override-form" action="{{ url_for('register_advisee_override') }}" method="POST" onsubmit="submitAdviseeOverride(event)">
+                <input type="hidden" name="student_id" id="override-student-id">
+                <input type="hidden" name="section_ids" id="override-section-ids">
+                <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-gradient-to-r from-blue-600 to-indigo-600">
+                    <i data-lucide="check" class="w-4 h-4"></i> Complete Registration Override
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ATTENDANCE TAB -->
+<div id="tab-attendance" class="tab-content hidden space-y-6">
+    <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Class Attendance</h1>
+        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Select a teaching section, mark the roster, and save attendance for the selected date.</p>
+    </div>
+
+    <div class="stitch-card space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Section</label>
+                <select id="attendance-section-select" class="p-2 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs stitch-input" onchange="loadAttendanceRoster(this.value)">
+                    <option value="">-- Choose Section --</option>
+                    {% for sec in sections %}
+                    <option value="{{ sec.id }}">{{ sec.course_code }} - Sec {{ sec.section_number }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Attendance Date</label>
+                <input type="date" id="attendance-date" class="stitch-input text-xs" onchange="reloadAttendanceIfReady()">
+            </div>
+            <div id="attendance-summary" class="text-xs text-[#64748b] dark:text-[#94a3b8]">
+                Choose a section to load registered students.
+            </div>
+        </div>
+
+        <div id="attendance-roster" class="hidden space-y-4">
+            <div class="table-container">
+                <table class="stitch-table">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-tbody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <button onclick="saveAttendance()" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4">
+                <i data-lucide="check" class="w-4 h-4"></i> Save Attendance
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- GRADING TAB -->
+<div id="tab-grading" class="tab-content hidden space-y-6">
+    <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Marks & Grading Entry</h1>
+        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Load a section roster, calculate letters from marks, and publish grades to student transcripts.</p>
+    </div>
+
+    <div class="stitch-card space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Section</label>
+                <select id="grading-section-select" class="p-2 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs stitch-input" onchange="loadGradingRoster(this.value)">
+                    <option value="">-- Choose Section --</option>
+                    {% for sec in sections %}
+                    <option value="{{ sec.id }}">{{ sec.course_code }} - Sec {{ sec.section_number }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div id="grading-summary" class="md:col-span-2 text-xs text-[#64748b] dark:text-[#94a3b8]">
+                Choose a section to load registered students.
+            </div>
+        </div>
+
+        <div id="grading-roster" class="hidden space-y-4">
+            <div class="table-container">
+                <table class="stitch-table">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Marks (0-100)</th>
+                            <th>Letter Grade</th>
+                        </tr>
+                    </thead>
+                    <tbody id="grading-tbody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <button onclick="saveGrades()" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4">
+                <i data-lucide="save" class="w-4 h-4"></i> Publish Grade Roster
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- REQUESTS TAB -->
+<div id="tab-requests" class="tab-content hidden space-y-6">
+    <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Pending Override Requests</h1>
+        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Review and resolve student override requests. Mandatory justifications required.</p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4">
+        {% for req in requests %}
+        <div class="stitch-card p-5 space-y-3 border border-slate-200 dark:border-slate-800">
+            <div class="flex justify-between items-start flex-wrap gap-2 pb-2 border-b border-[#e2e8f0] dark:border-[#1e293b]">
+                <div>
+                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                        Waiver Request Details
+                    </h3>
+                    <p class="text-xs text-[#94a3b8] mt-0.5">
+                        Student ID: <strong>{{ req.student_id }}</strong> ({{ req.student_name }})
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <span class="stitch-badge bg-amber-500/15 text-amber-500 text-[0.62rem] uppercase">{{ req.type.replace('_', ' ') }}</span>
+                    <span class="stitch-badge bg-slate-500/15 text-slate-400 text-[0.62rem]">{{ req.status }}</span>
+                </div>
+            </div>
+
+            <div class="text-xs space-y-2 py-1 text-slate-700 dark:text-slate-300">
+                <p>Course Code Requested: <strong class="text-blue-600 dark:text-blue-400">{{ req.course_id }}</strong></p>
+                {% if req.section_id %}
+                <p>Target Section ID: <strong>{{ req.section_id }}</strong></p>
+                {% endif %}
+                <p class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border italic border-[#e2e8f0] dark:border-[#1e293b]">
+                    "{{ req.comments }}"
+                </p>
+            </div>
+
+            <!-- Resolve Form with Mandatory Advisor Note -->
+            {% if req.status == 'pending_advisor' %}
+            <form action="{{ url_for('resolve_request', req_id=req.id) }}" method="POST" class="space-y-3 pt-2">
+                <div>
+                    <label class="block text-[0.68rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Advisor Comments / Reasons (Mandatory)</label>
+                    <input type="text" name="advisor_note" placeholder="Write justification for decision..." required
+                           class="w-full px-3 py-2 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs outline-none focus:border-blue-500">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="submit" name="status" value="rejected" class="text-xs px-3.5 py-2 font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors">
+                        Reject Request
+                    </button>
+                    <button type="submit" name="status" value="approved" class="text-xs px-3.5 py-2 font-bold bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors">
+                        Approve Request
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-[#e2e8f0] dark:border-[#1e293b] text-xs text-blue-600">
+                Advisor justification: <strong>"{{ req.advisor_note or 'No note provided' }}"</strong>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="text-xs text-[#94a3b8] text-center py-8 bg-white dark:bg-[#0a0f1e] border border-dashed rounded-xl border-slate-200 dark:border-slate-800">
+            No pending advising or waiver requests.
+        </p>
+        {% endfor %}
+    </div>
+</div>
+<!-- MY COURSES TAB -->
+<div id="tab-my-courses" class="tab-content hidden space-y-6">
+    <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">My Teaching Assignments</h1>
+        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Review assigned courses, student capacities, attendance, and grading tools for {{ active_semester }}.</p>
+    </div>
+
+    <div class="stitch-card space-y-4">
+        {% if sections %}
+        <div class="table-container">
+            <table class="stitch-table">
+                <thead>
+                    <tr>
+                        <th>Course Code</th>
+                        <th>Course Title</th>
+                        <th>Section</th>
+                        <th>Schedule</th>
+                        <th>Room</th>
+                        <th>Enrollment</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sec in sections %}
+                    <tr>
+                        <td class="font-bold text-xs text-blue-600 dark:text-blue-400">{{ sec.course_code }}</td>
+                        <td class="text-xs">{{ sec.course_title }}</td>
+                        <td class="text-xs font-semibold">
+                            {{ sec.section_number }}
+                            {% if sec.is_lab %}
+                            <span class="stitch-badge bg-amber-500/15 text-amber-500 text-[0.58rem] ml-1">Lab</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-xs font-mono">{{ sec.schedule }}</td>
+                        <td class="text-xs">{{ sec.room }}</td>
+                        <td class="text-xs">{{ sec.enrolled_count }} / {{ sec.capacity }}</td>
+                        <td>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="openSectionTool('attendance', '{{ sec.id }}')" class="px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-[0.65rem] font-bold transition-colors">Attendance</button>
+                                <button onclick="openSectionTool('grading', '{{ sec.id }}')" class="px-2 py-1 rounded bg-violet-100 hover:bg-violet-200 text-violet-700 text-[0.65rem] font-bold transition-colors">Grading</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-[#94a3b8] py-4">No course assignments found for {{ active_semester }}.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- CLASS SCHEDULE TAB -->
+<div id="tab-schedule" class="tab-content hidden space-y-6">
+    <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Instructor Class Schedule</h1>
+        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Weekly view of lecturing hours and counselling sections</p>
+    </div>
+
+    <div class="stitch-card space-y-4">
+        <div class="table-container">
+            <table class="stitch-table">
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Time</th>
+                        <th>Course</th>
+                        <th>Section</th>
+                        <th>Room</th>
+                        <th>Enrollment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in schedule_items %}
+                    <tr>
+                        <td class="font-bold text-xs">{{ item.day }}</td>
+                        <td class="font-mono text-xs">{{ item.time }}</td>
+                        <td class="schedule-pill p-2 text-xs rounded">
+                            <strong class="block text-blue-600 dark:text-blue-400">{{ item.section.course_code }}</strong>
+                            <span class="text-[0.65rem] text-[#94a3b8] block">{{ item.section.course_title }}</span>
+                        </td>
+                        <td class="text-xs">Section {{ item.section.section_number }}</td>
+                        <td class="text-xs">{{ item.section.room }}</td>
+                        <td class="text-xs">{{ item.section.enrolled_count }} / {{ item.section.capacity }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-[#94a3b8] py-4">No scheduled classes for {{ active_semester }}.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p class="font-bold text-sm text-[#0f172a] dark:text-[#f1f5f9]">No courses assigned</p>
+                <p class="text-xs text-[#94a3b8] mt-1">Attendance and grade tools become available as soon as a section is assigned to you.</p>
+            </div>
+            <button onclick="switchTab('schedule')" class="stitch-btn btn-secondary rounded-lg text-xs py-2 px-4">Open Schedule</button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- SECTION CHANGE TAB -->
+<div id="tab-section-change" class="tab-content hidden space-y-6">
+    <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Manual Section Swap</h1>
+        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Advisor override to switch student sections instantly bypassing advising timeline restrictions</p>
+    </div>
+
+    <div class="stitch-card max-w-xl space-y-4">
+        <form action="{{ url_for('faculty_swap_section') }}" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Student</label>
+                <select name="student_id" id="swap-student-id" required onchange="loadSectionSwapOptions(this.value)" class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
+                    <option value="">-- Choose Advisee --</option>
+                    {% for std in advisees %}
+                    <option value="{{ std.id }}">{{ std.id }} - {{ std.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Current Registered Section</label>
+                    <select name="current_section_id" id="swap-current-section" required onchange="populateSwapTargets()" class="stitch-input text-xs">
+                        <option value="">Select a student first</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">New Target Section</label>
+                    <select name="wanted_section_id" id="swap-target-section" required class="stitch-input text-xs">
+                        <option value="">Select current section first</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-amber-500 border-amber-500 hover:bg-amber-600">
+                Execute Swap
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- SETTINGS TAB -->
+<div id="tab-settings" class="tab-content hidden space-y-6">
+    <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Faculty Profile</h1>
+        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Review your faculty details and manage security credentials.</p>
+    </div>
+
+    <div class="stitch-card max-w-xl space-y-5">
+        <div class="flex flex-col sm:flex-row gap-5 sm:items-center">
+            <div class="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/20 overflow-hidden flex items-center justify-center text-violet-500 font-black text-3xl flex-shrink-0">
+                {% if faculty.profile_pic %}
+                <img src="{{ url_for('static', filename='uploads/' ~ faculty.profile_pic) }}" alt="{{ faculty.name }} profile picture" class="w-full h-full object-cover">
+                {% else %}
+                {{ faculty.name[:1] | upper }}
+                {% endif %}
+            </div>
+            <div class="min-w-0">
+                <p class="text-xs font-bold uppercase tracking-wider text-[#94a3b8]">Faculty Profile</p>
+                <h2 class="text-xl font-extrabold truncate">{{ faculty.name }}</h2>
+                <p class="text-sm text-[#64748b] dark:text-[#94a3b8]">{{ faculty.id }} | {{ dept.name if dept else faculty.department_id }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-[#e2e8f0] dark:border-[#1e293b]">
+                <span class="block text-[#94a3b8] font-bold uppercase tracking-wider">Assigned Advisees</span>
+                <strong class="block mt-1">{{ advisees | length }} students</strong>
+            </div>
+            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-[#e2e8f0] dark:border-[#1e293b]">
+                <span class="block text-[#94a3b8] font-bold uppercase tracking-wider">Teaching Sections</span>
+                <strong class="block mt-1">{{ sections | length }} sections</strong>
+            </div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-[#e2e8f0] dark:border-[#1e293b]">
+            <span class="block text-xs text-[#94a3b8] font-bold uppercase tracking-wider">About / Professional Bio</span>
+            <p class="mt-2 text-sm text-[#475569] dark:text-[#cbd5e1] leading-relaxed">{{ faculty.about if faculty.about else 'No biography has been added yet.' }}</p>
+        </div>
+    </div>
+
+    <div class="stitch-card max-w-xl space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Change Password</h3>
+        <form action="{{ url_for('change_password') }}" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">New Password</label>
+                <input type="password" name="new_password" required minlength="6" placeholder="New password" class="stitch-input text-xs">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Confirm New Password</label>
+                <input type="password" name="confirm_password" required minlength="6" placeholder="Confirm password" class="stitch-input text-xs">
+            </div>
+            <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4">
+                Update Password
+            </button>
+        </form>
+    </div>
+</div>
+<script>
+    const advisees = {{ advisees_json | safe }};
+    const facultySections = {{ sections_json | safe }};
+    const allSections = {{ all_sections_json | safe }};
+    const gradeLetters = ['', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F'];
+    let currentAttendanceSectionId = '';
+    let currentGradingSectionId = '';
+    let currentSwapSections = [];
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[char]));
+    }
+
+    function switchTab(tabId) {
+        const target = document.getElementById(`tab-${tabId}`);
+        if (!target) {
+            tabId = 'dashboard';
+        }
+
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+        document.querySelectorAll('.nav-item, .nav-sub-item').forEach(el => el.classList.remove('active'));
+
+        const mainBtn = document.getElementById(`nav-${tabId}`);
+        if (mainBtn) {
+            mainBtn.classList.add('active');
+        }
+
+        // Highlight matching sub-items dynamically
+        document.querySelectorAll('.nav-sub-item').forEach(subBtn => {
+            const onclickAttr = subBtn.getAttribute('onclick') || '';
+            if (onclickAttr.includes(`switchTab('${tabId}')`)) {
+                subBtn.classList.add('active');
+                const submenu = subBtn.closest('.submenu');
+                if (submenu && typeof toggleMenu === 'function') {
+                    toggleMenu(submenu.id, true);
+                }
+                
+                // Highlight corresponding parent item
+                if (submenu) {
+                    const parentId = submenu.id.replace('submenu-', 'nav-') + '-parent';
+                    document.getElementById(parentId)?.classList.add('active');
+                }
+            }
+        });
+
+        localStorage.setItem('faculty_active_tab', tabId);
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function todayLocalIso() {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${now.getFullYear()}-${month}-${day}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const attendanceDate = document.getElementById('attendance-date');
+        if (attendanceDate && !attendanceDate.value) {
+            attendanceDate.value = todayLocalIso();
+        }
+
+        const savedTab = localStorage.getItem('faculty_active_tab') || 'dashboard';
+        switchTab(savedTab);
+    });
+
+    function openSectionTool(tool, sectionId) {
+        switchTab(tool);
+        if (tool === 'attendance') {
+            const select = document.getElementById('attendance-section-select');
+            select.value = sectionId;
+            loadAttendanceRoster(sectionId);
+        } else if (tool === 'grading') {
+            const select = document.getElementById('grading-section-select');
+            select.value = sectionId;
+            loadGradingRoster(sectionId);
+        }
+    }
+
+    function filterAdviseeList() {
+        const query = document.getElementById('advisee-search').value.toLowerCase().trim();
+        document.querySelectorAll('.advisee-row').forEach(row => {
+            const name = row.getAttribute('data-name');
+            const id = row.getAttribute('data-id');
+            row.classList.toggle('hidden', !(name.includes(query) || id.includes(query)));
+        });
+    }
+
+    function selectAdviseeForRegistration(stdId) {
+        const interfaceDiv = document.getElementById('advisee-registration-interface');
+        const statusSpan = document.getElementById('advisee-status-indicator');
+        document.getElementById('override-student-id').value = stdId;
+
+        if (!stdId) {
+            interfaceDiv.classList.add('hidden');
+            statusSpan.textContent = 'Status: Select student advisee';
+            return;
+        }
+
+        const selectedAdvisee = advisees.find(a => a.id === stdId);
+        if (!selectedAdvisee) {
+            showToast('error', 'Advisee record was not found.');
+            return;
+        }
+
+        statusSpan.innerHTML = selectedAdvisee.has_plan
+            ? 'Status: <span class="text-green-600 font-bold">Pre-Advising Completed</span>'
+            : 'Status: <span class="text-amber-600 font-bold">Pre-Advising Missed (Advisor Override Mode)</span>';
+
+        document.querySelectorAll('.advisee-reg-checkbox').forEach(cb => cb.checked = false);
+
+        fetch(`/faculty/get-student-sections/${encodeURIComponent(stdId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    showToast('error', data.message || 'Could not load current registrations.');
+                    return;
+                }
+                data.sections.forEach(secId => {
+                    const cb = document.getElementById(`override-checkbox-${secId}`);
+                    if (cb) cb.checked = true;
+                });
+            })
+            .catch(() => showToast('error', 'Could not connect to the roster service.'));
+
+        interfaceDiv.classList.remove('hidden');
+    }
+
+    function submitAdviseeOverride() {
+        const sectionIds = Array.from(document.querySelectorAll('.advisee-reg-checkbox:checked')).map(c => c.value);
+        document.getElementById('override-section-ids').value = JSON.stringify(sectionIds);
+        return true;
+    }
+
+    function reloadAttendanceIfReady() {
+        const sectionId = document.getElementById('attendance-section-select').value;
+        if (sectionId) loadAttendanceRoster(sectionId);
+    }
+
+    function loadAttendanceRoster(secId) {
+        currentAttendanceSectionId = secId;
+        const roster = document.getElementById('attendance-roster');
+        const tbody = document.getElementById('attendance-tbody');
+        const summary = document.getElementById('attendance-summary');
+        const date = document.getElementById('attendance-date').value || todayLocalIso();
+
+        if (!secId) {
+            roster.classList.add('hidden');
+            summary.textContent = 'Choose a section to load registered students.';
+            return;
+        }
+
+        summary.textContent = 'Loading roster...';
+        fetch(`/faculty/section-roster/${encodeURIComponent(secId)}?date=${encodeURIComponent(date)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    showToast('error', data.message || 'Could not load attendance roster.');
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                if (data.students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-[#94a3b8] py-4">No students are registered in this section yet.</td></tr>';
+                } else {
+                    data.students.forEach(std => {
+                        const status = std.attendance_status || 'present';
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="font-mono text-xs">${escapeHtml(std.id)}</td>
+                            <td class="font-medium">${escapeHtml(std.name)}</td>
+                            <td>
+                                <select data-student-id="${escapeHtml(std.id)}" class="attendance-status stitch-input text-xs max-w-[160px]">
+                                    <option value="present" ${status === 'present' ? 'selected' : ''}>Present</option>
+                                    <option value="absent" ${status === 'absent' ? 'selected' : ''}>Absent</option>
+                                    <option value="late" ${status === 'late' ? 'selected' : ''}>Late</option>
+                                    <option value="excused" ${status === 'excused' ? 'selected' : ''}>Excused</option>
+                                </select>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                summary.textContent = `${data.section.course_code} Sec ${data.section.section_number} | ${data.students.length} registered students`;
+                roster.classList.remove('hidden');
+            })
+            .catch(() => showToast('error', 'Could not connect to the attendance service.'));
+    }
+
+    function saveAttendance() {
+        if (!currentAttendanceSectionId) {
+            showToast('error', 'Select a section first.');
+            return;
+        }
+
+        const records = Array.from(document.querySelectorAll('.attendance-status')).map(select => ({
+            student_id: select.dataset.studentId,
+            status: select.value
+        }));
+
+        fetch('/faculty/save-attendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                section_id: currentAttendanceSectionId,
+                date: document.getElementById('attendance-date').value || todayLocalIso(),
+                records
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('success', data.message);
+                } else {
+                    showToast('error', data.message || 'Attendance was not saved.');
+                }
+            })
+            .catch(() => showToast('error', 'Could not save attendance.'));
+    }
+
+    function loadGradingRoster(secId) {
+        currentGradingSectionId = secId;
+        const roster = document.getElementById('grading-roster');
+        const tbody = document.getElementById('grading-tbody');
+        const summary = document.getElementById('grading-summary');
+
+        if (!secId) {
+            roster.classList.add('hidden');
+            summary.textContent = 'Choose a section to load registered students.';
+            return;
+        }
+
+        summary.textContent = 'Loading roster...';
+        fetch(`/faculty/section-roster/${encodeURIComponent(secId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    showToast('error', data.message || 'Could not load grading roster.');
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                if (data.students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-[#94a3b8] py-4">No students are registered in this section yet.</td></tr>';
+                } else {
+                    data.students.forEach(std => {
+                        const options = gradeLetters.map(letter => {
+                            const label = letter || 'Not set';
+                            return `<option value="${letter}" ${std.grade_letter === letter ? 'selected' : ''}>${label}</option>`;
+                        }).join('');
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="font-mono text-xs">${escapeHtml(std.id)}</td>
+                            <td class="font-medium">${escapeHtml(std.name)}</td>
+                            <td>
+                                <input type="number" min="0" max="100" placeholder="e.g. 85" oninput="calculateLetterGrade(this)"
+                                    class="marks-input w-[110px] p-2 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs font-mono">
+                            </td>
+                            <td>
+                                <select data-student-id="${escapeHtml(std.id)}" class="grade-letter stitch-input text-xs max-w-[140px]">
+                                    ${options}
+                                </select>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                summary.textContent = `${data.section.course_code} Sec ${data.section.section_number} | ${data.students.length} registered students`;
+                roster.classList.remove('hidden');
+            })
+            .catch(() => showToast('error', 'Could not connect to the grading service.'));
+    }
+
+    function gradeFromScore(score) {
+        if (score >= 90) return 'A';
+        if (score >= 85) return 'A-';
+        if (score >= 80) return 'B+';
+        if (score >= 75) return 'B';
+        if (score >= 70) return 'B-';
+        if (score >= 65) return 'C+';
+        if (score >= 60) return 'C';
+        if (score >= 57) return 'C-';
+        if (score >= 55) return 'D+';
+        if (score >= 50) return 'D';
+        return 'F';
+    }
+
+    function calculateLetterGrade(input) {
+        const score = parseFloat(input.value);
+        const row = input.closest('tr');
+        const select = row.querySelector('.grade-letter');
+        if (Number.isNaN(score)) {
+            select.value = '';
+            return;
+        }
+        select.value = gradeFromScore(Math.max(0, Math.min(100, score)));
+    }
+
+    function saveGrades() {
+        if (!currentGradingSectionId) {
+            showToast('error', 'Select a section first.');
+            return;
+        }
+
+        const grades = Array.from(document.querySelectorAll('.grade-letter'))
+            .filter(select => select.value)
+            .map(select => ({
+                student_id: select.dataset.studentId,
+                grade_letter: select.value
+            }));
+
+        if (grades.length === 0) {
+            showToast('error', 'Enter at least one grade before publishing.');
+            return;
+        }
+
+        fetch('/faculty/save-grades', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                section_id: currentGradingSectionId,
+                grades
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('success', data.message);
+                    loadGradingRoster(currentGradingSectionId);
+                } else {
+                    showToast('error', data.message || 'Grades were not saved.');
+                }
+            })
+            .catch(() => showToast('error', 'Could not save grades.'));
+    }
+
+    function loadSectionSwapOptions(stdId) {
+        const currentSelect = document.getElementById('swap-current-section');
+        const targetSelect = document.getElementById('swap-target-section');
+        currentSwapSections = [];
+        currentSelect.innerHTML = '<option value="">Loading sections...</option>';
+        targetSelect.innerHTML = '<option value="">Select current section first</option>';
+
+        if (!stdId) {
+            currentSelect.innerHTML = '<option value="">Select a student first</option>';
+            return;
+        }
+
+        fetch(`/faculty/get-student-sections/${encodeURIComponent(stdId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    showToast('error', data.message || 'Could not load student sections.');
+                    currentSelect.innerHTML = '<option value="">No sections available</option>';
+                    return;
+                }
+
+                currentSwapSections = data.section_details || [];
+                if (currentSwapSections.length === 0) {
+                    currentSelect.innerHTML = '<option value="">No registered sections</option>';
+                    return;
+                }
+
+                currentSelect.innerHTML = '<option value="">-- Choose Current Section --</option>';
+                currentSwapSections.forEach(sec => {
+                    const option = document.createElement('option');
+                    option.value = sec.id;
+                    option.textContent = `${sec.course_code} Sec ${sec.section_number} (${sec.schedule})`;
+                    currentSelect.appendChild(option);
+                });
+            })
+            .catch(() => {
+                currentSelect.innerHTML = '<option value="">No sections available</option>';
+                showToast('error', 'Could not connect to the section service.');
+            });
+    }
+
+    function populateSwapTargets() {
+        const currentId = document.getElementById('swap-current-section').value;
+        const targetSelect = document.getElementById('swap-target-section');
+        const currentSection = allSections.find(sec => sec.id === currentId);
+
+        targetSelect.innerHTML = '<option value="">-- Choose Target Section --</option>';
+        if (!currentSection) return;
+
+        const baseCode = currentSection.course_code.replace(' Lab', '');
+        const targets = allSections.filter(sec =>
+            sec.id !== currentId &&
+            sec.course_code.replace(' Lab', '') === baseCode
+        );
+
+        if (targets.length === 0) {
+            targetSelect.innerHTML = '<option value="">No alternate sections available</option>';
+            return;
+        }
+
+        targets.forEach(sec => {
+            const option = document.createElement('option');
+            option.value = sec.id;
+            option.textContent = `${sec.course_code} Sec ${sec.section_number} (${sec.schedule}) | ${sec.room} | ${sec.enrolled_count}/${sec.capacity}`;
+            if (sec.enrolled_count >= sec.capacity) option.disabled = true;
+            targetSelect.appendChild(option);
+        });
+    }
+</script>
+{% endblock %}
