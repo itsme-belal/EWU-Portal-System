@@ -3,27 +3,17 @@
 {% block title %}EWU Student Portal{% endblock %}
 
 {% block sidebar_nav %}
-<button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item active">
+<a href="/student" id="nav-dashboard" class="nav-item {% if active_tab == 'dashboard' %}active{% endif %}">
     <i data-lucide="layout-dashboard" class="w-4.5 h-4.5"></i>
     <span>Dashboard</span>
-</button>
+</a>
 
 <!-- Advising Group -->
-<div class="mt-3 pt-2 border-t border-slate-800">
-    <button onclick="toggleMenu('submenu-advising')" class="nav-item flex items-center justify-between w-full">
-        <div class="flex items-center gap-2">
-            <i data-lucide="calendar-days"></i>
-            <span>Advising</span>
-        </div>
-        <i data-lucide="chevron-right" id="submenu-advising-arrow" class="nav-arrow"></i>
-    </button>
-    <div id="submenu-advising" class="submenu">
-        <button onclick="switchTab('advising'); enterPreAdvisingPhase()" id="nav-pre-advising" class="nav-sub-item">Pre-Advising</button>
-        <button onclick="switchTab('advising'); enterFinalAdvisingPhase()" id="nav-final-advising" class="nav-sub-item">Final Advising</button>
-        <button onclick="switchTab('requests'); showRequestTab('add-course')" id="nav-add-request" class="nav-sub-item">Add Course Request</button>
-        <button onclick="switchTab('requests'); showRequestTab('section-change')" id="nav-section-change" class="nav-sub-item">Change Section Request</button>
-        <button onclick="switchTab('requests'); showRequestTab('seat-request')" id="nav-seat-request" class="nav-sub-item">Seat Increase Request</button>
-    </div>
+<div class="mt-1">
+    <a href="/advising" id="nav-advising" class="nav-item {% if active_tab == 'advising' %}active{% endif %}">
+        <i data-lucide="calendar-days" class="w-4.5 h-4.5"></i>
+        <span>Advising</span>
+    </a>
 </div>
 
 <div class="mt-1">
@@ -252,140 +242,430 @@
         </button>
     </div>
 
-    <!-- Active advising schedules notice -->
-    <div class="stitch-card space-y-3 bg-blue-50/20 dark:bg-blue-950/10 border-blue-500/20">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-[#94a3b8] flex items-center gap-1.5">
-            <i data-lucide="clock" class="w-4 h-4 text-blue-600"></i> Staggered Timeline Gates
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[0.7rem] text-[#475569] dark:text-[#94a3b8]">
-            <div class="space-y-1">
-                <p class="font-bold border-b border-[#e2e8f0] dark:border-[#1e293b] pb-1 text-slate-700 dark:text-slate-300">Pre-Advising Brackets</p>
-                {% for w in all_windows if w.type == 'pre' %}
-                <div class="flex justify-between {{ 'font-bold text-blue-600' if student.completed_credits >= w.credit_min and student.completed_credits <= w.credit_max }}">
-                    <span>{{ w.credit_min }}-{{ w.credit_max }} CR</span>
-                    <span>Starts: {{ w.start_date_time.replace('T', ' ') }}</span>
+    <!-- ADVISING HUB -->
+    <div id="advising-hub" class="space-y-6">
+        <!-- Active advising schedules notice -->
+        <div class="stitch-card space-y-4 bg-slate-900/40 border-slate-800">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e2e8f0]/10 pb-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-[#94a3b8] flex items-center gap-1.5">
+                    <i data-lucide="clock" class="w-4 h-4 text-violet-500"></i> Staggered Timeline Gates
+                </h3>
+                <div class="text-[0.68rem] text-slate-400">
+                    Your Completed Credits: <span class="font-extrabold text-violet-400">{{ student.completed_credits }} Credits</span>
                 </div>
-                {% endfor %}
             </div>
-            <div class="space-y-1">
-                <p class="font-bold border-b border-[#e2e8f0] dark:border-[#1e293b] pb-1 text-slate-700 dark:text-slate-300">Final Advising Brackets</p>
-                {% for w in all_windows if w.type == 'final' %}
-                <div class="flex justify-between {{ 'font-bold text-violet-600' if student.completed_credits >= w.credit_min and student.completed_credits <= w.credit_max }}">
-                    <span>{{ w.credit_min }}-{{ w.credit_max }} CR</span>
-                    <span>Starts: {{ w.start_date_time.replace('T', ' ') }}</span>
+
+            <!-- Student's Personal Clock Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Pre-Advising Time Slot -->
+                <div class="p-3 bg-slate-950/30 rounded-xl border border-slate-800/80 space-y-2 flex flex-col justify-between">
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[0.62rem] uppercase font-bold text-slate-400 tracking-wider">1. Pre-Advising Slot</span>
+                            <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold {{ pre_status_class }}">{{ pre_status_label }}</span>
+                        </div>
+                        <div class="text-xs font-bold text-slate-200">
+                            {% if student_pre_start != 'Not Set Yet' %}
+                            {{ student_pre_start }}
+                            {% else %}
+                            <span class="text-slate-500 italic">Not Set Yet</span>
+                            {% endif %}
+                        </div>
+                        {% if student_pre_end != 'Not Set Yet' %}
+                        <p class="text-[0.62rem] text-slate-400">Ends: {{ student_pre_end }}</p>
+                        {% endif %}
+                    </div>
                 </div>
-                {% endfor %}
+
+                <!-- Final Advising Time Slot -->
+                <div class="p-3 bg-slate-950/30 rounded-xl border border-slate-800/80 space-y-2 flex flex-col justify-between">
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[0.62rem] uppercase font-bold text-slate-400 tracking-wider">2. Final Advising Slot</span>
+                            <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold {{ final_status_class }}">{{ final_status_label }}</span>
+                        </div>
+                        <div class="text-xs font-bold text-slate-200">
+                            {% if student_final_start != 'Not Set Yet' %}
+                            {{ student_final_start }}
+                            {% else %}
+                            <span class="text-slate-500 italic">Not Set Yet</span>
+                            {% endif %}
+                        </div>
+                        {% if student_final_end != 'Not Set Yet' %}
+                        <p class="text-[0.62rem] text-slate-400">Ends: {{ student_final_end }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Advisor Request Time Slot -->
+                <div class="p-3 bg-slate-950/30 rounded-xl border border-slate-800/80 space-y-2 flex flex-col justify-between">
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[0.62rem] uppercase font-bold text-slate-400 tracking-wider">3. Request Submissions</span>
+                            <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold {{ request_status_class }}">{{ request_status_label }}</span>
+                        </div>
+                        <div class="text-xs font-bold text-slate-200">
+                            {% if request_phase_active %}
+                            Open after Final Advising
+                            {% else %}
+                            <span class="text-slate-500 italic">Not Open Yet</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-[0.62rem] text-slate-400">Subject to Advisor review & approval</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expandable Global Brackets -->
+            <div class="pt-2">
+                <details class="group text-[0.68rem] text-slate-400">
+                    <summary class="cursor-pointer hover:text-violet-400 font-bold transition-colors select-none flex items-center gap-1">
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 group-open:rotate-180 transition-transform"></i>
+                        View All Credit Bracket Windows
+                    </summary>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 pt-3 border-t border-slate-800/50">
+                        <div class="space-y-1">
+                            <p class="font-bold pb-1 text-slate-300">Pre-Advising Brackets</p>
+                            {% for w in all_windows if w.type == 'pre' %}
+                            <div class="flex justify-between py-1 border-b border-slate-800/30 {{ 'font-black text-blue-400' if student.completed_credits >= w.credit_min and student.completed_credits <= w.credit_max }}">
+                                <span>{{ w.credit_min }}-{{ w.credit_max }} Completed Credits</span>
+                                <span>Starts: {{ w.start_date_time.replace('T', ' ') }}</span>
+                            </div>
+                            {% else %}
+                            <p class="text-slate-500 italic text-[0.65rem]">No pre-advising brackets set by admin.</p>
+                            {% endfor %}
+                        </div>
+                        <div class="space-y-1">
+                            <p class="font-bold pb-1 text-slate-300">Final Advising Brackets</p>
+                            {% for w in all_windows if w.type == 'final' %}
+                            <div class="flex justify-between py-1 border-b border-slate-800/30 {{ 'font-black text-violet-400' if student.completed_credits >= w.credit_min and student.completed_credits <= w.credit_max }}">
+                                <span>{{ w.credit_min }}-{{ w.credit_max }} Completed Credits</span>
+                                <span>Starts: {{ w.start_date_time.replace('T', ' ') }}</span>
+                            </div>
+                            {% else %}
+                            <p class="text-slate-500 italic text-[0.65rem]">No final advising brackets set by admin.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- Visual Roadmap / Progress Bar -->
+        <div class="relative flex items-center justify-between w-full max-w-4xl mx-auto mb-10 mt-6 px-4">
+            <!-- Progress Line Background -->
+            <div class="absolute left-0 right-0 top-1/2 h-[3px] bg-slate-300 dark:bg-slate-800 -translate-y-1/2 z-0"></div>
+            
+            <!-- Progress Line Active -->
+            <div class="absolute left-0 top-1/2 h-[3px] bg-emerald-500 -translate-y-1/2 z-0 transition-all duration-500"
+                 style="width: {% if request_card_active %}100%{% elif plan_course_ids | length > 0 %}50%{% else %}0%{% endif %};"></div>
+
+            <!-- Step 1: Pre-Advising -->
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 {% if plan_course_ids | length > 0 %}bg-emerald-500 border-emerald-500 text-white{% elif pre_advising_active %}bg-blue-500 border-blue-500 text-white{% else %}bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400{% endif %} shadow-lg">
+                    {% if plan_course_ids | length > 0 %}
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    {% else %}
+                    <span class="text-xs font-bold">1</span>
+                    {% endif %}
+                </div>
+                <span class="text-[0.7rem] font-bold mt-2 uppercase tracking-wider text-slate-800 dark:text-slate-200">1. Pre-Advising</span>
+                <span class="text-[0.62rem] {% if plan_course_ids | length > 0 %}text-emerald-500{% elif pre_advising_active %}text-blue-500{% else %}text-slate-400{% endif %} font-medium">
+                    {% if plan_course_ids | length > 0 %}Complete{% elif pre_advising_active %}Active{% else %}Closed{% endif %}
+                </span>
+            </div>
+
+            <!-- Step 2: Final Advising -->
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 {% if plan_course_ids | length > 0 %}{% if final_advising_active %}bg-violet-600 border-violet-600 text-white animate-pulse{% else %}bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-500{% endif %}{% else %}bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400{% endif %} shadow-lg">
+                    {% if not plan_course_ids | length > 0 %}
+                    <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                    {% else %}
+                    <span class="text-xs font-bold">2</span>
+                    {% endif %}
+                </div>
+                <span class="text-[0.7rem] font-bold mt-2 uppercase tracking-wider {% if plan_course_ids | length > 0 %}text-slate-800 dark:text-slate-200{% else %}text-slate-400{% endif %}">2. Final Advising</span>
+                <span class="text-[0.62rem] {% if not plan_course_ids | length > 0 %}text-slate-400{% elif final_advising_active %}text-violet-500{% else %}text-amber-500{% endif %} font-medium">
+                    {% if not plan_course_ids | length > 0 %}Locked{% elif final_advising_active %}Active{% else %}Closed{% endif %}
+                </span>
+            </div>
+
+            <!-- Step 3: Request -->
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 {% if request_card_active %}bg-indigo-600 border-indigo-600 text-white{% else %}bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400{% endif %} shadow-lg">
+                    {% if not request_card_active %}
+                    <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                    {% else %}
+                    <span class="text-xs font-bold">3</span>
+                    {% endif %}
+                </div>
+                <span class="text-[0.7rem] font-bold mt-2 uppercase tracking-wider {% if request_card_active %}text-slate-800 dark:text-slate-200{% else %}text-slate-400{% endif %}">3. Request</span>
+                <span class="text-[0.62rem] {% if request_card_active %}text-indigo-500{% else %}text-slate-400{% endif %} font-medium">
+                    {% if request_card_active %}Active{% else %}Locked{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Grid of 3 Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Card 1: Pre-Advising -->
+            <div class="stitch-card flex flex-col justify-between p-6 border-2 transition-all duration-300 relative group
+                 {% if plan_course_ids | length > 0 %}border-emerald-500/30 bg-emerald-500/5
+                 {% elif pre_advising_active %}border-blue-500/30 bg-blue-50/5 hover:border-blue-500/60
+                 {% else %}border-slate-200 dark:border-slate-800 bg-slate-500/5 opacity-60 cursor-not-allowed{% endif %}">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-start">
+                        <div class="w-12 h-12 rounded-2xl {% if plan_course_ids | length > 0 %}bg-emerald-500/10 text-emerald-500{% elif pre_advising_active %}bg-blue-500/10 text-blue-500{% else %}bg-slate-500/10 text-slate-400{% endif %} flex items-center justify-center">
+                            <i data-lucide="calendar-days" class="w-6 h-6"></i>
+                        </div>
+                        <span class="stitch-badge {% if plan_course_ids | length > 0 %}bg-emerald-500/10 text-emerald-400{% elif pre_advising_active %}bg-blue-500/10 text-blue-400{% else %}bg-slate-500/10 text-slate-400{% endif %} text-[0.65rem] font-bold uppercase">
+                            {% if plan_course_ids | length > 0 %}Completed{% elif pre_advising_active %}Active{% else %}Locked{% endif %}
+                        </span>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-lg">Pre-Advising</h3>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                            Build your initial semester plan by selecting your preferred course catalog list and secure credit slots.
+                        </p>
+                    </div>
+                </div>
+                <div class="pt-6">
+                    {% if plan_course_ids | length > 0 %}
+                    <button onclick="enterPreAdvisingPhase()" class="w-full py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-black transition-all">
+                        VIEW COMPLETED PRE-ADVISING INFO
+                    </button>
+                    {% elif pre_advising_active %}
+                    <button onclick="enterPreAdvisingPhase()" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-all shadow-lg shadow-blue-500/20">
+                        START PRE-ADVISING
+                    </button>
+                    {% else %}
+                    <button disabled class="w-full py-2.5 rounded-xl bg-slate-800 text-slate-500 text-xs font-black cursor-not-allowed">
+                        LOCKED: PRE-ADVISING CLOSED
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Card 2: Final Advising -->
+            <div class="stitch-card flex flex-col justify-between p-6 border-2 transition-all duration-300 relative group
+                 {% if not plan_course_ids | length > 0 %}border-slate-200 dark:border-slate-800 opacity-60 cursor-not-allowed
+                 {% elif final_advising_active %}border-violet-500/30 bg-violet-500/5 hover:border-violet-500/60
+                 {% else %}border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60{% endif %}">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-start">
+                        <div class="w-12 h-12 rounded-2xl {% if not plan_course_ids | length > 0 %}bg-slate-100 dark:bg-slate-900 text-slate-400{% elif final_advising_active %}bg-violet-500/10 text-violet-500{% else %}bg-amber-500/10 text-amber-500{% endif %} flex items-center justify-center">
+                            <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                        </div>
+                        <span class="stitch-badge {% if not plan_course_ids | length > 0 %}bg-slate-100 dark:bg-slate-900 text-slate-400{% elif final_advising_active %}bg-violet-500/10 text-violet-400{% else %}bg-amber-500/10 text-amber-400{% endif %} text-[0.65rem] font-bold uppercase">
+                            {% if not plan_course_ids | length > 0 %}Locked{% elif final_advising_active %}Active{% else %}Closed{% endif %}
+                        </span>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-lg">Final Advising</h3>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                            Enroll in live class sections, select theory+labs schedules, and reserve seats in real time.
+                        </p>
+                    </div>
+                </div>
+                <div class="pt-6">
+                    {% if not plan_course_ids | length > 0 %}
+                    <button disabled class="w-full py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 text-xs font-black cursor-not-allowed">
+                        LOCKED: COMPLETE PRE-ADVISING
+                    </button>
+                    {% elif final_advising_active %}
+                    <button onclick="enterFinalAdvisingPhase()" class="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black transition-all shadow-lg shadow-violet-500/20">
+                        START FINAL ADVISING
+                    </button>
+                    {% else %}
+                    <button onclick="enterFinalAdvisingPhase()" class="w-full py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-black transition-all">
+                        VIEW REGISTERED COURSES (READ ONLY)
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Card 3: Request -->
+            <div class="stitch-card flex flex-col justify-between p-6 border-2 transition-all duration-300 relative group
+                 {% if not request_card_active %}border-slate-200 dark:border-slate-800 opacity-60
+                 {% else %}border-indigo-500/30 bg-indigo-500/5 hover:border-indigo-500/60{% endif %}">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-start">
+                        <div class="w-12 h-12 rounded-2xl {% if not request_card_active %}bg-slate-100 dark:bg-slate-900 text-slate-400{% else %}bg-indigo-500/10 text-indigo-500{% endif %} flex items-center justify-center">
+                            <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+                        </div>
+                        <span class="stitch-badge {% if not request_card_active %}bg-slate-100 dark:bg-slate-900 text-slate-400{% else %}bg-indigo-500/10 text-indigo-400{% endif %} text-[0.65rem] font-bold uppercase">
+                            {% if not request_card_active %}Locked{% else %}Active{% endif %}
+                        </span>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-lg">Request</h3>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                            Submit override requests for course additions, drops, section swaps, or seat limit increases.
+                        </p>
+                    </div>
+                    
+                    <!-- Inner options -->
+                    <div class="pt-4 border-t border-slate-200 dark:border-slate-800/60 space-y-2">
+                        {% if not request_card_active %}
+                        <p class="text-[0.68rem] text-slate-500 italic text-center py-2">
+                            LOCKED: Requires Pre-Advising complete, official advising over, and Admin Option ON.
+                        </p>
+                        <!-- Disabled Buttons visual state -->
+                        <div class="grid grid-cols-2 gap-2 opacity-50 pointer-events-none">
+                            <button class="py-1.5 bg-slate-100 dark:bg-slate-900 text-[0.68rem] font-bold text-slate-400 rounded-lg text-center" disabled>Add Course</button>
+                            <button class="py-1.5 bg-slate-100 dark:bg-slate-900 text-[0.68rem] font-bold text-slate-400 rounded-lg text-center" disabled>Drop Course</button>
+                            <button class="py-1.5 bg-slate-100 dark:bg-slate-900 text-[0.68rem] font-bold text-slate-400 rounded-lg text-center" disabled>Section Change</button>
+                            <button class="py-1.5 bg-slate-100 dark:bg-slate-900 text-[0.68rem] font-bold text-slate-400 rounded-lg text-center" disabled>Seat Request</button>
+                        </div>
+                        {% if requests | length > 0 %}
+                        <button onclick="switchTab('requests')" class="w-full py-1.5 mt-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-[0.68rem] font-bold text-slate-500 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+                            <i data-lucide="history" class="w-3.5 h-3.5"></i> View Request History
+                        </button>
+                        {% endif %}
+                        {% else %}
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="switchTab('requests'); showRequestTab('add-course')" class="py-1.5 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-[0.68rem] font-bold text-indigo-400 rounded-lg text-center transition-all">
+                                Add Course
+                            </button>
+                            <button onclick="switchTab('requests'); showRequestTab('drop-course')" class="py-1.5 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-[0.68rem] font-bold text-indigo-400 rounded-lg text-center transition-all">
+                                Drop Course
+                            </button>
+                            <button onclick="switchTab('requests'); showRequestTab('change-section')" class="py-1.5 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-[0.68rem] font-bold text-indigo-400 rounded-lg text-center transition-all">
+                                Section Change
+                            </button>
+                            <button onclick="switchTab('requests'); showRequestTab('seat-request')" class="py-1.5 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-[0.68rem] font-bold text-indigo-400 rounded-lg text-center transition-all">
+                                Seat Request
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- PRE ADVISING VIEW CONTENT -->
-    <div id="pre-advising-workspace" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-4">
-            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Pre-Advising Course Catalog</h3>
-            <div class="space-y-2">
-                {% for course in courses %}
-                {% set selected = course.code in plan_course_ids %}
-                <div class="stitch-card flex justify-between items-center py-3 px-4 border transition-all duration-150 {{ 'border-blue-500 bg-blue-50/10' if selected else 'border-[#e2e8f0] dark:border-[#1e293b]' }}">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600">
-                            <i data-lucide="book-open" class="w-4 h-4"></i>
-                        </div>
-                        <div>
-                            <p class="font-bold text-xs">{{ course.code }}: {{ course.title }}</p>
-                            <p class="text-[0.65rem] text-[#94a3b8]">Credits: {{ course.credits }} {% if course.prerequisites %}• Prereq: {{ course.prerequisites | join(', ') }}{% endif %}</p>
-                        </div>
-                    </div>
-                    <button onclick="togglePlanCourse('{{ course.code }}')" class="px-3.5 py-1 text-xs font-bold rounded-lg border transition-colors {{ 'bg-blue-600 border-blue-600 text-white' if selected else 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800' }}">
-                        {{ 'Selected' if selected else 'Select' }}
-                    </button>
-                </div>
-                {% endfor %}
-            </div>
+    <div id="pre-advising-workspace" class="hidden space-y-4">
+        <div class="flex items-center gap-2">
+            <button onclick="showAdvisingHub()" class="flex items-center gap-1.5 text-xs text-blue-500 font-bold hover:underline transition-all">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back to Advising Hub
+            </button>
         </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Pre-Advising Course Catalog</h3>
+                <div class="space-y-2">
+                    {% for course in courses %}
+                    {% set selected = course.code in plan_course_ids %}
+                    <div id="course-card-{{ course.code }}" class="stitch-card flex justify-between items-center py-3 px-4 border transition-all duration-150 {{ 'border-blue-500 bg-blue-50/10' if selected else 'border-[#e2e8f0] dark:border-[#1e293b]' }}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600">
+                                <i data-lucide="book-open" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-xs">{{ course.code }}: {{ course.title }}</p>
+                                <p class="text-[0.65rem] text-[#94a3b8]">Credits: {{ course.credits }} {% if course.prerequisites %}• Prereq: {{ course.prerequisites | join(', ') }}{% endif %}</p>
+                            </div>
+                        </div>
+                        <button id="course-btn-{{ course.code }}" {% if not pre_advising_active %}disabled{% endif %} onclick="togglePlanCourse('{{ course.code }}')" class="px-3.5 py-1 text-xs font-bold rounded-lg border transition-colors {{ 'bg-blue-600 border-blue-600 text-white' if selected else 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800' }} {% if not pre_advising_active %}opacity-50 cursor-not-allowed{% endif %}">
+                            {{ 'Selected' if selected else 'Select' }}
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
 
-        <div class="stitch-card space-y-4 h-fit">
-            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Pre-Advising Checkout</h3>
-            <div class="space-y-2 text-xs">
-                <div class="flex justify-between">
-                    <span>Planned Courses:</span>
-                    <span class="font-bold" id="plan-count">{{ plan_course_ids | length }} / 6</span>
+            <div class="stitch-card space-y-4 h-fit">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Pre-Advising Checkout</h3>
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span>Planned Courses:</span>
+                        <span class="font-bold" id="plan-count">{{ plan_course_ids | length }} / 6</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Planned Credits:</span>
+                        <span class="font-bold" id="plan-credits">{{ plan_credits }} / 21 CR</span>
+                    </div>
                 </div>
-                <div class="flex justify-between">
-                    <span>Planned Credits:</span>
-                    <span class="font-bold" id="plan-credits">{{ plan_credits }} / 21 CR</span>
+                <div class="bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 p-3 rounded-xl text-[0.68rem] text-blue-600 dark:text-blue-400 space-y-1">
+                    <p class="font-bold">Requirements:</p>
+                    <p>• Select minimum 6.0 credits (2 courses).</p>
+                    <p>• Select maximum 21.0 credits (6 courses).</p>
                 </div>
+                <form action="{{ url_for('save_plan') }}" method="POST" id="plan-form">
+                    <input type="hidden" name="course_ids" id="plan-input" value='{{ plan_course_ids | tojson }}'>
+                    <button type="submit" class="w-full btn-primary justify-center py-2 rounded-lg text-xs" {% if not pre_advising_active or plan_course_ids|length > 6 or plan_credits > 21 or plan_course_ids|length < 2 or plan_credits < 6 %}disabled{% endif %}>
+                        Save Pre-Advising Carts
+                    </button>
+                </form>
             </div>
-            <div class="bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 p-3 rounded-xl text-[0.68rem] text-blue-600 dark:text-blue-400 space-y-1">
-                <p class="font-bold">Requirements:</p>
-                <p>• Select minimum 9.0 credits (2 courses).</p>
-                <p>• Select maximum 21.0 credits (6 courses).</p>
-            </div>
-            <form action="{{ url_for('save_plan') }}" method="POST" id="plan-form">
-                <input type="hidden" name="course_ids" id="plan-input" value='{{ plan_course_ids | tojson }}'>
-                <button type="submit" class="w-full btn-primary justify-center py-2 rounded-lg text-xs" {% if plan_course_ids|length > 6 or plan_credits > 21 or plan_course_ids|length < 2 %}disabled{% endif %}>
-                    Save Pre-Advising Carts
-                </button>
-            </form>
         </div>
     </div>
 
     <!-- FINAL ADVISING VIEW CONTENT -->
-    <div id="final-advising-workspace" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Live offerings -->
-        <div class="lg:col-span-2 space-y-4">
-            <!-- Filter Row -->
-            <div class="flex gap-2 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
-                <button onclick="filterAdvisingSections('all')" id="filter-all" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent active-filter">
-                    All Planned
-                </button>
-                <button onclick="filterAdvisingSections('failed')" id="filter-failed" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                    F Grade Courses
-                </button>
-                <button onclick="filterAdvisingSections('recommended')" id="filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                    Recommended
-                </button>
-                <button onclick="filterAdvisingSections('retake')" id="filter-retake" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                    D/D+ Retakes
-                </button>
-            </div>
-
-            <div class="space-y-4 max-h-[700px] overflow-y-auto pr-2" id="advising-table-container">
-                <!-- Populated / Filtered dynamically in JS -->
-            </div>
+    <div id="final-advising-workspace" class="hidden space-y-4">
+        <div class="flex items-center gap-2">
+            <button onclick="showAdvisingHub()" class="flex items-center gap-1.5 text-xs text-blue-500 font-bold hover:underline transition-all">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back to Advising Hub
+            </button>
         </div>
-
-        <!-- Registration cart panel -->
-        <div class="space-y-4">
-            <div class="stitch-card space-y-4 h-fit">
-                <div class="flex justify-between items-center border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
-                    <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Live Cart</h3>
-                    <span class="text-[0.62rem] px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold rounded-full">Auto-Saved</span>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Live offerings -->
+            <div class="lg:col-span-2 space-y-4">
+                <!-- Filter Row -->
+                <div class="flex gap-2 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+                    <button onclick="filterAdvisingSections('all')" id="filter-all" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent active-filter">
+                        All Planned
+                    </button>
+                    <button onclick="filterAdvisingSections('failed')" id="filter-failed" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                        F Grade Courses
+                    </button>
+                    <button onclick="filterAdvisingSections('recommended')" id="filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                        Recommended
+                    </button>
+                    <button onclick="filterAdvisingSections('retake')" id="filter-retake" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                        D/D+ Retakes
+                    </button>
                 </div>
-                
-                <div id="live-cart-items" class="space-y-2">
-                    <!-- Populated dynamically -->
-                </div>
 
-                <div class="space-y-2 pt-2 border-t border-[#e2e8f0] dark:border-[#1e293b] text-xs">
-                    <div class="flex justify-between">
-                        <span>Total Registered:</span>
-                        <span class="font-bold" id="cart-credits-summary">0.0 CR</span>
+                <div class="space-y-4 max-h-[700px] overflow-y-auto pr-2" id="advising-table-container">
+                    <!-- Populated / Filtered dynamically in JS -->
+                </div>
+            </div>
+
+            <!-- Registration cart panel -->
+            <div class="space-y-4">
+                <div class="stitch-card space-y-4 h-fit">
+                    <div class="flex justify-between items-center border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
+                        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Live Cart</h3>
+                        <span class="text-[0.62rem] px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold rounded-full">Auto-Saved</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span>Course Count:</span>
-                        <span class="font-bold" id="cart-course-count">0 / 5</span>
+                    
+                    <div id="live-cart-items" class="space-y-2">
+                        <!-- Populated dynamically -->
                     </div>
-                </div>
 
-                <!-- Min enrollment check indicator -->
-                <div id="enroll-warning" class="hidden p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl text-[0.65rem] space-y-1">
-                    <p class="font-bold flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Credit Underflow</p>
-                    <p>Minimum is 9.0 credits & 3 courses. Underloaded carts will require advisor approval before advising completion.</p>
+                    <div class="space-y-2 pt-2 border-t border-[#e2e8f0] dark:border-[#1e293b] text-xs">
+                        <div class="flex justify-between">
+                            <span>Total Registered:</span>
+                            <span class="font-bold" id="cart-credits-summary">0.0 CR</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Course Count:</span>
+                            <span class="font-bold" id="cart-course-count">0 / 5</span>
+                        </div>
+                    </div>
+
+                    <!-- Min enrollment check indicator -->
+                    <div id="enroll-warning" class="hidden p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl text-[0.65rem] space-y-1">
+                        <p class="font-bold flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Credit Underflow</p>
+                        <p>Minimum is 9.0 credits & 3 courses. Underloaded carts will require advisor approval before advising completion.</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </div>
 
 <!-- CLASS SCHEDULE TAB -->
@@ -710,6 +990,9 @@
                 <button onclick="toggleRequestForm('seat-increase')" id="btn-form-seat-increase" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-transparent transition-all">
                     Seat Increase
                 </button>
+                <button onclick="toggleRequestForm('drop-course')" id="btn-form-drop-course" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-transparent transition-all">
+                    Drop Course
+                </button>
             </div>
 
             <!-- 1. Course Add Request Form -->
@@ -803,6 +1086,33 @@
                     </div>
                     <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-cyan-500 hover:bg-cyan-600 border-cyan-500 hover:border-cyan-600">
                         Submit Seat Request
+                    </button>
+                </form>
+            </div>
+
+            <!-- 4. Drop Course Request Form -->
+            <div id="form-drop-course" class="stitch-card space-y-4 hidden">
+                <h3 class="font-bold text-sm text-red-500">Submit Drop Course Request</h3>
+                <form action="{{ url_for('submit_override_request') }}" method="POST" class="space-y-4">
+                    <input type="hidden" name="request_type" value="drop_course">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Course to Drop</label>
+                            <select name="course_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
+                                {% for s in next_schedule_sections %}
+                                <option value="{{ s.course_code }}">{{ s.course_code }} - Sec {{ s.section_number }}</option>
+                                {% else %}
+                                <option value="">No registered courses in your cart</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Justification / Reason (Mandatory)</label>
+                        <textarea name="comments" required rows="3" placeholder="Why do you need to drop this course? E.g., medical reasons, course load adjustment..." class="w-full p-3 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"></textarea>
+                    </div>
+                    <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-red-500 hover:bg-red-600 border-red-500 hover:border-red-600">
+                        Submit Drop Request
                     </button>
                 </form>
             </div>
@@ -1171,44 +1481,15 @@
             mainBtn.classList.add('active');
         }
 
-        // Highlight matching sub-items
-        document.querySelectorAll('.nav-sub-item').forEach(subBtn => {
-            const onclickAttr = subBtn.getAttribute('onclick') || '';
-            if (onclickAttr.includes(`switchTab('${tabId}')`)) {
-                // If it is advising or requests, check additional context
-                if (tabId === 'advising') {
-                    const isPre = document.getElementById('pre-advising-phase')?.classList.contains('hidden') === false;
-                    const subId = subBtn.id;
-                    if ((isPre && subId === 'nav-pre-advising') || (!isPre && subId === 'nav-final-advising')) {
-                        subBtn.classList.add('active');
-                        const submenu = subBtn.closest('.submenu');
-                        if (submenu && typeof toggleMenu === 'function') toggleMenu(submenu.id, true);
-                    }
-                } else if (tabId === 'requests') {
-                    const isAdd = document.getElementById('form-add-course')?.classList.contains('hidden') === false;
-                    const isChange = document.getElementById('form-change-section')?.classList.contains('hidden') === false;
-                    const isSeat = document.getElementById('form-seat-increase')?.classList.contains('hidden') === false;
-                    const subId = subBtn.id;
-                    if ((isAdd && subId === 'nav-add-request') || 
-                        (isChange && subId === 'nav-section-change') || 
-                        (isSeat && subId === 'nav-seat-request')) {
-                        subBtn.classList.add('active');
-                        const submenu = subBtn.closest('.submenu');
-                        if (submenu && typeof toggleMenu === 'function') toggleMenu(submenu.id, true);
-                    }
-                } else {
-                    subBtn.classList.add('active');
-                    const submenu = subBtn.closest('.submenu');
-                    if (submenu && typeof toggleMenu === 'function') toggleMenu(submenu.id, true);
-                }
-            }
-        });
+        if (tabId === 'advising') {
+            showAdvisingHub();
+        }
 
         localStorage.setItem('student_active_tab', tabId);
     }
 
     function toggleRequestForm(formId) {
-        ['add-course', 'change-section', 'seat-increase'].forEach(f => {
+        ['add-course', 'change-section', 'seat-increase', 'drop-course'].forEach(f => {
             const formEl = document.getElementById(`form-${f}`);
             if (formEl) formEl.classList.add('hidden');
             const btnEl = document.getElementById(`btn-form-${f}`);
@@ -1232,13 +1513,14 @@
         if (formId === 'add-course') subNavId = 'nav-add-request';
         else if (formId === 'change-section') subNavId = 'nav-section-change';
         else if (formId === 'seat-increase') subNavId = 'nav-seat-request';
+        else if (formId === 'drop-course') subNavId = 'nav-drop-request';
         
         const subNavEl = document.getElementById(subNavId);
         if (subNavEl) subNavEl.classList.add('active');
     }
 
     function showRequestTab(formId) {
-        const mappedForm = formId === 'seat-request' ? 'seat-increase' : formId;
+        const mappedForm = formId === 'seat-request' ? 'seat-increase' : (formId === 'drop-request' ? 'drop-course' : formId);
         toggleRequestForm(mappedForm);
         showForm(mappedForm);
     }
@@ -1260,10 +1542,8 @@
         }, 100);
     }
 
-    const savedTab = localStorage.getItem('student_active_tab');
-    if (savedTab) {
-        switchTab(savedTab);
-    }
+    const savedTab = "{{ active_tab or 'dashboard' }}";
+    switchTab(savedTab);
 
     // CGPA Masking Control
     let cgpaVisible = false;
@@ -1287,18 +1567,32 @@
     const isFinalActive = {{ 'true' if final_advising_active else 'false' }};
     const prePlanSubmitted = {{ 'true' if plan_course_ids | length > 0 else 'false' }};
 
+    function showAdvisingHub() {
+        const hub = document.getElementById('advising-hub');
+        const preWork = document.getElementById('pre-advising-workspace');
+        const finalWork = document.getElementById('final-advising-workspace');
+        if (hub) hub.classList.remove('hidden');
+        if (preWork) preWork.classList.add('hidden');
+        if (finalWork) finalWork.classList.add('hidden');
+    }
+
     function enterPreAdvisingPhase() {
-        if (!isPreActive) {
+        if (!isPreActive && !prePlanSubmitted) {
             showToast('error', 'Pre-Advising phase is not currently started by Admin.');
             return;
         }
         switchTab('advising');
-        document.getElementById('pre-advising-workspace').classList.remove('hidden');
-        document.getElementById('final-advising-workspace').classList.add('hidden');
+        const hub = document.getElementById('advising-hub');
+        const preWork = document.getElementById('pre-advising-workspace');
+        const finalWork = document.getElementById('final-advising-workspace');
+        if (hub) hub.classList.add('hidden');
+        if (preWork) preWork.classList.remove('hidden');
+        if (finalWork) finalWork.classList.add('hidden');
     }
 
     function enterFinalAdvisingPhase() {
-        if (!isFinalActive) {
+        const hasRegistered = registrationsList.length > 0;
+        if (!isFinalActive && !hasRegistered) {
             showToast('error', 'Final Advising phase is not currently started by Admin.');
             return;
         }
@@ -1307,8 +1601,12 @@
             return;
         }
         switchTab('advising');
-        document.getElementById('pre-advising-workspace').classList.add('hidden');
-        document.getElementById('final-advising-workspace').classList.remove('hidden');
+        const hub = document.getElementById('advising-hub');
+        const preWork = document.getElementById('pre-advising-workspace');
+        const finalWork = document.getElementById('final-advising-workspace');
+        if (hub) hub.classList.add('hidden');
+        if (preWork) preWork.classList.add('hidden');
+        if (finalWork) finalWork.classList.remove('hidden');
         loadAdvisingSections();
     }
 
@@ -1318,6 +1616,7 @@
 
     function togglePlanCourse(code) {
         const idx = planCourseCodes.indexOf(code);
+        let selectedNow = false;
         if (idx > -1) {
             planCourseCodes.splice(idx, 1);
         } else {
@@ -1325,7 +1624,18 @@
                 showToast('error', 'Limit exceeded: Maximum of 6 courses allowed.');
                 return;
             }
+            const courseToAdd = coursesData.find(x => x.code === code);
+            let currentCredits = 0;
+            planCourseCodes.forEach(c => {
+                const course = coursesData.find(x => x.code === c);
+                if (course) currentCredits += course.credits;
+            });
+            if (courseToAdd && currentCredits + courseToAdd.credits > 21) {
+                showToast('error', 'Limit exceeded: Maximum of 21.0 credits allowed.');
+                return;
+            }
             planCourseCodes.push(code);
+            selectedNow = true;
         }
 
         let credits = 0;
@@ -1334,25 +1644,37 @@
             if (course) credits += course.credits;
         });
 
-        if (credits > 21) {
-            showToast('error', 'Limit exceeded: Maximum of 21.0 credits allowed.');
-            planCourseCodes.pop();
-            return;
-        }
-
         document.getElementById('plan-count').textContent = `${planCourseCodes.length} / 6`;
         document.getElementById('plan-credits').textContent = `${credits} / 21 CR`;
         document.getElementById('plan-input').value = JSON.stringify(planCourseCodes);
 
-        const btn = document.querySelector('#plan-form button');
-        if (planCourseCodes.length < 2 || planCourseCodes.length > 6 || credits > 21) {
-            btn.setAttribute('disabled', 'true');
+        const btnSave = document.querySelector('#plan-form button');
+        if (planCourseCodes.length < 2 || planCourseCodes.length > 6 || credits < 6 || credits > 21) {
+            btnSave.setAttribute('disabled', 'true');
         } else {
-            btn.removeAttribute('disabled');
+            btnSave.removeAttribute('disabled');
         }
 
-        // Save immediately to session/db state via reload
-        document.getElementById('plan-form').submit();
+        // Toggling visual elements locally
+        const cardEl = document.getElementById(`course-card-${code}`);
+        const btnEl = document.getElementById(`course-btn-${code}`);
+        if (cardEl && btnEl) {
+            if (selectedNow) {
+                cardEl.classList.remove('border-[#e2e8f0]', 'dark:border-[#1e293b]');
+                cardEl.classList.add('border-blue-500', 'bg-blue-50/10');
+
+                btnEl.classList.remove('border-slate-200', 'dark:border-slate-800', 'hover:bg-slate-100', 'dark:hover:bg-slate-800');
+                btnEl.classList.add('bg-blue-600', 'border-blue-600', 'text-white');
+                btnEl.textContent = 'Selected';
+            } else {
+                cardEl.classList.remove('border-blue-500', 'bg-blue-50/10');
+                cardEl.classList.add('border-[#e2e8f0]', 'dark:border-[#1e293b]');
+
+                btnEl.classList.remove('bg-blue-600', 'border-blue-600', 'text-white');
+                btnEl.classList.add('border-slate-200', 'dark:border-slate-800', 'hover:bg-slate-100', 'dark:hover:bg-slate-800');
+                btnEl.textContent = 'Select';
+            }
+        }
     }
 
     // Final advising AJAX booking and filtering logic
@@ -1473,6 +1795,8 @@
                 let colorClass = "border-[#e2e8f0] dark:border-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-900/20";
                 if (isSelected) {
                     colorClass = "border-green-500 bg-green-50/10 text-green-700 dark:text-green-400";
+                } else if (sec.is_lab) {
+                    colorClass = "border-[#e2e8f0]/60 dark:border-[#1e293b]/60 bg-slate-500/5 opacity-80 cursor-default";
                 } else if (isFull) {
                     colorClass = "border-blue-500 bg-blue-500/5 text-blue-700 dark:text-blue-400 cursor-not-allowed opacity-75";
                 } else if (hasConflict) {
@@ -1480,7 +1804,7 @@
                 }
 
                 let btnHtml = '';
-                if (isFull || hasConflict) {
+                if (!sec.is_lab && isFinalActive && (isFull || hasConflict)) {
                     const reqType = isFull ? 'section_full' : 'schedule_conflict';
                     btnHtml = `
                         <button onclick="event.stopPropagation(); openRequestModal('${sec.id}', '${code}', '${reqType}')" 
@@ -1490,22 +1814,24 @@
                     `;
                 }
 
+                let clickHandler = sec.is_lab ? "" : `onclick="toggleSectionAJAX('${sec.id}', ${isFull}, ${hasConflict}, ${isRestricted})"`;
+
                 headerHtml += `
-                    <div onclick="toggleSectionAJAX('${sec.id}', ${isFull}, ${hasConflict}, ${isRestricted})" 
-                         class="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 cursor-pointer ${colorClass}">
+                    <div ${clickHandler} 
+                         class="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 ${sec.is_lab ? '' : 'cursor-pointer'} ${colorClass}">
                         <div class="space-y-1">
                             <p class="text-xs font-bold">
                                 Section ${sec.section_number}
                                 <span class="badge ${sec.is_lab ? 'badge-warning' : 'badge-info'} text-[0.58rem] ml-1">
                                     ${sec.is_lab ? 'LAB' : 'THEORY'}
                                 </span>
-                                ${isFull ? '<span class="badge badge-primary text-[0.58rem] ml-1 bg-blue-600 text-white">BLUE / FULL</span>' : ''}
-                                ${hasConflict ? '<span class="stitch-badge badge-hold text-[0.58rem] ml-1 bg-red-600 text-white">RED / CONFLICT</span>' : ''}
+                                ${!sec.is_lab && isFull ? '<span class="badge badge-primary text-[0.58rem] ml-1 bg-blue-600 text-white">BLUE / FULL</span>' : ''}
+                                ${!sec.is_lab && hasConflict ? '<span class="stitch-badge badge-hold text-[0.58rem] ml-1 bg-red-600 text-white">RED / CONFLICT</span>' : ''}
                             </p>
                             <p class="text-[0.7rem] text-[#94a3b8]">
                                 Room: ${sec.room} • Faculty: ${sec.faculty_id || 'TBA'} • Schedule: ${sec.schedule}
                             </p>
-                            ${isRestricted ? `<p class="text-[0.62rem] text-red-500 font-bold">⚠ Restrict: ${sec.dedicated_departments.join('-')}</p>` : ''}
+                            ${!sec.is_lab && isRestricted ? `<p class="text-[0.62rem] text-red-500 font-bold">⚠ Restrict: ${sec.dedicated_departments.join('-')}</p>` : ''}
                         </div>
                         <div class="flex items-center gap-3">
                             <div class="text-right">
@@ -1528,6 +1854,10 @@
 
     // Ajax booking function on click
     function toggleSectionAJAX(secId, isFull, hasConflict, isRestricted) {
+        if (!isFinalActive) {
+            showToast('error', 'Final Advising is currently closed. Registration is in view-only mode.');
+            return;
+        }
         if (isRestricted) {
             showToast('error', 'This section is restricted to other departments.');
             return;
@@ -1594,18 +1924,32 @@
 
                     const cartItem = document.createElement('div');
                     cartItem.className = "p-3 bg-slate-50 dark:bg-slate-900 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl flex justify-between items-center text-xs";
+                    
+                    let actionHtml = '';
+                    if (isFinalActive) {
+                        if (sec.is_lab) {
+                            actionHtml = `<span class="text-blue-500 dark:text-blue-400 text-[0.65rem] font-medium italic">Linked Lab</span>`;
+                        } else {
+                            actionHtml = `
+                                <button onclick="openChangeModal('${sec.id}', '${sec.course_code}')" class="px-2 py-1 bg-violet-500/10 border border-violet-500/20 text-violet-600 rounded text-[0.62rem] font-bold hover:bg-violet-600 hover:text-white transition-all">
+                                    Swap Sec
+                                </button>
+                                <button onclick="toggleSectionAJAX('${sec.id}', false, false, false)" class="text-red-500 hover:text-red-700">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            `;
+                        }
+                    } else {
+                        actionHtml = `<span class="text-emerald-500 dark:text-emerald-400 text-[0.65rem] font-bold italic">Registered</span>`;
+                    }
+
                     cartItem.innerHTML = `
                         <div>
                             <p class="font-bold">${sec.course_code} Sec ${sec.section_number}</p>
                             <p class="text-[0.65rem] text-[#94a3b8]">${sec.credits} CR • ${sec.schedule}</p>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="openChangeModal('${sec.id}', '${sec.course_code}')" class="px-2 py-1 bg-violet-500/10 border border-violet-500/20 text-violet-600 rounded text-[0.62rem] font-bold hover:bg-violet-600 hover:text-white transition-all">
-                                Swap Sec
-                            </button>
-                            <button onclick="toggleSectionAJAX('${sec.id}', false, false, false)" class="text-red-500 hover:text-red-700">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
+                            ${actionHtml}
                         </div>
                     `;
                     cartContainer.appendChild(cartItem);
@@ -1663,7 +2007,7 @@
         
         // Find other sections of the same course
         const rawCode = courseCode.replace(' Lab', '');
-        const alternatives = sectionsData.filter(s => s.id !== secId && (s.course_code === rawCode || s.course_code === (rawCode + ' Lab')));
+        const alternatives = sectionsData.filter(s => s.id !== secId && s.course_code === rawCode && !s.is_lab);
         
         const select = document.getElementById('swap-new-section-id');
         select.innerHTML = '';

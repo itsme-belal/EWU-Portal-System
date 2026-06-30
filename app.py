@@ -279,8 +279,15 @@ def student_has_schedule_conflict(student_id, candidate_section, exclude_section
         student_id=student_id,
         semester_id=get_current_semester()
     ).all()
+    exclude_ids = []
+    if exclude_section_id:
+        if isinstance(exclude_section_id, (list, tuple, set)):
+            exclude_ids = list(exclude_section_id)
+        else:
+            exclude_ids = [exclude_section_id]
+            
     for reg in registrations:
-        if exclude_section_id and reg.section_id == exclude_section_id:
+        if reg.section_id in exclude_ids:
             continue
         current_section = SectionOffering.query.get(reg.section_id)
         if current_section and schedules_conflict(current_section.schedule, candidate_section.schedule):
@@ -547,10 +554,13 @@ def logout():
 
 # STUDENT DASHBOARD
 @app.route('/student')
+@app.route('/advising')
 @login_required
 def student_dashboard():
     if current_user.role != 'student':
         return redirect(url_for('home'))
+        
+    active_tab = 'advising' if request.path == '/advising' else 'dashboard'
         
     student = Student.query.filter_by(user_id=current_user.id).first()
     
@@ -654,8 +664,61 @@ def student_dashboard():
     ).order_by(SemesterDropRequest.created_at.desc()).all()
     all_windows = AdvisingWindow.query.filter_by(semester_id=get_current_semester()).all()
     
+    # Find student's matched advising windows based on completed credits
+    student_pre_window = next((w for w in all_windows if w.type == 'pre' and w.credit_min <= student.completed_credits <= w.credit_max), None)
+    student_final_window = next((w for w in all_windows if w.type == 'final' and w.credit_min <= student.completed_credits <= w.credit_max), None)
+
+    now_iso = datetime.now().isoformat()
+    
+    def format_window_time(dt_str):
+        if not dt_str:
+            return 'Not Set Yet'
+        try:
+            t_str = dt_str.replace('T', ' ')
+            if len(t_str) > 16:
+                t_str = t_str[:16]
+            dt = datetime.strptime(t_str, '%Y-%m-%d %H:%M')
+            return dt.strftime('%b %d, %Y at %I:%M %p')
+        except Exception:
+            return dt_str.replace('T', ' ')
+
+    def get_window_status(w, active_toggle):
+        if not w:
+            return 'Not Set Yet', 'text-slate-400 bg-slate-500/10'
+        if w.start_date_time <= now_iso <= w.end_date_time:
+            if active_toggle:
+                return 'OPEN NOW', 'text-emerald-500 bg-emerald-500/10 animate-pulse font-extrabold border border-emerald-500/20'
+            else:
+                return 'Inactive (Toggled Off)', 'text-amber-500 bg-amber-500/10 font-bold border border-amber-500/20'
+        elif now_iso < w.start_date_time:
+            return 'Scheduled / Upcoming', 'text-blue-500 bg-blue-500/10 font-bold border border-blue-500/20'
+        else:
+            return 'Closed', 'text-rose-500 bg-rose-500/10 font-bold border border-rose-500/20'
+
+    pre_status_label, pre_status_class = get_window_status(student_pre_window, pre_advising_active)
+    final_status_label, final_status_class = get_window_status(student_final_window, final_advising_active)
+
+    student_pre_start = format_window_time(student_pre_window.start_date_time) if student_pre_window else 'Not Set Yet'
+    student_pre_end = format_window_time(student_pre_window.end_date_time) if student_pre_window else 'Not Set Yet'
+    student_final_start = format_window_time(student_final_window.start_date_time) if student_final_window else 'Not Set Yet'
+    student_final_end = format_window_time(student_final_window.end_date_time) if student_final_window else 'Not Set Yet'
+
+    request_status_label = 'Closed'
+    request_status_class = 'text-rose-500 bg-rose-500/10 font-bold border border-rose-500/20'
+    if request_phase_active:
+        if (len(plan_course_ids) > 0) and (not pre_advising_active) and (not final_advising_active):
+            request_status_label = 'OPEN NOW'
+            request_status_class = 'text-indigo-500 bg-indigo-500/10 animate-pulse font-extrabold border border-indigo-500/20'
+        else:
+            request_status_label = 'Locked (Pre-requisites pending)'
+            request_status_class = 'text-amber-500 bg-amber-500/10 font-bold border border-amber-500/20'
+
+    request_card_active = (len(plan_course_ids) > 0) and (not pre_advising_active) and (not final_advising_active) and request_phase_active
+    
     return render_template(
         'student.html',
+        active_tab=active_tab,
+        request_card_active=request_card_active,
         student=student,
         dept=dept,
         advisor=advisor,
@@ -685,6 +748,16 @@ def student_dashboard():
         semester_drop_requests=semester_drop_requests,
         all_windows=all_windows,
         advisor_email=advisor_email,
+        pre_status_label=pre_status_label,
+        pre_status_class=pre_status_class,
+        final_status_label=final_status_label,
+        final_status_class=final_status_class,
+        student_pre_start=student_pre_start,
+        student_pre_end=student_pre_end,
+        student_final_start=student_final_start,
+        student_final_end=student_final_end,
+        request_status_label=request_status_label,
+        request_status_class=request_status_class,
         datetime=datetime.now().strftime('%d-%b-%Y %I:%M %p')
     )
 
@@ -699,7 +772,7 @@ def save_plan():
     active_setting = SystemSetting.query.filter_by(key='pre_advising_active').first()
     if not active_setting or active_setting.value != 'true':
         flash('Pre-advising is currently closed by the Administrator.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
         
     student = Student.query.filter_by(user_id=current_user.id).first()
     course_ids_str = request.form.get('course_ids', '[]')
@@ -707,13 +780,13 @@ def save_plan():
     
     if len(course_ids) < 2 or len(course_ids) > 6:
         flash('Pre-advising constraint: Must select between 2 and 6 courses.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
         
     courses = PreAdvisingCourse.query.filter(PreAdvisingCourse.code.in_(course_ids)).all()
     total_credits = sum([c.credits for c in courses])
-    if total_credits < 9 or total_credits > 21:
-        flash('Pre-advising constraint: Total credits must be between 9.0 and 21.0.', 'error')
-        return redirect(url_for('student_dashboard'))
+    if total_credits < 6 or total_credits > 21:
+        flash('Pre-advising constraint: Total credits must be between 6.0 and 21.0.', 'error')
+        return redirect('/advising')
         
     plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_current_semester()).first()
     if not plan:
@@ -725,7 +798,7 @@ def save_plan():
     db.session.commit()
     
     flash('Pre-advising plan saved successfully!', 'success')
-    return redirect(url_for('student_dashboard'))
+    return redirect('/advising')
 
 # Dynamic section toggling (Auto-books/Auto-saves instantly)
 @app.route('/student/toggle-section', methods=['POST'])
@@ -840,37 +913,37 @@ def submit_override_request():
     comments = (request.form.get('comments') or '').strip()
     request_type = (request.form.get('request_type') or 'add_course').strip()
 
-    if request_type not in ['add_course', 'seat_increase']:
+    if request_type not in ['add_course', 'seat_increase', 'drop_course']:
         request_type = 'add_course'
 
     active_setting = SystemSetting.query.filter_by(key='request_phase_active').first()
     if not active_setting or active_setting.value != 'true':
         flash('Course request phase is currently closed by the Administrator.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
 
     if not comments:
         flash('Justification comments are required.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
 
     if request_type == 'seat_increase':
         sec = SectionOffering.query.get(sec_id)
         if not sec:
             flash('Please select a valid section for the seat increase request.', 'error')
-            return redirect(url_for('student_dashboard'))
+            return redirect('/advising')
         course_id = sec.course_code
     elif not course_id:
         flash('Please select a course before submitting the request.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
     
     # Check max 2 requests
     req_count = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_current_semester()).count()
     if req_count >= 2:
         flash('Maximum request limit reached (Max 2 requests allowed).', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
         
     if not student.advisor_id:
         flash('No advisor assigned to route request.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
         
     req = AdvisingRequest(
         id=f"REQ-{student.id}-{int(datetime.utcnow().timestamp())}-{random.randint(1000, 9999)}",
@@ -886,7 +959,7 @@ def submit_override_request():
     db.session.commit()
     
     flash('Request submitted to your advisor successfully.', 'success')
-    return redirect(url_for('student_dashboard'))
+    return redirect('/advising')
 
 # Submit Change Section Request
 @app.route('/student/submit-change-request', methods=['POST'])
@@ -903,31 +976,31 @@ def submit_change_request():
     active_setting = SystemSetting.query.filter_by(key='request_phase_active').first()
     if not active_setting or active_setting.value != 'true':
         flash('Course request phase is currently closed by the Administrator.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
 
     if not student.advisor_id:
         flash('No advisor assigned to route request.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
 
     if not comments:
         flash('Justification comments are required.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
     
     req_count = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_current_semester()).count()
     if req_count >= 2:
         flash('Maximum request limit reached (Max 2 requests allowed).', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
         
     current_sec = SectionOffering.query.get(current_sec_id)
     new_sec = SectionOffering.query.get(new_sec_id)
     
     if not current_sec or not new_sec:
         flash('Invalid sections selected.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
 
     if current_sec.course_code.replace(' Lab', '') != new_sec.course_code.replace(' Lab', ''):
         flash('Section change must stay within the same course.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
         
     # Check conflict with other courses in cart (excluding current section)
     regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
@@ -936,7 +1009,7 @@ def submit_change_request():
             other = SectionOffering.query.get(r.section_id)
             if other and schedules_conflict(other.schedule, new_sec.schedule):
                 flash(f"Conflict detected: Swapped section conflicts with {other.course_code}.", 'error')
-                return redirect(url_for('student_dashboard'))
+                return redirect('/advising')
                 
     req = AdvisingRequest(
         id=f"REQ-{student.id}-{int(datetime.utcnow().timestamp())}-{random.randint(1000, 9999)}",
@@ -953,7 +1026,7 @@ def submit_change_request():
     db.session.commit()
     
     flash('Section change swap request sent to academic advisor.', 'success')
-    return redirect(url_for('student_dashboard'))
+    return redirect('/advising')
 
 @app.route('/student/semester-drop', methods=['POST'])
 @login_required
@@ -969,10 +1042,10 @@ def submit_semester_drop():
     reason = request.form.get('reason', '').strip()
     if len(reason) < 20:
         flash('Please provide a reason of at least 20 characters for semester drop.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
     if len(reason) > 1000:
         flash('Semester drop reason must be 1000 characters or fewer.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
 
     existing_pending = SemesterDropRequest.query.filter_by(
         student_id=student.id,
@@ -981,7 +1054,7 @@ def submit_semester_drop():
     ).first()
     if existing_pending:
         flash('You already have a pending semester drop request for this semester.', 'error')
-        return redirect(url_for('student_dashboard'))
+        return redirect('/advising')
 
     drop_request = SemesterDropRequest(
         id=f"DROP-{student.id}-{int(datetime.utcnow().timestamp())}-{random.randint(1000, 9999)}",
@@ -994,7 +1067,7 @@ def submit_semester_drop():
     db.session.commit()
 
     flash('Semester drop application submitted successfully and marked as pending.', 'success')
-    return redirect(url_for('student_dashboard'))
+    return redirect('/advising')
 
 # FACULTY VIEWS
 @app.route('/faculty')
@@ -1470,6 +1543,16 @@ def resolve_request(req_id):
                     flash(f"Cannot approve: schedule conflict with {conflict_section.course_code}.", "error")
                     return redirect(url_for('faculty_dashboard'))
 
+                linked_lab = None
+                if sec.linked_section_id:
+                    linked_lab = SectionOffering.query.get(sec.linked_section_id)
+
+                if linked_lab:
+                    lab_conflict = student_has_schedule_conflict(student.id, linked_lab)
+                    if lab_conflict:
+                        flash(f"Cannot approve: linked lab conflicts with {lab_conflict.course_code}.", "error")
+                        return redirect(url_for('faculty_dashboard'))
+
                 db.session.add(Registration(
                     id=f"REG-{student.id}-{sec.id}",
                     student_id=student.id,
@@ -1477,6 +1560,17 @@ def resolve_request(req_id):
                     semester_id=get_current_semester()
                 ))
                 sec.enrolled_count += 1
+
+                if linked_lab:
+                    lab_reg = Registration.query.filter_by(student_id=student.id, section_id=linked_lab.id, semester_id=get_current_semester()).first()
+                    if not lab_reg:
+                        db.session.add(Registration(
+                            id=f"REG-{student.id}-{linked_lab.id}",
+                            student_id=student.id,
+                            section_id=linked_lab.id,
+                            semester_id=get_current_semester()
+                        ))
+                        linked_lab.enrolled_count += 1
                 
             elif req.type == 'change_section' and sec:
                 old_reg = Registration.query.filter_by(student_id=student.id, section_id=req.current_section_id, semester_id=get_current_semester()).first()
@@ -1493,17 +1587,37 @@ def resolve_request(req_id):
                     flash("Cannot approve: student is already registered in the target section.", "error")
                     return redirect(url_for('faculty_dashboard'))
 
-                conflict_section = student_has_schedule_conflict(student.id, sec, exclude_section_id=req.current_section_id)
+                old_sec = SectionOffering.query.get(req.current_section_id)
+                old_lab_id = old_sec.linked_section_id if old_sec else None
+
+                conflict_section = student_has_schedule_conflict(student.id, sec, exclude_section_id=[req.current_section_id, old_lab_id])
                 if conflict_section:
                     flash(f"Cannot approve: target section conflicts with {conflict_section.course_code}.", "error")
                     return redirect(url_for('faculty_dashboard'))
 
+                linked_lab = None
+                if sec.linked_section_id:
+                    linked_lab = SectionOffering.query.get(sec.linked_section_id)
+
+                if linked_lab:
+                    lab_conflict = student_has_schedule_conflict(student.id, linked_lab, exclude_section_id=[req.current_section_id, old_lab_id])
+                    if lab_conflict:
+                        flash(f"Cannot approve: target lab section conflicts with {lab_conflict.course_code}.", "error")
+                        return redirect(url_for('faculty_dashboard'))
+
                 if old_reg:
                     db.session.delete(old_reg)
-                    old_sec = SectionOffering.query.get(req.current_section_id)
                     if old_sec:
                         old_sec.enrolled_count = max(0, old_sec.enrolled_count - 1)
-                
+
+                if old_lab_id:
+                    old_lab_reg = Registration.query.filter_by(student_id=student.id, section_id=old_lab_id, semester_id=get_current_semester()).first()
+                    if old_lab_reg:
+                        db.session.delete(old_lab_reg)
+                        old_lab_sec = SectionOffering.query.get(old_lab_id)
+                        if old_lab_sec:
+                            old_lab_sec.enrolled_count = max(0, old_lab_sec.enrolled_count - 1)
+
                 db.session.add(Registration(
                     id=f"REG-{student.id}-{sec.id}",
                     student_id=student.id,
@@ -1512,8 +1626,21 @@ def resolve_request(req_id):
                 ))
                 sec.enrolled_count += 1
 
+                if linked_lab:
+                    db.session.add(Registration(
+                        id=f"REG-{student.id}-{linked_lab.id}",
+                        student_id=student.id,
+                        section_id=linked_lab.id,
+                        semester_id=get_current_semester()
+                    ))
+                    linked_lab.enrolled_count += 1
+
             elif req.type == 'seat_increase' and sec:
                 sec.capacity += 1
+                if sec.linked_section_id:
+                    linked_sec = SectionOffering.query.get(sec.linked_section_id)
+                    if linked_sec:
+                        linked_sec.capacity += 1
                 
         db.session.commit()
         flash(f"Request resolved as '{status}'.", 'success')
@@ -1796,6 +1923,11 @@ def edit_section_capacity(sec_id):
     sec = SectionOffering.query.get(sec_id)
     if sec:
         sec.capacity = cap
+        # Synchronize linked section capacity if present
+        if sec.linked_section_id:
+            linked_sec = SectionOffering.query.get(sec.linked_section_id)
+            if linked_sec:
+                linked_sec.capacity = cap
         db.session.commit()
         flash(f"Section '{sec_id}' capacity updated to {cap}.", 'success')
     else:
