@@ -86,7 +86,12 @@ def seed_db():
         db.session.add(admin_profile2)
 
         print("Seeding System Settings...")
-        db.session.add(SystemSetting(key='current_semester', value='Summer2026'))
+        db.session.add(SystemSetting(key='current_semester', value='Spring2026'))
+        db.session.add(SystemSetting(key='next_semester', value='Summer2026'))
+        db.session.add(SystemSetting(key='current_semester_start', value='2026-01-05'))
+        db.session.add(SystemSetting(key='current_semester_end', value='2026-04-20'))
+        db.session.add(SystemSetting(key='next_semester_start', value='2026-05-10'))
+        db.session.add(SystemSetting(key='next_semester_end', value='2026-08-25'))
         db.session.add(SystemSetting(key='pre_advising_active', value='true'))
         db.session.add(SystemSetting(key='final_advising_active', value='true'))
         db.session.add(SystemSetting(key='request_phase_active', value='true'))
@@ -182,18 +187,34 @@ def seed_db():
         )
         db.session.add(std_profile2)
 
-        print("Seeding Courses (Curriculum Catalog)...")
-        courses = [
-            PreAdvisingCourse(id='CSE103', code='CSE103', title='Structured Programming Language', credits=3.0, department_id='CSE', _prerequisites='[]'),
-            PreAdvisingCourse(id='CSE103 Lab', code='CSE103 Lab', title='Structured Programming Language Lab', credits=1.5, department_id='CSE', _prerequisites='[]'),
-            PreAdvisingCourse(id='CSE106', code='CSE106', title='Digital Logic Design', credits=3.0, department_id='CSE', _prerequisites='["CSE103"]'),
-            PreAdvisingCourse(id='CSE207', code='CSE207', title='Data Structures and Algorithms', credits=3.0, department_id='CSE', _prerequisites='["CSE103"]'),
-            PreAdvisingCourse(id='CSE207 Lab', code='CSE207 Lab', title='Data Structures and Algorithms Lab', credits=1.0, department_id='CSE', _prerequisites='["CSE103"]'),
-            PreAdvisingCourse(id='MAT102', code='MAT102', title='Differential and Integral Calculus', credits=3.0, department_id='MAT', _prerequisites='["MAT101"]'),
-            PreAdvisingCourse(id='MAT101', code='MAT101', title='Differential Equations', credits=3.0, department_id='MAT', _prerequisites='[]'),
-        ]
-        for c in courses:
-            db.session.add(c)
+        # 0-credit Freshman Student
+        std_user3 = User(
+            id='std_u3',
+            email='freshman@std.ewubd.edu',
+            password_hash=generate_password_hash('password123'),
+            role='student',
+            is_active=True,
+            is_activated=True
+        )
+        db.session.add(std_user3)
+
+        std_profile3 = Student(
+            id='2026-1-60-001',
+            user_id='std_u3',
+            name='Freshman Student',
+            department_id='CSE',
+            advisor_id='FAC-001',
+            credit_limit=15,
+            completed_credits=0.0,
+            cgpa=0.0,
+            advising_status='not_started',
+            outstanding_balance=0,
+            financial_cleared=True
+        )
+        db.session.add(std_profile3)
+
+        print("Skipping auto-seeding Courses (Curriculum Catalog) as per admin manual configuration requirement...")
+        courses = []
 
         print("Seeding Section Offerings...")
         sections = [
@@ -373,6 +394,67 @@ def seed_db():
                 enrolled_count=0,
                 _dedicated_departments='["None"]',
                 _prerequisites='["MAT101"]',
+                semester_id='Summer2026',
+                is_lab=False
+            ),
+            # ENG101 and MAT101 for default advising
+            SectionOffering(
+                id='ENG101-01-Summer2026',
+                course_code='ENG101',
+                course_title='English Reading and Writing',
+                section_number='01',
+                credits=3.0,
+                schedule='MW:08.30-10.00',
+                room='AB1-201',
+                capacity=35,
+                enrolled_count=0,
+                _dedicated_departments='["None"]',
+                _prerequisites='[]',
+                semester_id='Summer2026',
+                is_lab=False
+            ),
+            SectionOffering(
+                id='ENG101-02-Summer2026',
+                course_code='ENG101',
+                course_title='English Reading and Writing',
+                section_number='02',
+                credits=3.0,
+                schedule='TR:08.30-10.00',
+                room='AB1-202',
+                capacity=35,
+                enrolled_count=0,
+                _dedicated_departments='["None"]',
+                _prerequisites='[]',
+                semester_id='Summer2026',
+                is_lab=False
+            ),
+            SectionOffering(
+                id='MAT101-01-Summer2026',
+                course_code='MAT101',
+                course_title='Differential Equations',
+                section_number='01',
+                credits=3.0,
+                schedule='ST:13.30-15.00',
+                room='AB2-301',
+                capacity=35,
+                enrolled_count=0,
+                _dedicated_departments='["None"]',
+                _prerequisites='[]',
+                semester_id='Summer2026',
+                is_lab=False
+            ),
+            SectionOffering(
+                id='MAT101-02-Summer2026',
+                course_code='MAT101',
+                course_title='Differential Equations',
+                section_number='02',
+                credits=3.0,
+                schedule='TR:13.30-15.00',
+                room='AB2-302',
+                capacity=35,
+                enrolled_count=0,
+                _dedicated_departments='["None"]',
+                _prerequisites='[]',
                 semester_id='Summer2026',
                 is_lab=False
             ),

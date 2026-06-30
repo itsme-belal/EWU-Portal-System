@@ -83,7 +83,25 @@ def check_deactivated_user():
 # Helper: Get current system semester
 def get_current_semester():
     sem_setting = SystemSetting.query.filter_by(key='current_semester').first()
+    return sem_setting.value if sem_setting else 'Spring2026'
+
+# Helper: Get next system semester for advising registration
+def get_next_semester():
+    sem_setting = SystemSetting.query.filter_by(key='next_semester').first()
     return sem_setting.value if sem_setting else 'Summer2026'
+
+# Helper: Get calendar dates
+def get_calendar_dates():
+    c_start = SystemSetting.query.filter_by(key='current_semester_start').first()
+    c_end = SystemSetting.query.filter_by(key='current_semester_end').first()
+    n_start = SystemSetting.query.filter_by(key='next_semester_start').first()
+    n_end = SystemSetting.query.filter_by(key='next_semester_end').first()
+    return {
+        'current_semester_start_date': c_start.value if c_start else '2026-01-05',
+        'current_semester_end_date': c_end.value if c_end else '2026-04-20',
+        'next_semester_start_date': n_start.value if n_start else '2026-05-10',
+        'next_semester_end_date': n_end.value if n_end else '2026-08-25',
+    }
 
 # Helper: Get prev semester for schedules comparison
 def get_previous_semester():
@@ -241,8 +259,7 @@ def faculty_can_teach_section(faculty, section):
 
 def registered_students_for_section(section_id):
     registrations = Registration.query.filter_by(
-        section_id=section_id,
-        semester_id=get_current_semester()
+        section_id=section_id
     ).all()
     students = []
     for reg in registrations:
@@ -264,20 +281,20 @@ def find_requested_section(req):
         section = SectionOffering.query.filter_by(
             course_code=req.course_id,
             section_number=normalized_section,
-            semester_id=get_current_semester()
+            semester_id=req.semester_id
         ).first()
         if section:
             return section
 
     return SectionOffering.query.filter_by(
         course_code=req.course_id,
-        semester_id=get_current_semester()
+        semester_id=req.semester_id
     ).order_by(SectionOffering.enrolled_count.asc()).first()
 
 def student_has_schedule_conflict(student_id, candidate_section, exclude_section_id=None):
     registrations = Registration.query.filter_by(
         student_id=student_id,
-        semester_id=get_current_semester()
+        semester_id=candidate_section.semester_id
     ).all()
     exclude_ids = []
     if exclude_section_id:
@@ -321,36 +338,30 @@ def save_grade_for_student(student_id, course_code, grade_letter, semester_id):
 
 # Helper: check student credit-bracket gating
 def is_student_allowed_in_portal(student):
-    now_iso = datetime.now().isoformat()
+    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
     semester = get_current_semester()
     
     all_windows = AdvisingWindow.query.filter_by(semester_id=semester).all()
     if not all_windows:
         return True, None
         
-    active_any = False
-    for w in all_windows:
-        if w.start_date_time <= now_iso <= w.end_date_time:
-            active_any = True
-            break
-            
-    if not active_any:
+    student_windows = [w for w in all_windows if w.credit_min <= student.completed_credits <= w.credit_max]
+    if not student_windows:
         return True, None
         
-    for w in all_windows:
-        if w.start_date_time <= now_iso <= w.end_date_time:
-            if w.credit_min <= student.completed_credits <= w.credit_max:
-                return True, w
-                
+    for w in student_windows:
+        if w.start_date_time <= now_str <= w.end_date_time:
+            return True, w
+            
     return False, None
 
 def get_active_window(student_credits, win_type):
-    now_iso = datetime.now().isoformat()
+    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
     semester = get_current_semester()
     windows = AdvisingWindow.query.filter_by(type=win_type, semester_id=semester).all()
     for w in windows:
         if w.credit_min <= student_credits <= w.credit_max:
-            if w.start_date_time <= now_iso <= w.end_date_time:
+            if w.start_date_time <= now_str <= w.end_date_time:
                 return w
     return None
 
@@ -397,6 +408,7 @@ def inject_layout_variables():
             profile_name = admin.name
             profile_id = admin.id
             
+    cal_dates = get_calendar_dates()
     return {
         'role_color': role_colors.get(role, '#3b82f6'),
         'role_icon': role_icons.get(role, 'user'),
@@ -404,7 +416,12 @@ def inject_layout_variables():
         'profile_id': profile_id,
         'profile_pic': profile_pic,
         'profile_about': profile_about,
-        'current_semester': get_current_semester()
+        'current_semester': get_current_semester(),
+        'next_semester': get_next_semester(),
+        'current_semester_start_date': cal_dates['current_semester_start_date'],
+        'current_semester_end_date': cal_dates['current_semester_end_date'],
+        'next_semester_start_date': cal_dates['next_semester_start_date'],
+        'next_semester_end_date': cal_dates['next_semester_end_date'],
     }
 
 # ROUTES
@@ -593,12 +610,12 @@ def student_dashboard():
         'prerequisites': c.prerequisites
     } for c in courses])
 
-    plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_current_semester()).first()
+    plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_next_semester()).first()
     plan_course_ids = plan.course_ids if plan else []
     plan_credits = sum([c.credits for c in courses if c.code in plan_course_ids])
     
     # Offering sections
-    sections = SectionOffering.query.filter_by(semester_id=get_current_semester()).all()
+    sections = SectionOffering.query.filter_by(semester_id=get_next_semester()).all()
     sections_json = json.dumps([{
         'id': s.id,
         'course_code': s.course_code,
@@ -616,16 +633,41 @@ def student_dashboard():
         'faculty_id': s.faculty_id
     } for s in sections])
 
-    registrations = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    registrations = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
     selected_section_ids = [r.section_id for r in registrations]
     
     # System Advising States (Toggle switches controlled by admin settings)
+    # System Advising States (pre and final determined dynamically by window timings & credit requirements)
+    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    
+    pre_advising_active = False
+    student_pre_window = AdvisingWindow.query.filter(
+        AdvisingWindow.type == 'pre',
+        AdvisingWindow.semester_id == get_current_semester(),
+        AdvisingWindow.credit_min <= student.completed_credits,
+        AdvisingWindow.credit_max >= student.completed_credits,
+        AdvisingWindow.start_date_time <= now_str,
+        AdvisingWindow.end_date_time >= now_str
+    ).first()
+    if student_pre_window:
+        pre_advising_active = True
+        
+    final_advising_active = False
+    student_final_window = AdvisingWindow.query.filter(
+        AdvisingWindow.type == 'final',
+        AdvisingWindow.semester_id == get_current_semester(),
+        AdvisingWindow.credit_min <= student.completed_credits,
+        AdvisingWindow.credit_max >= student.completed_credits,
+        AdvisingWindow.start_date_time <= now_str,
+        AdvisingWindow.end_date_time >= now_str
+    ).first()
+    if student_final_window:
+        final_advising_active = True
+        
     def is_setting_true(key):
         s = SystemSetting.query.filter_by(key=key).first()
         return s.value == 'true' if s else False
         
-    pre_advising_active = is_setting_true('pre_advising_active')
-    final_advising_active = is_setting_true('final_advising_active')
     request_phase_active = is_setting_true('request_phase_active')
     
     # Final advising courses sorting
@@ -648,8 +690,7 @@ def student_dashboard():
                 recommended_courses.append(c.code)
                 
     # Class Schedules
-    prev_semester = get_previous_semester()
-    current_sem_regs = Registration.query.filter_by(student_id=student.id, semester_id=prev_semester).all()
+    current_sem_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
     current_schedule_sections = [SectionOffering.query.get(r.section_id) for r in current_sem_regs if SectionOffering.query.get(r.section_id)]
     
     next_schedule_sections = [SectionOffering.query.get(r.section_id) for r in registrations if SectionOffering.query.get(r.section_id)]
@@ -657,10 +698,10 @@ def student_dashboard():
     # Ledger
     ledger = LedgerEntry.query.filter_by(student_id=student.id).all()
     installments = Installment.query.filter_by(student_id=student.id).all()
-    requests = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    requests = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
     semester_drop_requests = SemesterDropRequest.query.filter_by(
         student_id=student.id,
-        semester_id=get_current_semester()
+        semester_id=get_next_semester()
     ).order_by(SemesterDropRequest.created_at.desc()).all()
     all_windows = AdvisingWindow.query.filter_by(semester_id=get_current_semester()).all()
     
@@ -788,9 +829,9 @@ def save_plan():
         flash('Pre-advising constraint: Total credits must be between 6.0 and 21.0.', 'error')
         return redirect('/advising')
         
-    plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_current_semester()).first()
+    plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_next_semester()).first()
     if not plan:
-        plan = AdvisingPlan(id='PLAN-'+student.id, student_id=student.id, semester_id=get_current_semester())
+        plan = AdvisingPlan(id='PLAN-'+student.id+'-'+get_next_semester(), student_id=student.id, semester_id=get_next_semester())
         db.session.add(plan)
         
     plan.course_ids = course_ids
@@ -819,7 +860,7 @@ def toggle_section():
         return jsonify({'status': 'error', 'message': 'Registration blocked due to outstanding financial balance.'})
         
     # Pre-advising validation check
-    plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_current_semester()).first()
+    plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_next_semester()).first()
     if not plan or len(plan.course_ids) == 0:
         return jsonify({'status': 'error', 'message': 'Self-registration blocked: You missed Pre-Advising.'})
         
@@ -828,7 +869,7 @@ def toggle_section():
     if not sec:
         return jsonify({'status': 'error', 'message': 'Section offering not found.'})
         
-    existing_reg = Registration.query.filter_by(student_id=student.id, section_id=sec.id, semester_id=get_current_semester()).first()
+    existing_reg = Registration.query.filter_by(student_id=student.id, section_id=sec.id, semester_id=get_next_semester()).first()
     
     if existing_reg:
         # Drop logic
@@ -837,7 +878,7 @@ def toggle_section():
         sec.enrolled_count = max(0, sec.enrolled_count - 1)
         
         if sec.linked_section_id:
-            lab_reg = Registration.query.filter_by(student_id=student.id, section_id=sec.linked_section_id, semester_id=get_current_semester()).first()
+            lab_reg = Registration.query.filter_by(student_id=student.id, section_id=sec.linked_section_id, semester_id=get_next_semester()).first()
             if lab_reg:
                 db.session.delete(lab_reg)
                 lab_sec = SectionOffering.query.get(sec.linked_section_id)
@@ -849,7 +890,7 @@ def toggle_section():
         
     # Add logic
     # Find active cart items
-    regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    regs = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
     current_sections = [SectionOffering.query.get(r.section_id) for r in regs if SectionOffering.query.get(r.section_id)]
     
     # Enforce maximum constraints: 15.0 credits & 5 courses
@@ -886,12 +927,12 @@ def toggle_section():
             return jsonify({'status': 'error', 'message': f"Linked Lab conflict with {cs.course_code} ({cs.schedule})."})
             
     # Register!
-    reg = Registration(id=f"REG-{student.id}-{sec.id}", student_id=student.id, section_id=sec.id, semester_id=get_current_semester())
+    reg = Registration(id=f"REG-{student.id}-{sec.id}", student_id=student.id, section_id=sec.id, semester_id=get_next_semester())
     db.session.add(reg)
     sec.enrolled_count += 1
     
     if linked_lab:
-        lab_reg = Registration(id=f"REG-{student.id}-{linked_lab.id}", student_id=student.id, section_id=linked_lab.id, semester_id=get_current_semester())
+        lab_reg = Registration(id=f"REG-{student.id}-{linked_lab.id}", student_id=student.id, section_id=linked_lab.id, semester_id=get_next_semester())
         db.session.add(lab_reg)
         linked_lab.enrolled_count += 1
         
@@ -936,7 +977,7 @@ def submit_override_request():
         return redirect('/advising')
     
     # Check max 2 requests
-    req_count = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_current_semester()).count()
+    req_count = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_next_semester()).count()
     if req_count >= 2:
         flash('Maximum request limit reached (Max 2 requests allowed).', 'error')
         return redirect('/advising')
@@ -952,7 +993,7 @@ def submit_override_request():
         course_id=course_id,
         type=request_type,
         comments=comments,
-        semester_id=get_current_semester(),
+        semester_id=get_next_semester(),
         advisor_id=student.advisor_id
     )
     db.session.add(req)
@@ -986,7 +1027,7 @@ def submit_change_request():
         flash('Justification comments are required.', 'error')
         return redirect('/advising')
     
-    req_count = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_current_semester()).count()
+    req_count = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_next_semester()).count()
     if req_count >= 2:
         flash('Maximum request limit reached (Max 2 requests allowed).', 'error')
         return redirect('/advising')
@@ -1003,7 +1044,7 @@ def submit_change_request():
         return redirect('/advising')
         
     # Check conflict with other courses in cart (excluding current section)
-    regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    regs = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
     for r in regs:
         if r.section_id != current_sec_id:
             other = SectionOffering.query.get(r.section_id)
@@ -1019,7 +1060,7 @@ def submit_change_request():
         course_id=new_sec.course_code,
         type='change_section',
         comments=comments,
-        semester_id=get_current_semester(),
+        semester_id=get_next_semester(),
         advisor_id=student.advisor_id
     )
     db.session.add(req)
@@ -1462,7 +1503,7 @@ def register_advisee_override():
         return redirect(url_for('faculty_dashboard'))
         
     # Drop all previous registrations
-    old_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    old_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
     for reg in old_regs:
         sec = SectionOffering.query.get(reg.section_id)
         if sec:
@@ -1478,7 +1519,7 @@ def register_advisee_override():
         if not sec:
             continue
             
-        reg = Registration(id=f"REG-{student.id}-{sec.id}", student_id=student.id, section_id=sec.id, semester_id=get_current_semester())
+        reg = Registration(id=f"REG-{student.id}-{sec.id}", student_id=student.id, section_id=sec.id, semester_id=get_next_semester())
         db.session.add(reg)
         sec.enrolled_count += 1
         registered_ids.add(sec.id)
@@ -1487,7 +1528,7 @@ def register_advisee_override():
         if sec.linked_section_id and sec.linked_section_id not in registered_ids:
             linked_sec = SectionOffering.query.get(sec.linked_section_id)
             if linked_sec:
-                l_reg = Registration(id=f"REG-{student.id}-{linked_sec.id}", student_id=student.id, section_id=linked_sec.id, semester_id=get_current_semester())
+                l_reg = Registration(id=f"REG-{student.id}-{linked_sec.id}", student_id=student.id, section_id=linked_sec.id, semester_id=get_next_semester())
                 db.session.add(l_reg)
                 linked_sec.enrolled_count += 1
                 registered_ids.add(linked_sec.id)
@@ -1533,7 +1574,7 @@ def resolve_request(req_id):
                 existing_reg = Registration.query.filter_by(
                     student_id=student.id,
                     section_id=sec.id,
-                    semester_id=get_current_semester()
+                    semester_id=req.semester_id
                 ).first()
                 conflict_section = student_has_schedule_conflict(student.id, sec)
                 if existing_reg:
@@ -1557,23 +1598,23 @@ def resolve_request(req_id):
                     id=f"REG-{student.id}-{sec.id}",
                     student_id=student.id,
                     section_id=sec.id,
-                    semester_id=get_current_semester()
+                    semester_id=req.semester_id
                 ))
                 sec.enrolled_count += 1
 
                 if linked_lab:
-                    lab_reg = Registration.query.filter_by(student_id=student.id, section_id=linked_lab.id, semester_id=get_current_semester()).first()
+                    lab_reg = Registration.query.filter_by(student_id=student.id, section_id=linked_lab.id, semester_id=req.semester_id).first()
                     if not lab_reg:
                         db.session.add(Registration(
                             id=f"REG-{student.id}-{linked_lab.id}",
                             student_id=student.id,
                             section_id=linked_lab.id,
-                            semester_id=get_current_semester()
+                            semester_id=req.semester_id
                         ))
                         linked_lab.enrolled_count += 1
                 
             elif req.type == 'change_section' and sec:
-                old_reg = Registration.query.filter_by(student_id=student.id, section_id=req.current_section_id, semester_id=get_current_semester()).first()
+                old_reg = Registration.query.filter_by(student_id=student.id, section_id=req.current_section_id, semester_id=req.semester_id).first()
                 if not old_reg:
                     flash("Cannot approve: current registration was not found.", "error")
                     return redirect(url_for('faculty_dashboard'))
@@ -1581,7 +1622,7 @@ def resolve_request(req_id):
                 target_reg = Registration.query.filter_by(
                     student_id=student.id,
                     section_id=sec.id,
-                    semester_id=get_current_semester()
+                    semester_id=req.semester_id
                 ).first()
                 if target_reg and sec.id != req.current_section_id:
                     flash("Cannot approve: student is already registered in the target section.", "error")
@@ -1611,7 +1652,7 @@ def resolve_request(req_id):
                         old_sec.enrolled_count = max(0, old_sec.enrolled_count - 1)
 
                 if old_lab_id:
-                    old_lab_reg = Registration.query.filter_by(student_id=student.id, section_id=old_lab_id, semester_id=get_current_semester()).first()
+                    old_lab_reg = Registration.query.filter_by(student_id=student.id, section_id=old_lab_id, semester_id=req.semester_id).first()
                     if old_lab_reg:
                         db.session.delete(old_lab_reg)
                         old_lab_sec = SectionOffering.query.get(old_lab_id)
@@ -1622,7 +1663,7 @@ def resolve_request(req_id):
                     id=f"REG-{student.id}-{sec.id}",
                     student_id=student.id,
                     section_id=sec.id,
-                    semester_id=get_current_semester()
+                    semester_id=req.semester_id
                 ))
                 sec.enrolled_count += 1
 
@@ -1631,7 +1672,7 @@ def resolve_request(req_id):
                         id=f"REG-{student.id}-{linked_lab.id}",
                         student_id=student.id,
                         section_id=linked_lab.id,
-                        semester_id=get_current_semester()
+                        semester_id=req.semester_id
                     ))
                     linked_lab.enrolled_count += 1
 
@@ -1659,13 +1700,13 @@ def admin_dashboard():
     students = Student.query.all()
     faculties = Faculty.query.all()
     pre_courses = PreAdvisingCourse.query.all()
-    section_offerings = SectionOffering.query.filter_by(semester_id=get_current_semester()).all()
+    section_offerings = SectionOffering.query.filter_by(semester_id=get_next_semester()).all()
     windows = AdvisingWindow.query.filter_by(semester_id=get_current_semester()).all()
     departments = Department.query.all()
     
     # Calculate Pre-Advising Demand
     demand_counts = {}
-    plans = AdvisingPlan.query.filter_by(semester_id=get_current_semester()).all()
+    plans = AdvisingPlan.query.filter_by(semester_id=get_next_semester()).all()
     for p in plans:
         for cCode in p.course_ids:
             demand_counts[cCode] = demand_counts.get(cCode, 0) + 1
@@ -1693,6 +1734,12 @@ def admin_dashboard():
 
     student_map = {s.id: s for s in students}
 
+    # Query 0-credit students
+    students_0cr = Student.query.filter((Student.completed_credits == 0) | (Student.completed_credits == 0.0) | (Student.completed_credits == None)).all()
+    for s in students_0cr:
+        regs = Registration.query.filter_by(student_id=s.id, semester_id=get_next_semester()).all()
+        s.registered_credits = sum([SectionOffering.query.get(r.section_id).credits for r in regs if SectionOffering.query.get(r.section_id)])
+
     return render_template(
         'admin.html',
         students=students,
@@ -1707,6 +1754,7 @@ def admin_dashboard():
         users_map=users_map,
         faculty_map=faculty_map,
         student_map=student_map,
+        students_0cr=students_0cr,
         current_semester=get_current_semester(),
         pre_advising_active=is_setting_true('pre_advising_active'),
         final_advising_active=is_setting_true('final_advising_active'),
@@ -1730,27 +1778,42 @@ def toggle_setting(key):
     flash(f"System setting '{key}' toggled to {setting.value}.", 'success')
     return redirect(url_for('admin_dashboard'))
 
-@app.route('/admin/change-semester', methods=['POST'])
+@app.route('/admin/change-calendar-settings', methods=['POST'])
 @login_required
-def change_semester():
+def change_calendar_settings():
     if current_user.role != 'admin':
         return redirect(url_for('home'))
         
-    sem = request.form.get('semester')
-    if sem not in ['Summer2026', 'Spring2026', 'Fall2026']:
-        flash('Invalid Semester name.', 'error')
-        return redirect(url_for('admin_dashboard'))
-        
-    setting = SystemSetting.query.filter_by(key='current_semester').first()
-    if not setting:
-        setting = SystemSetting(key='current_semester', value=sem)
-        db.session.add(setting)
-    else:
-        setting.value = sem
-    db.session.commit()
+    curr_sem = request.form.get('current_semester')
+    next_sem = request.form.get('next_semester')
+    c_start = request.form.get('current_semester_start')
+    c_end = request.form.get('current_semester_end')
+    n_start = request.form.get('next_semester_start')
+    n_end = request.form.get('next_semester_end')
     
-    flash(f"System semester switched to {sem} successfully!", 'success')
-    return redirect(url_for('admin_dashboard'))
+    valid_sems = ['Spring2026', 'Summer2026', 'Fall2026', 'Spring2027']
+    if curr_sem not in valid_sems or next_sem not in valid_sems:
+        flash('Invalid Semester name.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=settings')
+        
+    def save_setting(key, val):
+        setting = SystemSetting.query.filter_by(key=key).first()
+        if not setting:
+            setting = SystemSetting(key=key, value=val)
+            db.session.add(setting)
+        else:
+            setting.value = val
+
+    save_setting('current_semester', curr_sem)
+    save_setting('next_semester', next_sem)
+    save_setting('current_semester_start', c_start)
+    save_setting('current_semester_end', c_end)
+    save_setting('next_semester_start', n_start)
+    save_setting('next_semester_end', n_end)
+    
+    db.session.commit()
+    flash('Calendar and semester settings updated successfully!', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=settings')
 
 @app.route('/admin/change-password', methods=['POST'])
 @login_required
@@ -1769,6 +1832,107 @@ def change_admin_password():
     
     flash('Admin password updated successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
+
+def execute_default_advising(student):
+    next_sem = get_next_semester()
+    # 1. Clear any existing registrations for this student in the next semester
+    old_regs = Registration.query.filter_by(student_id=student.id, semester_id=next_sem).all()
+    for reg in old_regs:
+        sec = SectionOffering.query.get(reg.section_id)
+        if sec:
+            sec.enrolled_count = max(0, sec.enrolled_count - 1)
+        db.session.delete(reg)
+    db.session.flush()
+    
+    # 2. Courses to assign
+    target_courses = ['CSE103', 'CSE103 Lab', 'ENG101', 'MAT101']
+    
+    for course_code in target_courses:
+        # Get all sections for this course in the next semester
+        sections = SectionOffering.query.filter_by(course_code=course_code, semester_id=next_sem).all()
+        if not sections:
+            raise ValueError(f"No sections offered for {course_code} in {next_sem}.")
+        
+        import random
+        random.shuffle(sections)
+        
+        assigned = False
+        for sec in sections:
+            # Check capacity
+            if sec.enrolled_count >= sec.capacity:
+                continue
+            
+            # Check conflict using student_has_schedule_conflict
+            if student_has_schedule_conflict(student.id, sec):
+                continue
+            
+            # Found a free, non-conflicting section!
+            reg = Registration(
+                id=f"REG-{student.id}-{sec.id}",
+                student_id=student.id,
+                section_id=sec.id,
+                semester_id=next_sem
+            )
+            db.session.add(reg)
+            sec.enrolled_count += 1
+            db.session.flush()
+            assigned = True
+            break
+        
+        if not assigned:
+            raise ValueError(f"Could not find a conflict-free section with available seats for {course_code}.")
+            
+    student.advising_status = 'approved'
+    db.session.commit()
+
+@app.route('/admin/run-default-advising/<student_id>', methods=['POST'])
+@login_required
+def run_default_advising(student_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    student = Student.query.get(student_id)
+    if not student:
+        flash('Student not found.', 'error')
+        return redirect(url_for('admin_dashboard'))
+        
+    try:
+        execute_default_advising(student)
+        flash(f"Default advising completed successfully for {student.name} ({student.id}).", 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error advising {student.name}: {str(e)}", 'error')
+        
+    return redirect(url_for('admin_dashboard') + '?tab=default-advising')
+
+@app.route('/admin/run-all-default-advising', methods=['POST'])
+@login_required
+def run_all_default_advising():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    # Get all students with 0 credits
+    students_0cr = Student.query.filter((Student.completed_credits == 0) | (Student.completed_credits == 0.0) | (Student.completed_credits == None)).all()
+    
+    success_count = 0
+    fail_count = 0
+    errors = []
+    
+    for s in students_0cr:
+        try:
+            execute_default_advising(s)
+            success_count += 1
+        except Exception as e:
+            db.session.rollback()
+            fail_count += 1
+            errors.append(f"{s.id}: {str(e)}")
+            
+    if fail_count == 0:
+        flash(f"Default advising successfully completed for all {success_count} freshman students.", 'success')
+    else:
+        flash(f"Default advising completed with errors. Success: {success_count}, Failed: {fail_count}. Errors: {'; '.join(errors[:3])}", 'warning')
+        
+    return redirect(url_for('admin_dashboard') + '?tab=default-advising')
 
 @app.route('/change-password', methods=['POST'])
 @login_required
@@ -2175,7 +2339,61 @@ def delete_window(win_id):
     AdvisingWindow.query.filter_by(id=win_id).delete()
     db.session.commit()
     flash('Advising window timeline deleted.', 'success')
-    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/add-pre-course', methods=['POST'])
+@login_required
+def add_pre_course():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    code = request.form.get('code', '').strip().upper()
+    try:
+        credits = float(request.form.get('credits', '3.0'))
+    except ValueError:
+        flash('Invalid credits value.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=pre-advising')
+        
+    if not code:
+        flash('Course Code is required.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=pre-advising')
+        
+    existing = PreAdvisingCourse.query.filter_by(code=code).first()
+    if existing:
+        flash(f'Course {code} already exists in the pre-advising catalog.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=pre-advising')
+        
+    import re
+    match = re.match(r'^([A-Za-z]+)', code)
+    dept = match.group(1) if match else 'GEN'
+    
+    course = PreAdvisingCourse(
+        id=code,
+        code=code,
+        title=code,
+        credits=credits,
+        department_id=dept,
+        _prerequisites='[]'
+    )
+    db.session.add(course)
+    db.session.commit()
+    flash(f'Course {code} ({credits} Credits) added successfully.', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=pre-advising')
+
+@app.route('/admin/delete-pre-course/<course_id>', methods=['POST'])
+@login_required
+def delete_pre_course(course_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    course = PreAdvisingCourse.query.get(course_id)
+    if course:
+        db.session.delete(course)
+        db.session.commit()
+        flash(f'Course {course_id} removed from the pre-advising catalog.', 'success')
+    else:
+        flash('Course not found.', 'error')
+        
+    return redirect(url_for('admin_dashboard') + '?tab=pre-advising')
 
 @app.route('/admin/delete-section-offering/<sec_id>', methods=['POST'])
 @login_required
