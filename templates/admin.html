@@ -1401,97 +1401,116 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Semester & Academic Calendar Settings -->
-        <div class="glass-card p-6 space-y-4 lg:col-span-2">
-            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-white/5 pb-2">Academic Calendar & Semester Rollover</h3>
-            <form action="{{ url_for('change_calendar_settings') }}" method="POST" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Current Semester Config -->
-                    <div class="space-y-4 p-4 rounded-2xl bg-white/5 border border-white/5">
-                        <h4 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            Current Active Semester
-                        </h4>
-                        
-                        <div>
-                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Semester Name</label>
-                            <select name="current_semester" class="input text-xs">
-                                <option value="Spring2026" {% if current_semester == 'Spring2026' %}selected{% endif %}>Spring 2026</option>
-                                <option value="Summer2026" {% if current_semester == 'Summer2026' %}selected{% endif %}>Summer 2026</option>
-                                <option value="Fall2026" {% if current_semester == 'Fall2026' %}selected{% endif %}>Fall 2026</option>
-                                <option value="Spring2027" {% if current_semester == 'Spring2027' %}selected{% endif %}>Spring 2027</option>
-                            </select>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date</label>
-                                <input type="date" name="current_semester_start" value="{{ current_semester_start_date }}" class="input text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">End Date</label>
-                                <input type="date" name="current_semester_end" value="{{ current_semester_end_date }}" class="input text-xs">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Next Semester Config -->
-                    <div class="space-y-4 p-4 rounded-2xl bg-white/5 border border-white/5">
-                        <h4 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-violet-500"></span>
-                            Upcoming Target Semester
-                        </h4>
-                        
-                        <div>
-                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Semester Name</label>
-                            <select name="next_semester" class="input text-xs">
-                                <option value="Spring2026" {% if next_semester == 'Spring2026' %}selected{% endif %}>Spring 2026</option>
-                                <option value="Summer2026" {% if next_semester == 'Summer2026' %}selected{% endif %}>Summer 2026</option>
-                                <option value="Fall2026" {% if next_semester == 'Fall2026' %}selected{% endif %}>Fall 2026</option>
-                                <option value="Spring2027" {% if next_semester == 'Spring2027' %}selected{% endif %}>Spring 2027</option>
-                            </select>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date</label>
-                                <input type="date" name="next_semester_start" value="{{ next_semester_start_date }}" class="input text-xs">
-                            </div>
-                            <div>
-                                <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">End Date</label>
-                                <input type="date" name="next_semester_end" value="{{ next_semester_end_date }}" class="input text-xs">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[0.68rem] text-amber-300/90 leading-relaxed flex items-start gap-2.5">
-                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5 animate-pulse"></i>
+    <div class="space-y-6">
+        <!-- Semester Config Blocks -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Current Semester Config -->
+            <div class="glass-card p-6 space-y-4">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-white/5 pb-2 flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    Current Semester Settings
+                </h3>
+                <p class="text-[0.7rem] text-slate-400">Governs the active semester students are currently enrolled in. Default advising registers students into this semester.</p>
+                <form action="{{ url_for('update_current_semester') }}" method="POST" class="space-y-4">
                     <div>
-                        <strong>Rollover Warning:</strong> Switching the active semesters will programmatically transition students' next semester advised registrations into their current semester course schedules. Please confirm current classes are graded before performing a rollover.
+                        <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Semester Name</label>
+                        <select name="current_semester" class="input text-xs">
+                            <option value="Spring2026" {% if current_semester == 'Spring2026' %}selected{% endif %}>Spring 2026</option>
+                            <option value="Summer2026" {% if current_semester == 'Summer2026' %}selected{% endif %}>Summer 2026</option>
+                            <option value="Fall2026" {% if current_semester == 'Fall2026' %}selected{% endif %}>Fall 2026</option>
+                            <option value="Spring2027" {% if current_semester == 'Spring2027' %}selected{% endif %}>Spring 2027</option>
+                        </select>
                     </div>
-                </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date</label>
+                            <input type="date" name="current_semester_start" value="{{ current_semester_start_date }}" class="input text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">End Date</label>
+                            <input type="date" name="current_semester_end" value="{{ current_semester_end_date }}" class="input text-xs">
+                        </div>
+                    </div>
 
-                <button type="submit" class="text-xs px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold border border-emerald-500/20 shadow-lg shadow-emerald-500/10 transition-all flex items-center gap-1.5">
-                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                    Apply Calendar &amp; Rollover Semester
-                </button>
-            </form>
+                    <button type="submit" class="text-xs px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all">
+                        Save Current Semester
+                    </button>
+                </form>
+            </div>
+
+            <!-- Next Semester Config -->
+            <div class="glass-card p-6 space-y-4">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-white/5 pb-2 flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
+                    Next Semester Settings
+                </h3>
+                <p class="text-[0.7rem] text-slate-400">Governs the upcoming semester students are registering for. Final Advising records registrations into this semester.</p>
+                <form action="{{ url_for('update_next_semester') }}" method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Semester Name</label>
+                        <select name="next_semester" class="input text-xs">
+                            <option value="Spring2026" {% if next_semester == 'Spring2026' %}selected{% endif %}>Spring 2026</option>
+                            <option value="Summer2026" {% if next_semester == 'Summer2026' %}selected{% endif %}>Summer 2026</option>
+                            <option value="Fall2026" {% if next_semester == 'Fall2026' %}selected{% endif %}>Fall 2026</option>
+                            <option value="Spring2027" {% if next_semester == 'Spring2027' %}selected{% endif %}>Spring 2027</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date</label>
+                            <input type="date" name="next_semester_start" value="{{ next_semester_start_date }}" class="input text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">End Date</label>
+                            <input type="date" name="next_semester_end" value="{{ next_semester_end_date }}" class="input text-xs">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="text-xs px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold transition-all">
+                        Save Next Semester
+                    </button>
+                </form>
+            </div>
         </div>
 
-        <!-- Admin Password Change -->
-        <div class="glass-card p-6 space-y-4">
-            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Admin Security</h3>
-            <form action="{{ url_for('change_admin_password') }}" method="POST" class="space-y-4">
-                <div>
-                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Change Admin Password</label>
-                    <input type="password" name="password" placeholder="Enter new password" required class="input text-xs w-full">
-                </div>
-                <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-4 bg-red-600 hover:bg-red-700">
-                    Change Password
-                </button>
-            </form>
+        <!-- Rollover & Security Config Blocks -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Semester Rollover -->
+            <div class="glass-card p-6 space-y-4 border border-amber-500/20">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-amber-400 border-b border-white/5 pb-2 flex items-center gap-2">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
+                    Semester Rollover Control
+                </h3>
+                <p class="text-[0.7rem] text-slate-400 leading-relaxed">
+                    Executing a rollover transitions next semester advised course selections into students' active current semester schedule. Verify current semester grades are completed prior to execution.
+                </p>
+                <form action="{{ url_for('perform_rollover') }}" method="POST">
+                    <button type="submit" onclick="return confirm('Are you sure you want to perform the semester rollover? This will migrate student registrations.');" 
+                            class="text-xs px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold transition-all flex items-center gap-1.5">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        Perform Semester Rollover
+                    </button>
+                </form>
+            </div>
+
+            <!-- Admin Password Change -->
+            <div class="glass-card p-6 space-y-4">
+                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2 flex items-center gap-2">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-slate-400"></i>
+                    Admin Security
+                </h3>
+                <form action="{{ url_for('change_admin_password') }}" method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Change Admin Password</label>
+                        <input type="password" name="password" placeholder="Enter new password" required class="input text-xs w-full">
+                    </div>
+                    <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-4 bg-red-600 hover:bg-red-700">
+                        Change Password
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>

@@ -1777,21 +1777,18 @@ def toggle_setting(key):
     flash(f"System setting '{key}' toggled to {setting.value}.", 'success')
     return redirect(url_for('admin_dashboard'))
 
-@app.route('/admin/change-calendar-settings', methods=['POST'])
+@app.route('/admin/update-current-semester', methods=['POST'])
 @login_required
-def change_calendar_settings():
+def update_current_semester():
     if current_user.role != 'admin':
         return redirect(url_for('home'))
         
     curr_sem = request.form.get('current_semester')
-    next_sem = request.form.get('next_semester')
     c_start = request.form.get('current_semester_start')
     c_end = request.form.get('current_semester_end')
-    n_start = request.form.get('next_semester_start')
-    n_end = request.form.get('next_semester_end')
     
     valid_sems = ['Spring2026', 'Summer2026', 'Fall2026', 'Spring2027']
-    if curr_sem not in valid_sems or next_sem not in valid_sems:
+    if curr_sem not in valid_sems:
         flash('Invalid Semester name.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=settings')
         
@@ -1804,14 +1801,89 @@ def change_calendar_settings():
             setting.value = val
 
     save_setting('current_semester', curr_sem)
-    save_setting('next_semester', next_sem)
     save_setting('current_semester_start', c_start)
     save_setting('current_semester_end', c_end)
+    
+    db.session.commit()
+    flash('Current semester settings updated successfully!', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=settings')
+
+@app.route('/admin/update-next-semester', methods=['POST'])
+@login_required
+def update_next_semester():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    next_sem = request.form.get('next_semester')
+    n_start = request.form.get('next_semester_start')
+    n_end = request.form.get('next_semester_end')
+    
+    valid_sems = ['Spring2026', 'Summer2026', 'Fall2026', 'Spring2027']
+    if next_sem not in valid_sems:
+        flash('Invalid Semester name.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=settings')
+        
+    def save_setting(key, val):
+        setting = SystemSetting.query.filter_by(key=key).first()
+        if not setting:
+            setting = SystemSetting(key=key, value=val)
+            db.session.add(setting)
+        else:
+            setting.value = val
+
+    save_setting('next_semester', next_sem)
     save_setting('next_semester_start', n_start)
     save_setting('next_semester_end', n_end)
     
     db.session.commit()
-    flash('Calendar and semester settings updated successfully!', 'success')
+    flash('Next semester settings updated successfully!', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=settings')
+
+@app.route('/admin/perform-rollover', methods=['POST'])
+@login_required
+def perform_rollover():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    curr_sem = get_current_semester()
+    next_sem = get_next_semester()
+    
+    # Rollover: Move registrations from next semester to current semester
+    next_regs = Registration.query.filter_by(semester_id=next_sem).all()
+    for reg in next_regs:
+        reg.semester_id = next_sem # wait, old next_sem is the new current_sem!
+        
+    # Get sequence sequence
+    sem_sequence = ['Spring2026', 'Summer2026', 'Fall2026', 'Spring2027']
+    try:
+        idx = sem_sequence.index(next_sem)
+        new_next_sem = sem_sequence[idx + 1] if idx + 1 < len(sem_sequence) else 'Spring2027'
+    except ValueError:
+        new_next_sem = 'Spring2027'
+        
+    def save_setting(key, val):
+        setting = SystemSetting.query.filter_by(key=key).first()
+        if not setting:
+            setting = SystemSetting(key=key, value=val)
+            db.session.add(setting)
+        else:
+            setting.value = val
+            
+    next_start = SystemSetting.query.filter_by(key='next_semester_start').first()
+    next_end = SystemSetting.query.filter_by(key='next_semester_end').first()
+    
+    save_setting('current_semester', next_sem)
+    if next_start:
+        save_setting('current_semester_start', next_start.value)
+    if next_end:
+        save_setting('current_semester_end', next_end.value)
+        
+    save_setting('next_semester', new_next_sem)
+    save_setting('next_semester_start', '')
+    save_setting('next_semester_end', '')
+    
+    db.session.commit()
+    flash(f"Semester Rollover executed successfully! {next_sem} is now the Current Semester.", 'success')
     return redirect(url_for('admin_dashboard') + '?tab=settings')
 
 @app.route('/admin/change-password', methods=['POST'])
