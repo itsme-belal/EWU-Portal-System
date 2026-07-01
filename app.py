@@ -5,7 +5,8 @@ from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, text, event
+from sqlalchemy.engine import Engine
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from models import (
@@ -13,6 +14,15 @@ from models import (
     PreAdvisingCourse, SectionOffering, AdvisingWindow, AdvisingPlan, Registration,
     SemesterDropRequest, AttendanceRecord, AdvisingRequest, Grade, LedgerEntry, Installment, Announcement, SystemSetting
 )
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    import sqlite3
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'ewu_secret_key_123')
@@ -571,15 +581,24 @@ def logout():
 
 # STUDENT DASHBOARD
 @app.route('/student')
-@app.route('/advising')
 @login_required
 def student_dashboard():
+    return render_student_portal('dashboard')
+
+@app.route('/advising')
+@login_required
+def student_advising():
+    return render_student_portal('advising')
+
+def render_student_portal(active_tab):
     if current_user.role != 'student':
         return redirect(url_for('home'))
         
-    active_tab = 'advising' if request.path == '/advising' else 'dashboard'
-        
     student = Student.query.filter_by(user_id=current_user.id).first()
+    if not student:
+        flash("Student profile not found. Please contact the administrator to create your record.", "error")
+        logout_user()
+        return redirect(url_for('login_page'))
     
     # Check staggered gating ONLY for advising tab
     if active_tab == 'advising':
@@ -589,6 +608,10 @@ def student_dashboard():
             return redirect(url_for('student_dashboard'))
         
     dept = Department.query.get(student.department_id)
+    if not dept:
+        class DummyDept:
+            name = student.department_id or "Not Assigned"
+        dept = DummyDept()
     advisor = Faculty.query.get(student.advisor_id) if student.advisor_id else None
     advisor_email = None
     if advisor:
@@ -809,13 +832,25 @@ def save_plan():
     if current_user.role != 'student':
         return redirect(url_for('home'))
         
-    # Toggle check
-    active_setting = SystemSetting.query.filter_by(key='pre_advising_active').first()
-    if not active_setting or active_setting.value != 'true':
-        flash('Pre-advising is currently closed by the Administrator.', 'error')
-        return redirect('/advising')
-        
     student = Student.query.filter_by(user_id=current_user.id).first()
+    if not student:
+        flash("Student profile not found.", "error")
+        return redirect(url_for('login_page'))
+        
+    # Gating checks - time window check
+    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    semester = get_current_semester()
+    window = AdvisingWindow.query.filter(
+        AdvisingWindow.type == 'pre',
+        AdvisingWindow.semester_id == semester,
+        AdvisingWindow.credit_min <= student.completed_credits,
+        AdvisingWindow.credit_max >= student.completed_credits,
+        AdvisingWindow.start_date_time <= now_str,
+        AdvisingWindow.end_date_time >= now_str
+    ).first()
+    if not window:
+        flash('Pre-advising is currently closed or not active for your completed credits range.', 'error')
+        return redirect('/advising')
     course_ids_str = request.form.get('course_ids', '[]')
     course_ids = json.loads(course_ids_str)
     
@@ -849,11 +884,22 @@ def toggle_section():
         return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
         
     student = Student.query.filter_by(user_id=current_user.id).first()
+    if not student:
+        return jsonify({'status': 'error', 'message': 'Student profile not found.'}), 404
     
-    # Gating checks
-    active_setting = SystemSetting.query.filter_by(key='final_advising_active').first()
-    if not active_setting or active_setting.value != 'true':
-        return jsonify({'status': 'error', 'message': 'Final advising is currently frozen.'})
+    # Gating checks - time window check
+    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    semester = get_current_semester()
+    window = AdvisingWindow.query.filter(
+        AdvisingWindow.type == 'final',
+        AdvisingWindow.semester_id == semester,
+        AdvisingWindow.credit_min <= student.completed_credits,
+        AdvisingWindow.credit_max >= student.completed_credits,
+        AdvisingWindow.start_date_time <= now_str,
+        AdvisingWindow.end_date_time >= now_str
+    ).first()
+    if not window:
+        return jsonify({'status': 'error', 'message': 'Final advising is currently closed or not active for your completed credits range.'})
         
     # Financial hold check
     if not student.financial_cleared or student.outstanding_balance > 0:
@@ -948,6 +994,9 @@ def submit_override_request():
         return redirect(url_for('home'))
         
     student = Student.query.filter_by(user_id=current_user.id).first()
+    if not student:
+        flash("Student profile not found.", "error")
+        return redirect(url_for('login_page'))
     sec_id = (request.form.get('section_id') or '').strip()
     course_id = (request.form.get('course_id') or '').strip()
     comments = (request.form.get('comments') or '').strip()
@@ -1009,6 +1058,9 @@ def submit_change_request():
         return redirect(url_for('home'))
         
     student = Student.query.filter_by(user_id=current_user.id).first()
+    if not student:
+        flash("Student profile not found.", "error")
+        return redirect(url_for('login_page'))
     current_sec_id = (request.form.get('current_section_id') or '').strip()
     new_sec_id = (request.form.get('new_section_id') or '').strip()
     comments = (request.form.get('comments') or '').strip()

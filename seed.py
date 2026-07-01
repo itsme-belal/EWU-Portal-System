@@ -1,6 +1,7 @@
 import os
 import json
-from sqlalchemy import create_engine, text as sa_text
+from sqlalchemy import create_engine, text as sa_text, event
+from sqlalchemy.engine import Engine
 from werkzeug.security import generate_password_hash
 from models import (
     db, User, Department, Admin, SystemSetting, Faculty, Student,
@@ -27,6 +28,15 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    import sqlite3
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
 
 def seed_db():
     # For PostgreSQL: attempt to auto-create the database if missing

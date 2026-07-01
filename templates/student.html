@@ -1369,7 +1369,7 @@
             </div>
             <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-[#e2e8f0] dark:border-[#1e293b]">
                 <span class="block text-[#94a3b8] font-bold uppercase tracking-wider">CGPA</span>
-                <strong class="block mt-1">{{ "%.2f"|format(student.cgpa) }}</strong>
+                <strong class="block mt-1">{{ "%.2f"|format(student.cgpa or 0.0) }}</strong>
             </div>
             <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-[#e2e8f0] dark:border-[#1e293b]">
                 <span class="block text-[#94a3b8] font-bold uppercase tracking-wider">Advisor</span>
@@ -1556,7 +1556,7 @@
 
     // CGPA Masking Control
     let cgpaVisible = false;
-    const cgpaRaw = "{{ '%.2f'|format(student.cgpa) }}";
+    const cgpaRaw = "{{ '%.2f'|format(student.cgpa or 0.0) }}";
     function toggleCGPA() {
         const valueSpan = document.getElementById('cgpa-value');
         const eyeIcon = document.getElementById('cgpa-eye-icon');
