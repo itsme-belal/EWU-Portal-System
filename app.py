@@ -343,11 +343,11 @@ def is_student_allowed_in_portal(student):
     
     all_windows = AdvisingWindow.query.filter_by(semester_id=semester).all()
     if not all_windows:
-        return True, None
+        return False, None
         
     student_windows = [w for w in all_windows if w.credit_min <= student.completed_credits <= w.credit_max]
     if not student_windows:
-        return True, None
+        return False, None
         
     for w in student_windows:
         if w.start_date_time <= now_str <= w.end_date_time:
@@ -581,12 +581,12 @@ def student_dashboard():
         
     student = Student.query.filter_by(user_id=current_user.id).first()
     
-    # Check staggered gating
-    allowed, active_win = is_student_allowed_in_portal(student)
-    if not allowed:
-        logout_user()
-        flash('Access Denied: The portal is closed for your completed credit bracket schedule.', 'error')
-        return redirect(url_for('login_page'))
+    # Check staggered gating ONLY for advising tab
+    if active_tab == 'advising':
+        allowed, active_win = is_student_allowed_in_portal(student)
+        if not allowed:
+            flash('Access Denied: Advising is closed or the advising schedule is not configured/active for your completed credits range.', 'error')
+            return redirect(url_for('student_dashboard'))
         
     dept = Department.query.get(student.department_id)
     advisor = Faculty.query.get(student.advisor_id) if student.advisor_id else None
@@ -859,10 +859,7 @@ def toggle_section():
     if not student.financial_cleared or student.outstanding_balance > 0:
         return jsonify({'status': 'error', 'message': 'Registration blocked due to outstanding financial balance.'})
         
-    # Pre-advising validation check
-    plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_next_semester()).first()
-    if not plan or len(plan.course_ids) == 0:
-        return jsonify({'status': 'error', 'message': 'Self-registration blocked: You missed Pre-Advising.'})
+
         
     sec_id = request.json.get('section_id')
     sec = SectionOffering.query.get(sec_id)
@@ -932,9 +929,11 @@ def toggle_section():
     sec.enrolled_count += 1
     
     if linked_lab:
-        lab_reg = Registration(id=f"REG-{student.id}-{linked_lab.id}", student_id=student.id, section_id=linked_lab.id, semester_id=get_next_semester())
-        db.session.add(lab_reg)
-        linked_lab.enrolled_count += 1
+        existing_linked_reg = Registration.query.filter_by(student_id=student.id, section_id=linked_lab.id, semester_id=get_next_semester()).first()
+        if not existing_linked_reg:
+            lab_reg = Registration(id=f"REG-{student.id}-{linked_lab.id}", student_id=student.id, section_id=linked_lab.id, semester_id=get_next_semester())
+            db.session.add(lab_reg)
+            linked_lab.enrolled_count += 1
         
     student.advising_status = 'approved'
     db.session.commit()
@@ -1834,9 +1833,9 @@ def change_admin_password():
     return redirect(url_for('admin_dashboard'))
 
 def execute_default_advising(student):
-    next_sem = get_next_semester()
-    # 1. Clear any existing registrations for this student in the next semester
-    old_regs = Registration.query.filter_by(student_id=student.id, semester_id=next_sem).all()
+    curr_sem = get_current_semester()
+    # 1. Clear any existing registrations for this student in the current semester
+    old_regs = Registration.query.filter_by(student_id=student.id, semester_id=curr_sem).all()
     for reg in old_regs:
         sec = SectionOffering.query.get(reg.section_id)
         if sec:
@@ -1848,10 +1847,10 @@ def execute_default_advising(student):
     target_courses = ['CSE103', 'CSE103 Lab', 'ENG101', 'MAT101']
     
     for course_code in target_courses:
-        # Get all sections for this course in the next semester
-        sections = SectionOffering.query.filter_by(course_code=course_code, semester_id=next_sem).all()
+        # Get all sections for this course in the current semester
+        sections = SectionOffering.query.filter_by(course_code=course_code, semester_id=curr_sem).all()
         if not sections:
-            raise ValueError(f"No sections offered for {course_code} in {next_sem}.")
+            raise ValueError(f"No sections offered for {course_code} in {curr_sem}.")
         
         import random
         random.shuffle(sections)
@@ -1871,7 +1870,7 @@ def execute_default_advising(student):
                 id=f"REG-{student.id}-{sec.id}",
                 student_id=student.id,
                 section_id=sec.id,
-                semester_id=next_sem
+                semester_id=curr_sem
             )
             db.session.add(reg)
             sec.enrolled_count += 1
@@ -2242,8 +2241,13 @@ def create_section_offering():
         flash(f"Invalid Building in Room field. Room must start with AB1, AB2, AB3, FUB, or Main.", 'error')
         return redirect(url_for('admin_dashboard'))
         
-    sec_id = f"{ccode}-{snum}-{get_current_semester()}"
+    sec_id = f"{ccode}-{snum}-{get_next_semester()}"
     
+    existing = SectionOffering.query.filter_by(id=sec_id).first()
+    if existing:
+        flash(f"Section offering '{sec_id}' already exists in the system.", 'error')
+        return redirect(url_for('admin_dashboard'))
+        
     sec = SectionOffering(
         id=sec_id,
         course_code=ccode,
@@ -2256,7 +2260,7 @@ def create_section_offering():
         faculty_id=fac_id,
         is_lab=is_lab,
         linked_section_id=linked_id,
-        semester_id=get_current_semester()
+        semester_id=get_next_semester()
     )
     sec.dedicated_departments = dedicated
     sec.prerequisites = prereqs
@@ -2286,6 +2290,11 @@ def create_pre_course():
     pre_str = request.form.get('prerequisites', '').strip()
     prereqs = [x.strip() for x in pre_str.split(',') if x.strip()] if pre_str else []
     
+    existing = PreAdvisingCourse.query.filter_by(id=code).first()
+    if existing:
+        flash(f"Pre-advising course '{code}' already exists.", 'error')
+        return redirect(url_for('admin_dashboard'))
+        
     pc = PreAdvisingCourse(
         id=code,
         code=code,

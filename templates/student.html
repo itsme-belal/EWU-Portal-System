@@ -612,20 +612,29 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Live offerings -->
             <div class="lg:col-span-2 space-y-4">
-                <!-- Filter Row -->
-                <div class="flex gap-2 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
-                    <button onclick="filterAdvisingSections('all')" id="filter-all" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent active-filter">
-                        All Planned
-                    </button>
-                    <button onclick="filterAdvisingSections('failed')" id="filter-failed" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                        F Grade Courses
-                    </button>
-                    <button onclick="filterAdvisingSections('recommended')" id="filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                        Recommended
-                    </button>
-                    <button onclick="filterAdvisingSections('retake')" id="filter-retake" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                        D/D+ Retakes
-                    </button>
+                <!-- Filter & Search Row -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="filterAdvisingSections('all')" id="filter-all" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent active-filter">
+                            All Offerings
+                        </button>
+                        <button onclick="filterAdvisingSections('failed')" id="filter-failed" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                            F Grade Courses
+                        </button>
+                        <button onclick="filterAdvisingSections('recommended')" id="filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                            Recommended
+                        </button>
+                        <button onclick="filterAdvisingSections('retake')" id="filter-retake" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                            D/D+ Retakes
+                        </button>
+                    </div>
+                    <div class="relative w-full md:w-64">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-[#94a3b8] pointer-events-none">
+                            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                        </span>
+                        <input type="text" id="course-search-input" oninput="searchAdvisingCourses()" placeholder="Search course code..." 
+                               class="w-full pl-9 pr-3 py-1.5 bg-white/50 dark:bg-[#0f172a]/50 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 text-[#0f172a] dark:text-[#f1f5f9] placeholder-slate-400">
+                    </div>
                 </div>
 
                 <div class="space-y-4 max-h-[700px] overflow-y-auto pr-2" id="advising-table-container">
@@ -1684,6 +1693,12 @@
     const dCodes = {{ d_grades | tojson }};
     const recommendedCodes = {{ recommended_courses | tojson }};
     let currentAdvisingFilter = 'all';
+    let searchAdvisingQuery = '';
+
+    function searchAdvisingCourses() {
+        searchAdvisingQuery = document.getElementById('course-search-input').value.trim().toUpperCase();
+        loadAdvisingSections();
+    }
 
     function filterAdvisingSections(filterType) {
         currentAdvisingFilter = filterType;
@@ -1731,12 +1746,6 @@
         if (!container) return;
         container.innerHTML = '';
 
-        // Get currently registered sections schedules for conflict checking
-        const registeredSchedules = registrationsList.map(id => {
-            const sec = sectionsData.find(s => s.id === id);
-            return sec ? { id: sec.id, schedule: sec.schedule } : null;
-        }).filter(Boolean);
-
         // Group sections by Course Code
         const grouped = {};
         sectionsData.forEach(sec => {
@@ -1746,13 +1755,19 @@
         });
 
         // Filter course codes based on advising sub-branch filter
-        let filteredCodes = planCourseCodes;
+        const allAvailableCourseCodes = Object.keys(grouped);
+        let filteredCodes = allAvailableCourseCodes;
         if (currentAdvisingFilter === 'failed') {
-            filteredCodes = planCourseCodes.filter(c => failedCodes.includes(c));
+            filteredCodes = allAvailableCourseCodes.filter(c => failedCodes.includes(c));
         } else if (currentAdvisingFilter === 'recommended') {
-            filteredCodes = planCourseCodes.filter(c => recommendedCodes.includes(c));
+            filteredCodes = allAvailableCourseCodes.filter(c => recommendedCodes.includes(c));
         } else if (currentAdvisingFilter === 'retake') {
-            filteredCodes = planCourseCodes.filter(c => dCodes.includes(c));
+            filteredCodes = allAvailableCourseCodes.filter(c => dCodes.includes(c));
+        }
+
+        // Apply search query filter if present
+        if (searchAdvisingQuery) {
+            filteredCodes = filteredCodes.filter(c => c.toUpperCase().includes(searchAdvisingQuery));
         }
 
         if (filteredCodes.length === 0) {
@@ -1776,35 +1791,54 @@
             `;
 
             matchingSecs.forEach(sec => {
-                const isSelected = registrationsList.includes(sec.id);
-                const isFull = sec.enrolled_count >= sec.capacity;
+                const linkedSec = sec.linked_section_id ? sectionsData.find(s => s.id === sec.linked_section_id) : null;
+                const isSelected = registrationsList.includes(sec.id) || (linkedSec && registrationsList.includes(linkedSec.id));
+                
+                // Capacity Check: If either self or linked section is full, it's considered full
+                const isSelfFull = sec.enrolled_count >= sec.capacity;
+                const isLinkedFull = linkedSec ? (linkedSec.enrolled_count >= linkedSec.capacity) : false;
+                const isFull = isSelfFull || isLinkedFull;
+                
                 const isRestricted = sec.dedicated_departments && sec.dedicated_departments.length > 0 && !sec.dedicated_departments.includes('None') && !sec.dedicated_departments.includes('{{ student.department_id }}');
                 
-                // Conflict check
+                // Conflict Check: Check if self or linked section conflicts with any other registered sections
                 let hasConflict = false;
                 if (!isSelected) {
-                    for (let regSec of registeredSchedules) {
-                        if (regSec.id !== sec.id && checkOverlap(regSec.schedule, sec.schedule)) {
-                            hasConflict = true;
-                            break;
+                    for (let regId of registrationsList) {
+                        if (regId === sec.id || (linkedSec && regId === linkedSec.id)) {
+                            continue;
+                        }
+                        const regSec = sectionsData.find(s => s.id === regId);
+                        if (regSec) {
+                            if (checkOverlap(regSec.schedule, sec.schedule)) {
+                                hasConflict = true;
+                                break;
+                            }
+                            if (linkedSec && checkOverlap(regSec.schedule, linkedSec.schedule)) {
+                                hasConflict = true;
+                                break;
+                            }
                         }
                     }
                 }
 
                 // Decide color coding class
                 let colorClass = "border-[#e2e8f0] dark:border-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-900/20";
+                let statusBadgeHtml = '';
+                
                 if (isSelected) {
                     colorClass = "border-green-500 bg-green-50/10 text-green-700 dark:text-green-400";
-                } else if (sec.is_lab) {
-                    colorClass = "border-[#e2e8f0]/60 dark:border-[#1e293b]/60 bg-slate-500/5 opacity-80 cursor-default";
+                    statusBadgeHtml = `<span class="badge badge-success text-[0.58rem] ml-1 bg-green-600 text-white">ENROLLED</span>`;
                 } else if (isFull) {
                     colorClass = "border-blue-500 bg-blue-500/5 text-blue-700 dark:text-blue-400 cursor-not-allowed opacity-75";
+                    statusBadgeHtml = `<span class="badge badge-primary text-[0.58rem] ml-1 bg-blue-600 text-white">BLUE / FULL</span>`;
                 } else if (hasConflict) {
                     colorClass = "border-red-500 bg-red-500/5 text-red-700 dark:text-red-400 cursor-not-allowed opacity-75";
+                    statusBadgeHtml = `<span class="stitch-badge badge-hold text-[0.58rem] ml-1 bg-red-600 text-white">RED / CONFLICT</span>`;
                 }
 
                 let btnHtml = '';
-                if (!sec.is_lab && isFinalActive && (isFull || hasConflict)) {
+                if (isFinalActive && (isFull || hasConflict)) {
                     const reqType = isFull ? 'section_full' : 'schedule_conflict';
                     btnHtml = `
                         <button onclick="event.stopPropagation(); openRequestModal('${sec.id}', '${code}', '${reqType}')" 
@@ -1814,24 +1848,23 @@
                     `;
                 }
 
-                let clickHandler = sec.is_lab ? "" : `onclick="toggleSectionAJAX('${sec.id}', ${isFull}, ${hasConflict}, ${isRestricted})"`;
+                let clickHandler = `onclick="toggleSectionAJAX('${sec.id}', ${isFull}, ${hasConflict}, ${isRestricted})"`;
 
                 headerHtml += `
                     <div ${clickHandler} 
-                         class="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 ${sec.is_lab ? '' : 'cursor-pointer'} ${colorClass}">
-                        <div class="space-y-1">
+                         class="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 cursor-pointer ${colorClass}">
+                         <div class="space-y-1">
                             <p class="text-xs font-bold">
                                 Section ${sec.section_number}
                                 <span class="badge ${sec.is_lab ? 'badge-warning' : 'badge-info'} text-[0.58rem] ml-1">
                                     ${sec.is_lab ? 'LAB' : 'THEORY'}
                                 </span>
-                                ${!sec.is_lab && isFull ? '<span class="badge badge-primary text-[0.58rem] ml-1 bg-blue-600 text-white">BLUE / FULL</span>' : ''}
-                                ${!sec.is_lab && hasConflict ? '<span class="stitch-badge badge-hold text-[0.58rem] ml-1 bg-red-600 text-white">RED / CONFLICT</span>' : ''}
+                                ${statusBadgeHtml}
                             </p>
                             <p class="text-[0.7rem] text-[#94a3b8]">
                                 Room: ${sec.room} • Faculty: ${sec.faculty_id || 'TBA'} • Schedule: ${sec.schedule}
                             </p>
-                            ${!sec.is_lab && isRestricted ? `<p class="text-[0.62rem] text-red-500 font-bold">⚠ Restrict: ${sec.dedicated_departments.join('-')}</p>` : ''}
+                            ${isRestricted ? `<p class="text-[0.62rem] text-red-500 font-bold">⚠ Restrict: ${sec.dedicated_departments.join('-')}</p>` : ''}
                         </div>
                         <div class="flex items-center gap-3">
                             <div class="text-right">
