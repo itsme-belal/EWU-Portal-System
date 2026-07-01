@@ -600,12 +600,7 @@ def render_student_portal(active_tab):
         logout_user()
         return redirect(url_for('login_page'))
     
-    # Check staggered gating ONLY for advising tab
-    if active_tab == 'advising':
-        allowed, active_win = is_student_allowed_in_portal(student)
-        if not allowed:
-            flash('Access Denied: Advising is closed or the advising schedule is not configured/active for your completed credits range.', 'error')
-            return redirect(url_for('student_dashboard'))
+
         
     dept = Department.query.get(student.department_id)
     if not dept:
@@ -2472,6 +2467,7 @@ def delete_window(win_id):
     AdvisingWindow.query.filter_by(id=win_id).delete()
     db.session.commit()
     flash('Advising window timeline deleted.', 'success')
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/add-pre-course', methods=['POST'])
 @login_required
