@@ -579,7 +579,10 @@
 
                 <div class="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                     {% for course in courses %}
+                    {% if not course.code.endswith(' Lab') %}
                     {% set selected = course.code in plan_course_ids %}
+                    {% set lab_course = courses | selectattr('code', 'equalto', course.code ~ ' Lab') | first %}
+                    {% set combined_credits = (course.credits + lab_course.credits) if lab_course else course.credits %}
                     {% set is_f = (course.code in f_grades) or ( (course.code ~ ' Lab') in f_grades ) %}
                     {% set is_d = (course.code in d_grades) or ( (course.code ~ ' Lab') in d_grades ) %}
                     {% set is_retake = is_f or is_d %}
@@ -596,13 +599,14 @@
                             </div>
                             <div>
                                 <p class="font-bold text-xs">{{ course.code }}: {{ course.title }}</p>
-                                <p class="text-[0.65rem] text-[#94a3b8]">Credits: {{ course.credits }} {% if course.prerequisites %}• Prereq: {{ course.prerequisites | join(', ') }}{% endif %}</p>
+                                <p class="text-[0.65rem] text-[#94a3b8]">Credits: {{ combined_credits }} CR {% if course.prerequisites %}• Prereq: {{ course.prerequisites | join(', ') }}{% endif %}</p>
                             </div>
                         </div>
                         <button id="course-btn-{{ course.code }}" {% if not pre_advising_active %}disabled{% endif %} onclick="togglePlanCourse('{{ course.code }}')" class="px-3.5 py-1 text-xs font-bold rounded-lg border transition-colors {{ 'bg-blue-600 border-blue-600 text-white' if selected else 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800' }} {% if not pre_advising_active %}opacity-50 cursor-not-allowed{% endif %}">
                             {{ 'Selected' if selected else 'Select' }}
                         </button>
                     </div>
+                    {% endif %}
                     {% endfor %}
                 </div>
             </div>
@@ -616,17 +620,17 @@
                     </div>
                     <div class="flex justify-between">
                         <span>Planned Credits:</span>
-                        <span class="font-bold" id="plan-credits">{{ plan_credits }} / 21 CR</span>
+                        <span class="font-bold" id="plan-credits">{{ plan_credits }} / 15 CR</span>
                     </div>
                 </div>
                 <div class="bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 p-3 rounded-xl text-[0.68rem] text-blue-600 dark:text-blue-400 space-y-1">
                     <p class="font-bold">Requirements:</p>
-                    <p>• Select minimum 6.0 credits (2 courses).</p>
-                    <p>• Select maximum 21.0 credits (6 courses).</p>
+                    <p>• Select minimum 9.0 credits (3 courses).</p>
+                    <p>• Select maximum 15.0 credits (6 courses).</p>
                 </div>
                 <form action="{{ url_for('save_plan') }}" method="POST" id="plan-form">
                     <input type="hidden" name="course_ids" id="plan-input" value='{{ plan_course_ids | tojson }}'>
-                    <button type="submit" class="w-full btn-primary justify-center py-2 rounded-lg text-xs" {% if not pre_advising_active or plan_course_ids|length > 6 or plan_credits > 21 or plan_course_ids|length < 2 or plan_credits < 6 %}disabled{% endif %}>
+                    <button type="submit" class="w-full btn-primary justify-center py-2 rounded-lg text-xs" {% if not pre_advising_active or plan_course_ids|length > 6 or plan_credits > 15 or plan_course_ids|length < 3 or plan_credits < 9 %}disabled{% endif %}>
                         Save Pre-Advising Carts
                     </button>
                 </form>
@@ -1798,15 +1802,17 @@
         loadAdvisingSections();
     }
 
-    // Function to calculate if two schedules overlap
     function parseSchedule(scheduleStr) {
         if (!scheduleStr || !scheduleStr.includes(':')) return [];
-        const [daysPart, timePart] = scheduleStr.split(':');
+        const idx = scheduleStr.indexOf(':');
+        const daysPart = scheduleStr.substring(0, idx).trim();
+        const timePart = scheduleStr.substring(idx + 1).trim();
         const days = Array.from(daysPart);
         const [startStr, endStr] = timePart.split('-');
         
         const toMin = (t) => {
-            const pts = t.split('.');
+            const clean = t.trim().replace(':', '.');
+            const pts = clean.split('.');
             const h = parseInt(pts[0]);
             const m = pts[1] ? parseInt(pts[1]) : 0;
             return h * 60 + m;
@@ -1895,13 +1901,13 @@
             let statusText = '';
             
             if (isSelected) {
-                rowClass = "bg-green-500/10 dark:bg-green-500/5 text-green-700 dark:text-green-400 font-semibold";
+                rowClass = "bg-emerald-500/10 dark:bg-emerald-500/5 border-l-4 border-emerald-500 text-emerald-700 dark:text-emerald-400 font-semibold";
                 statusText = ' (Enrolled)';
             } else if (isFull) {
-                rowClass = "bg-blue-500/5 dark:bg-blue-500/5 text-blue-700 dark:text-blue-400 opacity-80";
+                rowClass = "bg-sky-500/10 dark:bg-sky-500/5 border-l-4 border-sky-500 text-sky-700 dark:text-sky-400";
                 statusText = ' (Full)';
             } else if (hasConflict) {
-                rowClass = "bg-red-500/5 dark:bg-red-500/5 text-red-700 dark:text-red-400 opacity-80";
+                rowClass = "bg-rose-500/10 dark:bg-rose-500/5 border-l-4 border-rose-500 text-rose-700 dark:text-rose-400";
                 statusText = ' (Conflict)';
             }
 

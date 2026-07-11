@@ -560,7 +560,13 @@
 
     <!-- Offered sections table -->
     <div class="glass-card p-6 space-y-4">
-        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-white/5 pb-2">Section Offerings List</h3>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-2">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Section Offerings List</h3>
+            <div class="relative w-full sm:w-64">
+                <input type="text" id="section-search" onkeyup="filterSections()" placeholder="Search course code..." class="input text-xs w-full pl-8">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5"></i>
+            </div>
+        </div>
         <div class="table-wrap mt-4">
             <table class="w-full text-left text-xs border-collapse">
                 <thead>
@@ -975,75 +981,142 @@
         <p class="text-xs text-slate-500 mt-1">Create new student accounts, manage portal access, and update academic records</p>
     </div>
 
-    <!-- Create Student Form -->
-    <div class="card bg-slate-900/40 border border-white/5 rounded-2xl p-6 space-y-4">
-        <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Create New Student Account</h3>
-        <form action="{{ url_for('create_student') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
-            <!-- Profile Picture Upload Area (Top) -->
-            <div class="flex flex-col md:flex-row gap-4 items-center p-4 bg-slate-950/40 border border-white/5 rounded-xl">
-                <div class="w-16 h-16 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-500 overflow-hidden flex-shrink-0" id="std-pic-preview">
-                    <i data-lucide="user" class="w-8 h-8"></i>
+    <!-- Student Ingestion Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Excel Upload Card -->
+        <div class="lg:col-span-1 glass-card p-6 space-y-4">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Bulk Excel Ingestion</h3>
+            <p class="text-xs text-slate-500">Upload a spreadsheet of students containing all profile fields (Student ID, Name, Email, Phone, Dept, CGPA, Addresses, etc.) to batch-create accounts instantly.</p>
+            <form action="{{ url_for('upload_students') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Student Excel File (.xlsx)</label>
+                    <input type="file" name="student_file" accept=".xlsx" required class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
                 </div>
-                <div class="flex-1 w-full">
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Profile Picture (Optional)</label>
-                    <input type="file" name="profile_pic" id="std_pic_input" accept="image/*" onchange="previewImage(this, 'std-pic-preview')" class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/10 file:text-emerald-400 hover:file:bg-emerald-500/20 file:cursor-pointer">
-                </div>
-            </div>
+                <button type="submit" class="btn-primary w-full rounded-lg text-xs py-2">
+                    <i data-lucide="upload" class="w-4 h-4"></i> Upload & Import Students
+                </button>
+            </form>
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Student ID</label>
-                    <input type="text" name="student_id" required placeholder="e.g. 2023-2-60-010" class="input text-xs w-full">
+        <!-- Individual Create Student Form -->
+        <div class="lg:col-span-2 glass-card p-6 space-y-4">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Create Student (Individual)</h3>
+            <form action="{{ url_for('create_student') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <!-- Profile Picture Upload Area -->
+                <div class="flex flex-col md:flex-row gap-4 items-center p-4 bg-slate-950/40 border border-white/5 rounded-xl">
+                    <div class="w-16 h-16 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-500 overflow-hidden flex-shrink-0" id="std-pic-preview">
+                        <i data-lucide="user" class="w-8 h-8"></i>
+                    </div>
+                    <div class="flex-1 w-full">
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Profile Picture (Optional)</label>
+                        <input type="file" name="profile_pic" id="std_pic_input" accept="image/*" onchange="previewImage(this, 'std-pic-preview')" class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/10 file:text-emerald-400 hover:file:bg-emerald-500/20 file:cursor-pointer">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
-                    <input type="text" name="name" required placeholder="e.g. Belal Hossain" class="input text-xs w-full">
-                </div>
-                <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Department</label>
-                    <select name="department_id" class="input text-xs">
-                        {% for dept in departments %}
-                        <option value="{{ dept.id }}">{{ dept.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
-                    <input type="email" name="email" required placeholder="e.g. belal@std.ewubd.edu" class="input text-xs w-full">
-                </div>
-                <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Completed Credits</label>
-                    <input type="number" step="0.5" name="completed_credits" value="0.0" class="input text-xs w-full" required>
-                </div>
-                <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">CGPA</label>
-                    <input type="number" step="0.01" name="cgpa" value="0.00" class="input text-xs w-full" required>
-                </div>
-            </div>
-            <div class="flex items-center gap-6">
-                <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Outstanding Dues (Tk.)</label>
-                    <input type="number" name="outstanding_balance" value="0" class="input text-xs w-40" required>
-                </div>
-                <div class="flex items-center gap-2 mt-5">
-                    <input type="checkbox" name="financial_cleared" id="fc_check" checked class="w-4 h-4 rounded">
-                    <label for="fc_check" class="text-xs font-bold cursor-pointer">Financial Cleared</label>
-                </div>
-            </div>
 
-            <!-- About Section (Bottom) -->
-            <div>
-                <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">About (Biography / Notes)</label>
-                <textarea name="about" id="std_about" maxlength="500" rows="3" oninput="updateCharCount(this, 'std-about-char-count')" placeholder="Brief biography or academic notes (max 500 characters)..." class="input text-xs resize-none"></textarea>
-                <div class="text-[0.65rem] text-slate-500 text-right mt-1"><span id="std-about-char-count">0</span> / 500 characters</div>
-            </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Student ID</label>
+                        <input type="text" name="student_id" required placeholder="e.g. 2023-2-60-010" class="input text-xs w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
+                        <input type="text" name="name" required placeholder="e.g. Belal Hossain" class="input text-xs w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Department</label>
+                        <select name="department_id" class="input text-xs">
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
 
-            <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-5">
-                <i data-lucide="user-plus" class="w-4 h-4"></i> Create Student Account
-            </button>
-        </form>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
+                        <input type="email" name="email" required placeholder="e.g. belal@std.ewubd.edu" class="input text-xs w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Phone Number</label>
+                        <input type="text" name="phone_number" placeholder="e.g. +8801618487558" class="input text-xs w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">CGPA</label>
+                        <input type="number" step="0.01" name="cgpa" value="0.00" class="input text-xs w-full" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Completed Credits</label>
+                        <input type="number" step="0.5" name="completed_credits" value="0.0" class="input text-xs w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Remaining Credits</label>
+                        <input type="number" step="0.5" name="remaining_credits" value="140.0" class="input text-xs w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Outstanding Dues (Tk.)</label>
+                        <input type="number" name="outstanding_balance" value="0" class="input text-xs w-full" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Present Address</label>
+                        <input type="text" name="present_address" placeholder="Present Address" class="input text-xs w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Permanent Address</label>
+                        <input type="text" name="permanent_address" placeholder="Permanent Address" class="input text-xs w-full">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Completed Courses and Grades</label>
+                        <input type="text" name="completed_courses_and_grades" placeholder="e.g. CSE103:A, MAT101:A-, ENG101:B+" class="input text-xs w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Courses</label>
+                        <input type="text" name="current_courses" placeholder="e.g. CSE106, ENG102, CHE109" class="input text-xs w-full">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Course Credit</label>
+                        <input type="number" step="0.5" name="current_course_credit" value="0.0" class="input text-xs w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Next Semester Courses</label>
+                        <input type="text" name="next_semester_courses" placeholder="e.g. None" class="input text-xs w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Next Semester Course Credit</label>
+                        <input type="number" step="0.5" name="next_semester_course_credit" value="0.0" class="input text-xs w-full">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-6">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" name="financial_cleared" id="fc_check" checked class="w-4 h-4 rounded">
+                        <label for="fc_check" class="text-xs font-bold cursor-pointer">Financial Cleared</label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">About (Biography / Notes)</label>
+                    <textarea name="about" id="std_about" maxlength="500" rows="2" oninput="updateCharCount(this, 'std-about-char-count')" placeholder="Brief biography or academic notes (max 500 characters)..." class="input text-xs resize-none"></textarea>
+                    <div class="text-[0.65rem] text-slate-500 text-right mt-1"><span id="std-about-char-count">0</span> / 500 characters</div>
+                </div>
+
+                <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-5">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Create Student Account
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Students Roster -->
@@ -2234,10 +2307,14 @@
                 <p id="std-modal-about" class="text-xs text-slate-400 mt-2 italic max-w-xl"></p>
             </div>
             <!-- Quick Stats -->
-            <div class="grid grid-cols-2 gap-3 bg-slate-900/50 p-3.5 rounded-xl border border-white/5">
+            <div class="grid grid-cols-3 gap-3 bg-slate-900/50 p-3.5 rounded-xl border border-white/5">
                 <div class="text-center">
                     <p class="text-[0.6rem] text-slate-500 font-bold uppercase tracking-wider">Completed Credits</p>
                     <p id="std-modal-credits" class="text-lg font-black text-emerald-400 mt-0.5"></p>
+                </div>
+                <div class="text-center">
+                    <p class="text-[0.6rem] text-slate-500 font-bold uppercase tracking-wider">Remaining Credits</p>
+                    <p id="std-modal-remaining-credits" class="text-lg font-black text-amber-500 mt-0.5"></p>
                 </div>
                 <div class="text-center">
                     <p class="text-[0.6rem] text-slate-500 font-bold uppercase tracking-wider">CGPA</p>
@@ -2259,16 +2336,56 @@
                         <p id="std-modal-email" class="font-semibold text-slate-200 mt-0.5 break-all"></p>
                     </div>
                     <div>
+                        <span class="text-slate-500">Phone Number:</span>
+                        <p id="std-modal-phone" class="font-semibold text-slate-200 mt-0.5"></p>
+                    </div>
+                    <div>
                         <span class="text-slate-500">Academic Advisor:</span>
                         <p id="std-modal-advisor" class="font-semibold text-slate-200 mt-0.5"></p>
                     </div>
                     <div>
+                        <span class="text-slate-500">Advising Status:</span>
+                        <p id="std-modal-advising-status" class="mt-0.5"></p>
+                    </div>
+                    <div class="col-span-2">
                         <span class="text-slate-500">Financial Status:</span>
                         <p id="std-modal-financial" class="mt-0.5"></p>
                     </div>
+                </div>
+
+                <!-- Addresses -->
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pt-2 pb-1">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-sky-400"></i> Contact Addresses
+                </h3>
+                <div class="grid grid-cols-2 gap-3 text-xs">
                     <div>
-                        <span class="text-slate-500">Advising Status:</span>
-                        <p id="std-modal-advising-status" class="mt-0.5"></p>
+                        <span class="text-slate-500">Present Address:</span>
+                        <p id="std-modal-present-address" class="font-semibold text-slate-200 mt-0.5"></p>
+                    </div>
+                    <div>
+                        <span class="text-slate-500">Permanent Address:</span>
+                        <p id="std-modal-permanent-address" class="font-semibold text-slate-200 mt-0.5"></p>
+                    </div>
+                </div>
+
+                <!-- Academic Semesters course tracking -->
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pt-2 pb-1">
+                    <i data-lucide="book-open" class="w-4 h-4 text-indigo-400"></i> Academic Course Status
+                </h3>
+                <div class="grid grid-cols-3 gap-3 text-xs">
+                    <div>
+                        <span class="text-slate-500">Completed Courses:</span>
+                        <p id="std-modal-completed-courses-grades" class="font-semibold text-slate-200 mt-0.5 break-words"></p>
+                    </div>
+                    <div>
+                        <span class="text-slate-500">Current Courses:</span>
+                        <p id="std-modal-current-courses" class="font-semibold text-slate-200 mt-0.5 break-words"></p>
+                        <p class="text-[0.65rem] text-slate-400 mt-0.5">Credit: <span id="std-modal-current-credit" class="font-bold text-slate-200"></span></p>
+                    </div>
+                    <div>
+                        <span class="text-slate-500">Next Sem Courses:</span>
+                        <p id="std-modal-next-courses" class="font-semibold text-slate-200 mt-0.5 break-words"></p>
+                        <p class="text-[0.65rem] text-slate-400 mt-0.5">Credit: <span id="std-modal-next-credit" class="font-bold text-slate-200"></span></p>
                     </div>
                 </div>
 
@@ -2969,9 +3086,18 @@
                     document.getElementById('std-modal-id-dept').innerText = `${data.id} • ${data.department_id}`;
                     document.getElementById('std-modal-about').innerText = data.about || 'No about profile text provided.';
                     document.getElementById('std-modal-credits').innerText = `${data.completed_credits} CR`;
+                    document.getElementById('std-modal-remaining-credits').innerText = `${data.remaining_credits} CR`;
                     document.getElementById('std-modal-cgpa').innerText = Number(data.cgpa).toFixed(2);
                     document.getElementById('std-modal-email').innerText = data.email;
+                    document.getElementById('std-modal-phone').innerText = data.phone_number || 'N/A';
                     document.getElementById('std-modal-advisor').innerText = data.advisor_name;
+                    document.getElementById('std-modal-present-address').innerText = data.present_address || 'N/A';
+                    document.getElementById('std-modal-permanent-address').innerText = data.permanent_address || 'N/A';
+                    document.getElementById('std-modal-completed-courses-grades').innerText = data.completed_courses_and_grades || 'None';
+                    document.getElementById('std-modal-current-courses').innerText = data.current_courses || 'None';
+                    document.getElementById('std-modal-current-credit').innerText = `${data.current_course_credit} CR`;
+                    document.getElementById('std-modal-next-courses').innerText = data.next_semester_courses || 'None';
+                    document.getElementById('std-modal-next-credit').innerText = `${data.next_semester_course_credit} CR`;
                     
                     const fin = document.getElementById('std-modal-financial');
                     if (data.financial_cleared && data.outstanding_balance === 0) {
@@ -3141,6 +3267,23 @@
         if (event === null || event.target === document.getElementById('faculty-profile-modal')) {
             document.getElementById('faculty-profile-modal').classList.add('hidden');
         }
+    }
+
+    function filterSections() {
+        const input = document.getElementById("section-search");
+        const filter = input.value.toLowerCase();
+        const rows = document.querySelectorAll("#tab-course-management table tbody tr");
+        rows.forEach(row => {
+            const cells = row.getElementsByTagName("td");
+            if (cells.length > 0) {
+                const courseCode = cells[0].innerText.toLowerCase();
+                if (courseCode.indexOf(filter) > -1) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            }
+        });
     }
 
     // Initial call on DOMContentLoaded for academic records and charts

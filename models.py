@@ -49,6 +49,17 @@ class Student(db.Model):
     financial_cleared = db.Column(db.Boolean, default=True)
     profile_pic = db.Column(db.String(255), nullable=True)
     about = db.Column(db.String(500), nullable=True)
+    
+    # Newly added fields
+    phone_number = db.Column(db.String(50), nullable=True)
+    remaining_credits = db.Column(db.Float, default=0.0)
+    present_address = db.Column(db.String(255), nullable=True)
+    permanent_address = db.Column(db.String(255), nullable=True)
+    completed_courses_and_grades = db.Column(db.Text, nullable=True)
+    current_courses = db.Column(db.Text, nullable=True)
+    current_course_credit = db.Column(db.Float, default=0.0)
+    next_semester_courses = db.Column(db.Text, nullable=True)
+    next_semester_course_credit = db.Column(db.Float, default=0.0)
 
 class Admin(db.Model):
     __tablename__ = 'admins'

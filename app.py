@@ -49,7 +49,19 @@ def ensure_runtime_schema():
     inspector = inspect(db.engine)
     tables = set(inspector.get_table_names())
     profile_columns = {
-        'students': {'profile_pic': 'VARCHAR(255)', 'about': 'VARCHAR(500)'},
+        'students': {
+            'profile_pic': 'VARCHAR(255)', 
+            'about': 'VARCHAR(500)',
+            'phone_number': 'VARCHAR(50)',
+            'remaining_credits': 'FLOAT DEFAULT 0.0',
+            'present_address': 'VARCHAR(255)',
+            'permanent_address': 'VARCHAR(255)',
+            'completed_courses_and_grades': 'TEXT',
+            'current_courses': 'TEXT',
+            'current_course_credit': 'FLOAT DEFAULT 0.0',
+            'next_semester_courses': 'TEXT',
+            'next_semester_course_credit': 'FLOAT DEFAULT 0.0'
+        },
         'faculty': {'profile_pic': 'VARCHAR(255)', 'about': 'VARCHAR(500)'},
         'pre_advising_courses': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
         'section_offerings': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
@@ -197,7 +209,10 @@ def parse_schedule(schedule_str):
     try:
         if not schedule_str or ':' not in schedule_str:
             return []
-        days_part, time_part = schedule_str.split(':')
+        # Split by the FIRST colon only
+        days_part, time_part = schedule_str.split(':', 1)
+        days_part = days_part.strip()
+        time_part = time_part.strip()
         
         days = []
         i = 0
@@ -208,8 +223,9 @@ def parse_schedule(schedule_str):
         start_str, end_str = time_part.split('-')
         
         def to_minutes(time_str):
-            # Normalizes times like '10.10' or '10.10.1' (admin typo support)
-            parts = time_str.split('.')
+            # Normalizes times like '10.10' or '10:10' or '10.10.1' (admin typo support)
+            clean = time_str.strip().replace(':', '.')
+            parts = clean.split('.')
             h = int(parts[0])
             m = int(parts[1]) if len(parts) > 1 else 0
             return h * 60 + m
@@ -845,18 +861,21 @@ def render_student_portal(active_tab):
     f_grades     = [_grade_course_code(g) for g in grades if g.grade_letter == 'F']
     d_grades     = [_grade_course_code(g) for g in grades if g.grade_letter in ['D', 'D+']]
 
-    # Recommended courses (prerequisites met and not passed)
-    recommended_courses = []
-    for c in courses:
-        if c.code not in passed_codes:
-            prereqs_met = all(pre in passed_codes for pre in c.prerequisites)
-            if prereqs_met:
-                recommended_courses.append(c.code)
-                
     # Class Schedules
     current_sem_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
     current_schedule_sections = [SectionOffering.query.get(r.section_id) for r in current_sem_regs if SectionOffering.query.get(r.section_id)]
-    
+    current_course_codes = [sec.course_code for sec in current_schedule_sections if sec]
+    all_completed_or_ongoing = set(passed_codes) | set(current_course_codes)
+
+    # Recommended courses (prerequisites met, not yet passed or ongoing, and completed credit requirement is met)
+    recommended_courses = []
+    for c in courses:
+        if c.code not in all_completed_or_ongoing:
+            prereqs_met = all(pre in all_completed_or_ongoing for pre in c.prerequisites)
+            credits_met = student.completed_credits >= c.completed_credit_requirement
+            if prereqs_met and credits_met:
+                recommended_courses.append(c.code)
+                
     next_schedule_sections = [SectionOffering.query.get(r.section_id) for r in registrations if SectionOffering.query.get(r.section_id)]
 
     # Ledger
@@ -971,10 +990,14 @@ def render_student_portal(active_tab):
 @login_required
 def save_plan():
     if current_user.role != 'student':
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
         return redirect(url_for('home'))
         
     student = Student.query.filter_by(user_id=current_user.id).first()
     if not student:
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': 'Student profile not found.'}), 404
         flash("Student profile not found.", "error")
         return redirect(url_for('login_page'))
         
@@ -990,21 +1013,34 @@ def save_plan():
         AdvisingWindow.end_date_time >= now_str
     ).first()
     if not window:
-        flash('Pre-advising is currently closed or not active for your completed credits range.', 'error')
+        msg = 'Pre-advising is currently closed or not active for your completed credits range.'
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': msg})
+        flash(msg, 'error')
         return redirect('/advising')
-    course_ids_str = request.form.get('course_ids', '[]')
-    submitted_course_ids = json.loads(course_ids_str)
+        
+    if request.is_json:
+        submitted_course_ids = request.json.get('course_ids', [])
+    else:
+        course_ids_str = request.form.get('course_ids', '[]')
+        submitted_course_ids = json.loads(course_ids_str)
     
-    # Validate count check on submitted courses (2 to 6)
-    if len(submitted_course_ids) < 2 or len(submitted_course_ids) > 6:
-        flash('Pre-advising constraint: Must select between 2 and 6 courses.', 'error')
+    # Enforce maximum courses: 6
+    if len(submitted_course_ids) > 6:
+        msg = 'Pre-advising constraint: Maximum of 6 courses allowed.'
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': msg})
+        flash(msg, 'error')
         return redirect('/advising')
         
     # Eligibility check on submitted courses
     eligible_course_codes = get_eligible_courses_for_student(student)
     for ccode in submitted_course_ids:
         if ccode not in eligible_course_codes:
-            flash(f"Pre-advising constraint: You are not eligible to take course {ccode} due to prerequisite or completed credit requirements.", "error")
+            msg = f"Pre-advising constraint: You are not eligible to take course {ccode} due to prerequisite or completed credit requirements."
+            if request.is_json:
+                return jsonify({'status': 'error', 'message': msg})
+            flash(msg, "error")
             return redirect('/advising')
             
     # Auto-expand to include eligible labs
@@ -1019,8 +1055,13 @@ def save_plan():
     # Check credit limit on expanded list
     courses = PreAdvisingCourse.query.filter(PreAdvisingCourse.code.in_(course_ids)).all()
     total_credits = sum([c.credits for c in courses])
-    if total_credits < 6 or total_credits > 21:
-        flash('Pre-advising constraint: Total credits must be between 6.0 and 21.0.', 'error')
+    
+    # Enforce maximum credits: 15.0
+    if total_credits > 15.0:
+        msg = 'Pre-advising constraint: Total credits cannot exceed 15.0 CR.'
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': msg})
+        flash(msg, 'error')
         return redirect('/advising')
         
     plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_next_semester()).first()
@@ -1032,6 +1073,9 @@ def save_plan():
     student.advising_status = 'planned'
     db.session.commit()
     
+    if request.is_json:
+        return jsonify({'status': 'success', 'message': 'Pre-advising plan auto-saved!'})
+        
     flash('Pre-advising plan saved successfully!', 'success')
     return redirect('/advising')
 
@@ -1100,7 +1144,7 @@ def toggle_section():
     regs = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
     current_sections = [SectionOffering.query.get(r.section_id) for r in regs if SectionOffering.query.get(r.section_id)]
     
-    # Enforce maximum constraints: 15.0 credits & 5 courses
+    # Enforce maximum constraints: 15.0 credits & 6 courses
     courses_count = len(current_sections) + 1
     total_credits = sum([s.credits for s in current_sections]) + sec.credits
     
@@ -1112,8 +1156,8 @@ def toggle_section():
             courses_count += 1
             total_credits += linked_lab.credits
             
-    if courses_count > 5 or total_credits > 15.0:
-        return jsonify({'status': 'error', 'message': 'Registration limit exceeded (Max 15.0 credits & 5 courses).'})
+    if courses_count > 6 or total_credits > 15.0:
+        return jsonify({'status': 'error', 'message': 'Registration limit exceeded (Max 15.0 credits & 6 courses).'})
         
     # Capacity Check
     if sec.enrolled_count >= sec.capacity:
@@ -2120,6 +2164,29 @@ def change_admin_password():
     flash('Admin password updated successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
 
+def get_student_semester_level(student_id, current_semester_str):
+    parts = student_id.split('-')
+    if len(parts) < 3:
+        return 1
+    try:
+        admit_year = int(parts[0])
+        admit_term = int(parts[1])
+    except ValueError:
+        return 1
+        
+    import re
+    match = re.match(r'([A-Za-z]+)(\d+)', current_semester_str)
+    if not match:
+        return 1
+    term_name = match.group(1).lower()
+    curr_year = int(match.group(2))
+    
+    term_map = {'spring': 1, 'summer': 2, 'fall': 3}
+    curr_term = term_map.get(term_name, 1)
+    
+    elapsed = (curr_year - admit_year) * 3 + (curr_term - admit_term) + 1
+    return max(1, elapsed)
+
 def execute_default_advising(student):
     curr_sem = get_current_semester()
     # 1. Clear any existing registrations for this student in the current semester
@@ -2131,27 +2198,63 @@ def execute_default_advising(student):
         db.session.delete(reg)
     db.session.flush()
     
-    # 2. Courses to assign
-    target_courses = ['CSE103', 'CSE103 Lab', 'ENG101', 'MAT101']
+    # 2. Courses to assign based on student ID parsing
+    parts = student.id.split('-')
+    dept_code = parts[2] if len(parts) >= 3 else ''
+    sem_level = get_student_semester_level(student.id, curr_sem)
     
+    # Department codes mapping: 60 = CSE, 80 = EEE, 50 = ICE, 40 = ENG
+    if dept_code == '60' and sem_level == 1:
+        target_courses = ['CSE106', 'ENG101', 'MAT101']
+    elif dept_code == '80' and sem_level == 1:
+        target_courses = ['PHY109', 'CHE109', 'MAT101']
+    elif dept_code == '50' and sem_level == 2:
+        target_courses = ['ICE101', 'ENG101', 'MAT101']
+    else:
+        # Fallback default courses
+        if dept_code == '60':
+            target_courses = ['CSE103', 'ENG101', 'MAT101']
+        elif dept_code == '80':
+            target_courses = ['EEE101', 'MAT101', 'PHY109']
+        elif dept_code == '50':
+            target_courses = ['ICE101', 'ENG101', 'MAT101']
+        else:
+            target_courses = ['ENG101', 'MAT101', 'GEN226']
+            
     for course_code in target_courses:
-        # Get all sections for this course in the current semester
+        # Check if already registered (e.g. from linked labs)
+        already_reg = False
+        for r in Registration.query.filter_by(student_id=student.id, semester_id=curr_sem).all():
+            rsec = SectionOffering.query.get(r.section_id)
+            if rsec and rsec.course_code == course_code:
+                already_reg = True
+                break
+        if already_reg:
+            continue
+            
         sections = SectionOffering.query.filter_by(course_code=course_code, semester_id=curr_sem).all()
         if not sections:
-            raise ValueError(f"No sections offered for {course_code} in {curr_sem}.")
-        
+            continue
+            
         import random
         random.shuffle(sections)
         
         assigned = False
         for sec in sections:
-            # Check capacity
             if sec.enrolled_count >= sec.capacity:
                 continue
-            
-            # Check conflict using student_has_schedule_conflict
             if student_has_schedule_conflict(student.id, sec):
                 continue
+                
+            # If it has a linked lab, check capacity & conflicts too
+            linked_lab = None
+            if sec.linked_section_id:
+                linked_lab = SectionOffering.query.get(sec.linked_section_id)
+                if linked_lab:
+                    if linked_lab.enrolled_count >= linked_lab.capacity:
+                        continue
+                    if student_has_schedule_conflict(student.id, linked_lab):
+                        continue
             
             # Found a free, non-conflicting section!
             reg = Registration(
@@ -2162,10 +2265,22 @@ def execute_default_advising(student):
             )
             db.session.add(reg)
             sec.enrolled_count += 1
+            
+            # Register linked lab
+            if linked_lab:
+                reg_lab = Registration(
+                    id=f"REG-{student.id}-{linked_lab.id}",
+                    student_id=student.id,
+                    section_id=linked_lab.id,
+                    semester_id=curr_sem
+                )
+                db.session.add(reg_lab)
+                linked_lab.enrolled_count += 1
+                
             db.session.flush()
             assigned = True
             break
-        
+            
         if not assigned:
             raise ValueError(f"Could not find a conflict-free section with available seats for {course_code}.")
             
@@ -2257,27 +2372,39 @@ def create_student():
     balance = int(request.form.get('outstanding_balance', 0))
     cleared = 'financial_cleared' in request.form
     about = request.form.get('about', '').strip()
+    
+    # New fields
+    phone_number = request.form.get('phone_number', '').strip()
+    remaining_credits = float(request.form.get('remaining_credits', 0.0))
+    present_address = request.form.get('present_address', '').strip()
+    permanent_address = request.form.get('permanent_address', '').strip()
+    completed_courses_and_grades = request.form.get('completed_courses_and_grades', '').strip()
+    current_courses = request.form.get('current_courses', '').strip()
+    current_course_credit = float(request.form.get('current_course_credit', 0.0))
+    next_semester_courses = request.form.get('next_semester_courses', '').strip()
+    next_semester_course_credit = float(request.form.get('next_semester_course_credit', 0.0))
+    
     if len(about) > 500:
         flash('About section must be 500 characters or fewer.', 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=students')
     
     if not std_id or not name or not email:
         flash('All fields are required.', 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=students')
         
     if User.query.filter_by(email=email).first():
         flash('Email already registered.', 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=students')
         
     if Student.query.get(std_id):
         flash('Student ID already exists.', 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=students')
         
     try:
         profile_pic_filename = save_profile_pic_upload(request.files.get('profile_pic'), f"student_{std_id}")
     except ValueError as exc:
         flash(str(exc), 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=students')
 
     user = User(
         id='usr-' + std_id,
@@ -2285,9 +2412,10 @@ def create_student():
         password_hash=generate_password_hash('password123'),
         role='student',
         is_active=True,
-        is_activated=False # Starts unactivated! First time activation flow.
+        is_activated=False
     )
     db.session.add(user)
+    db.session.flush()
     
     student = Student(
         id=std_id,
@@ -2299,13 +2427,73 @@ def create_student():
         outstanding_balance=balance,
         financial_cleared=cleared,
         profile_pic=profile_pic_filename,
-        about=about
+        about=about,
+        
+        # Save new fields
+        phone_number=phone_number if phone_number else None,
+        remaining_credits=remaining_credits,
+        present_address=present_address if present_address else None,
+        permanent_address=permanent_address if permanent_address else None,
+        completed_courses_and_grades=completed_courses_and_grades if completed_courses_and_grades else None,
+        current_courses=current_courses if current_courses else None,
+        current_course_credit=current_course_credit,
+        next_semester_courses=next_semester_courses if next_semester_courses else None,
+        next_semester_course_credit=next_semester_course_credit
     )
     db.session.add(student)
+    
+    # Sync grades and registrations
+    import re
+    if completed_courses_and_grades and completed_courses_and_grades.lower() != 'none':
+        parts = re.split(r'[,;\n\r]+', completed_courses_and_grades)
+        for part in parts:
+            part = part.strip()
+            if not part: continue
+            match = re.search(r'([A-Za-z0-9\s]+)[:\s]+([A-Za-z+-]+)', part)
+            if match:
+                ccode = match.group(1).strip().replace(' ', '')
+                gletter = match.group(2).strip()
+                points_map = {
+                    'A+': 4.0, 'A': 4.0, 'A-': 3.7,
+                    'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+                    'C+': 2.3, 'C': 2.0, 'C-': 1.7,
+                    'D+': 1.3, 'D': 1.0, 'F': 0.0
+                }
+                gpoint = points_map.get(gletter.upper(), 0.0)
+                grade_id = f"GRD-{std_id}-{ccode}"
+                new_grade = Grade(
+                    id=grade_id,
+                    student_id=std_id,
+                    section_id=ccode,
+                    grade_letter=gletter.upper(),
+                    grade_point=gpoint,
+                    semester_id='completed'
+                )
+                db.session.add(new_grade)
+                
+    if current_courses and current_courses.lower() != 'none':
+        ccodes = [c.strip() for c in re.split(r'[,;\s]+', current_courses) if c.strip()]
+        for cc in ccodes:
+            if not cc: continue
+            sec = SectionOffering.query.filter_by(course_code=cc).first()
+            if sec:
+                reg_id = f"REG-{std_id}-{sec.id}"
+                existing_reg = Registration.query.get(reg_id)
+                if not existing_reg:
+                    new_reg = Registration(
+                        id=reg_id,
+                        student_id=std_id,
+                        section_id=sec.id,
+                        semester_id=sec.semester_id,
+                        status='registered'
+                    )
+                    db.session.add(new_reg)
+                    sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                    
     db.session.commit()
     
     flash('Student account created successfully! Advise student to activate using their email.', 'success')
-    return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('admin_dashboard') + '?tab=students')
 
 @app.route('/admin/create-faculty', methods=['POST'])
 @login_required
@@ -2809,6 +2997,226 @@ def import_excel_schedule(file_source):
                         sec.linked_section_id = linked_sec_id
             db.session.commit()
 
+def import_excel_students(file_source):
+    import openpyxl
+    import re
+    wb = openpyxl.load_workbook(file_source)
+    sheet = wb.active
+    header_row = next(sheet.iter_rows(max_row=1), None)
+    if not header_row:
+        raise ValueError("The excel file is empty or has no header row.")
+        
+    headers = [str(cell.value).strip() for cell in header_row]
+    
+    required_cols = [
+        'Student ID', 'Name', 'Student Email', 'Phone Number', 'Department',
+        'Completed Credit', 'Remaining Credit', 'CGPA', 'Present Address',
+        'Permanent Address', 'Completed Courses and Grades', 'Current Courses',
+        'Current Course Credit', 'Next Semester Courses', 'Next Semester Course Credit',
+        'Profile Picture'
+    ]
+    
+    col_map = {}
+    for name in required_cols:
+        if name in headers:
+            col_map[name] = headers.index(name)
+        else:
+            for idx, h in enumerate(headers):
+                if h.lower().replace(' ', '').replace('_', '').replace('-', '') == name.lower().replace(' ', '').replace('_', '').replace('-', ''):
+                    col_map[name] = idx
+                    break
+                    
+    if 'Student ID' not in col_map or 'Name' not in col_map or 'Student Email' not in col_map:
+        raise ValueError("Headers must contain at least 'Student ID', 'Name', and 'Student Email'.")
+        
+    rows = list(sheet.iter_rows(min_row=2, values_only=True))
+    imported_count = 0
+    
+    for row in rows:
+        if not row or all(v is None for v in row):
+            continue
+            
+        std_id = str(row[col_map['Student ID']]).strip()
+        name = str(row[col_map['Name']]).strip()
+        email = str(row[col_map['Student Email']]).strip()
+        
+        if not std_id or not name or not email:
+            continue
+            
+        phone = str(row[col_map['Phone Number']]).strip() if ('Phone Number' in col_map and row[col_map['Phone Number']] is not None) else None
+        dept = str(row[col_map['Department']]).strip() if ('Department' in col_map and row[col_map['Department']] is not None) else 'CSE'
+        
+        try:
+            credits = float(row[col_map['Completed Credit']]) if ('Completed Credit' in col_map and row[col_map['Completed Credit']] is not None) else 0.0
+        except ValueError:
+            credits = 0.0
+            
+        try:
+            rem_credits = float(row[col_map['Remaining Credit']]) if ('Remaining Credit' in col_map and row[col_map['Remaining Credit']] is not None) else 140.0
+        except ValueError:
+            rem_credits = 140.0
+            
+        try:
+            cgpa = float(row[col_map['CGPA']]) if ('CGPA' in col_map and row[col_map['CGPA']] is not None) else 0.0
+        except ValueError:
+            cgpa = 0.0
+            
+        present_address = str(row[col_map['Present Address']]).strip() if ('Present Address' in col_map and row[col_map['Present Address']] is not None) else None
+        permanent_address = str(row[col_map['Permanent Address']]).strip() if ('Permanent Address' in col_map and row[col_map['Permanent Address']] is not None) else None
+        
+        comp_courses_grades = str(row[col_map['Completed Courses and Grades']]).strip() if ('Completed Courses and Grades' in col_map and row[col_map['Completed Courses and Grades']] is not None) else None
+        curr_courses = str(row[col_map['Current Courses']]).strip() if ('Current Courses' in col_map and row[col_map['Current Courses']] is not None) else None
+        
+        try:
+            curr_credit = float(row[col_map['Current Course Credit']]) if ('Current Course Credit' in col_map and row[col_map['Current Course Credit']] is not None) else 0.0
+        except ValueError:
+            curr_credit = 0.0
+            
+        next_courses = str(row[col_map['Next Semester Courses']]).strip() if ('Next Semester Courses' in col_map and row[col_map['Next Semester Courses']] is not None) else None
+        
+        try:
+            next_credit = float(row[col_map['Next Semester Course Credit']]) if ('Next Semester Course Credit' in col_map and row[col_map['Next Semester Course Credit']] is not None) else 0.0
+        except ValueError:
+            next_credit = 0.0
+            
+        prof_pic = str(row[col_map['Profile Picture']]).strip() if ('Profile Picture' in col_map and row[col_map['Profile Picture']] is not None) else None
+        if prof_pic and prof_pic.lower() == 'none':
+            prof_pic = None
+            
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            user = User(
+                id='usr-' + std_id,
+                email=email,
+                password_hash=generate_password_hash('password123'),
+                role='student',
+                is_active=True,
+                is_activated=False
+            )
+            db.session.add(user)
+            db.session.flush()
+            
+        student = Student.query.get(std_id)
+        if not student:
+            student = Student(
+                id=std_id,
+                user_id=user.id,
+                name=name,
+                department_id=dept,
+                completed_credits=credits,
+                remaining_credits=rem_credits,
+                cgpa=cgpa,
+                phone_number=phone,
+                present_address=present_address,
+                permanent_address=permanent_address,
+                completed_courses_and_grades=comp_courses_grades,
+                current_courses=curr_courses,
+                current_course_credit=curr_credit,
+                next_semester_courses=next_courses,
+                next_semester_course_credit=next_credit,
+                profile_pic=prof_pic,
+                outstanding_balance=0,
+                financial_cleared=True,
+                about=''
+            )
+            db.session.add(student)
+        else:
+            student.name = name
+            student.department_id = dept
+            student.completed_credits = credits
+            student.remaining_credits = rem_credits
+            student.cgpa = cgpa
+            student.phone_number = phone
+            student.present_address = present_address
+            student.permanent_address = permanent_address
+            student.completed_courses_and_grades = comp_courses_grades
+            student.current_courses = curr_courses
+            student.current_course_credit = curr_credit
+            student.next_semester_courses = next_courses
+            student.next_semester_course_credit = next_credit
+            if prof_pic:
+                student.profile_pic = prof_pic
+                
+        if comp_courses_grades and comp_courses_grades.lower() != 'none':
+            parts = re.split(r'[,;\n\r]+', comp_courses_grades)
+            for part in parts:
+                part = part.strip()
+                if not part: continue
+                match = re.search(r'([A-Za-z0-9\s]+)[:\s]+([A-Za-z+-]+)', part)
+                if match:
+                    ccode = match.group(1).strip().replace(' ', '')
+                    gletter = match.group(2).strip()
+                    points_map = {
+                        'A+': 4.0, 'A': 4.0, 'A-': 3.7,
+                        'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+                        'C+': 2.3, 'C': 2.0, 'C-': 1.7,
+                        'D+': 1.3, 'D': 1.0, 'F': 0.0
+                    }
+                    gpoint = points_map.get(gletter.upper(), 0.0)
+                    grade_id = f"GRD-{std_id}-{ccode}"
+                    
+                    existing_grade = Grade.query.get(grade_id)
+                    if not existing_grade:
+                        new_grade = Grade(
+                            id=grade_id,
+                            student_id=std_id,
+                            section_id=ccode,
+                            grade_letter=gletter.upper(),
+                            grade_point=gpoint,
+                            semester_id='completed'
+                        )
+                        db.session.add(new_grade)
+                    else:
+                        existing_grade.grade_letter = gletter.upper()
+                        existing_grade.grade_point = gpoint
+                        
+        if curr_courses and curr_courses.lower() != 'none':
+            ccodes = [c.strip() for c in re.split(r'[,;\s]+', curr_courses) if c.strip()]
+            for cc in ccodes:
+                if not cc: continue
+                sec = SectionOffering.query.filter_by(course_code=cc).first()
+                if sec:
+                    reg_id = f"REG-{std_id}-{sec.id}"
+                    existing_reg = Registration.query.get(reg_id)
+                    if not existing_reg:
+                        new_reg = Registration(
+                            id=reg_id,
+                            student_id=std_id,
+                            section_id=sec.id,
+                            semester_id=sec.semester_id,
+                            status='registered'
+                        )
+                        db.session.add(new_reg)
+                        sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                        
+        imported_count += 1
+        
+    db.session.commit()
+    return imported_count
+
+@app.route('/admin/upload-students', methods=['POST'])
+@login_required
+def upload_students():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    file = request.files.get('student_file')
+    if not file or file.filename == '':
+        flash('No file selected.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=students')
+        
+    if not file.filename.endswith('.xlsx'):
+        flash('Invalid file format. Only Excel files (.xlsx) are allowed.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=students')
+        
+    try:
+        count = import_excel_students(file)
+        flash(f'{count} students imported/updated successfully!', 'success')
+    except Exception as e:
+        flash(f'Error importing students: {str(e)}', 'error')
+        
+    return redirect(url_for('admin_dashboard') + '?tab=students')
+
 @app.route('/admin/upload-schedule', methods=['POST'])
 @login_required
 def upload_schedule():
@@ -3221,7 +3629,18 @@ def admin_student_details(std_id):
         'advisor_name': advisor_name,
         'registrations': regs_list,
         'grades': grades_list,
-        'ledger': ledger_list
+        'ledger': ledger_list,
+        
+        # New profile fields
+        'phone_number': student.phone_number or '',
+        'remaining_credits': student.remaining_credits,
+        'present_address': student.present_address or '',
+        'permanent_address': student.permanent_address or '',
+        'completed_courses_and_grades': student.completed_courses_and_grades or '',
+        'current_courses': student.current_courses or '',
+        'current_course_credit': student.current_course_credit,
+        'next_semester_courses': student.next_semester_courses or '',
+        'next_semester_course_credit': student.next_semester_course_credit
     })
 
 @app.route('/admin/faculty-details/<fac_id>')
