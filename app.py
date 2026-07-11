@@ -31,6 +31,12 @@ app.secret_key = os.environ.get('SECRET_KEY', 'ewu_secret_key_123')
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///ewu_portal.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Prevent disk I/O errors: disable connection pool for SQLite (each request gets its own connection)
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'check_same_thread': False, 'timeout': 30},
+    'pool_recycle': 300,
+    'pool_pre_ping': True,
+}
 
 db.init_app(app)
 
@@ -593,18 +599,25 @@ def student_advising():
     return render_student_portal('advising')
 
 def get_eligible_courses_for_student(student):
-    """
-    Returns a set of course codes that the student is eligible to take this semester
-    based on:
-    1. Department restrictions (Core Dept, Common, Non-Dept <= 3 limit).
-    2. Prerequisite completion (including current ongoing courses).
-    3. Completed credit thresholds.
-    """
-    # 1. Fetch all student grades & registrations
+    """Returns a set of course codes student is eligible to take."""
+    # Build set of PASSED course codes (not section IDs)
     grades = Grade.query.filter_by(student_id=student.id).all()
-    passed_codes = {g.section_id for g in grades if g.grade_letter != 'F'}
-    
-    current_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    passed_codes = set()
+    for g in grades:
+        if g.grade_letter not in ('F', None, ''):
+            # g.section_id might be a course_code directly stored, or a section ID
+            # Try to look up the section to get course_code
+            sec = SectionOffering.query.get(g.section_id)
+            if sec:
+                passed_codes.add(sec.course_code)
+            else:
+                # Fallback: treat section_id as the course_code (old format)
+                passed_codes.add(g.section_id)
+
+    # Current semester registrations (courses being taken now)
+    current_regs = Registration.query.filter_by(
+        student_id=student.id, semester_id=get_current_semester()
+    ).all()
     current_course_codes = []
     ongoing_credits = 0.0
     for r in current_regs:
@@ -612,7 +625,7 @@ def get_eligible_courses_for_student(student):
         if sec_obj:
             current_course_codes.append(sec_obj.course_code)
             ongoing_credits += sec_obj.credits
-            
+
     all_completed_or_ongoing = passed_codes | set(current_course_codes)
     student_total_credits = student.completed_credits + ongoing_credits
     
@@ -703,7 +716,52 @@ def render_student_portal(active_tab):
     
     # Pre-advising data (filtered by eligibility)
     eligible_course_codes = get_eligible_courses_for_student(student)
-    courses = [c for c in PreAdvisingCourse.query.all() if c.code in eligible_course_codes]
+    raw_courses = [c for c in PreAdvisingCourse.query.all() if c.code in eligible_course_codes]
+    all_catalog_map = {c.code: c for c in PreAdvisingCourse.query.all()}
+    
+    courses = []
+    processed_codes = set()
+    
+    for c in raw_courses:
+        if c.code in processed_codes:
+            continue
+            
+        if " Lab" in c.code:
+            theory_code = c.code.replace(" Lab", "")
+            if theory_code in eligible_course_codes:
+                continue
+            else:
+                courses.append(c)
+                processed_codes.add(c.code)
+        else:
+            lab_code = c.code + " Lab"
+            if lab_code in all_catalog_map:
+                lab_course = all_catalog_map[lab_code]
+                
+                class CombinedCourse:
+                    def __init__(self, code, title, credits, prerequisites, completed_credit_requirement):
+                        self.code = code
+                        self.title = title
+                        self.credits = credits
+                        self.prerequisites = prerequisites
+                        self.completed_credit_requirement = completed_credit_requirement
+                
+                combined_prereqs = list(set(c.prerequisites) | set(lab_course.prerequisites))
+                combined_credits = c.credits + lab_course.credits
+                
+                combined_obj = CombinedCourse(
+                    code=c.code,
+                    title=c.title + " & Lab",
+                    credits=combined_credits,
+                    prerequisites=combined_prereqs,
+                    completed_credit_requirement=c.completed_credit_requirement
+                )
+                courses.append(combined_obj)
+                processed_codes.add(c.code)
+                processed_codes.add(lab_code)
+            else:
+                courses.append(c)
+                processed_codes.add(c.code)
     
     all_courses = PreAdvisingCourse.query.all()
     all_courses_dict = {c.code: c for c in all_courses}
@@ -714,7 +772,7 @@ def render_student_portal(active_tab):
         'credits': c.credits,
         'prerequisites': c.prerequisites
     } for c in courses])
-
+ 
     plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_next_semester()).first()
     plan_course_ids = plan.course_ids if plan else []
     plan_credits = sum([all_courses_dict[code].credits for code in plan_course_ids if code in all_courses_dict])
@@ -776,23 +834,22 @@ def render_student_portal(active_tab):
         return s.value == 'true' if s else False
         
     request_phase_active = is_setting_true('request_phase_active')
-    
-    # Final advising courses sorting
+
+    # Final advising courses sorting — resolve course codes from grade section_ids
     grades = Grade.query.filter_by(student_id=student.id).all()
-    passed_codes = [g.section_id for g in grades if g.grade_letter != 'F']
-    f_grades = [g.section_id for g in grades if g.grade_letter == 'F']
-    d_grades = [g.section_id for g in grades if g.grade_letter in ['D', 'D+']]
-    
+    def _grade_course_code(g):
+        sec = SectionOffering.query.get(g.section_id)
+        return sec.course_code if sec else g.section_id
+
+    passed_codes = [_grade_course_code(g) for g in grades if g.grade_letter not in ('F', None, '')]
+    f_grades     = [_grade_course_code(g) for g in grades if g.grade_letter == 'F']
+    d_grades     = [_grade_course_code(g) for g in grades if g.grade_letter in ['D', 'D+']]
+
     # Recommended courses (prerequisites met and not passed)
     recommended_courses = []
     for c in courses:
         if c.code not in passed_codes:
-            # Check prerequisites
-            prereqs_met = True
-            for pre in c.prerequisites:
-                if pre not in passed_codes:
-                    prereqs_met = False
-                    break
+            prereqs_met = all(pre in passed_codes for pre in c.prerequisites)
             if prereqs_met:
                 recommended_courses.append(c.code)
                 
@@ -936,19 +993,30 @@ def save_plan():
         flash('Pre-advising is currently closed or not active for your completed credits range.', 'error')
         return redirect('/advising')
     course_ids_str = request.form.get('course_ids', '[]')
-    course_ids = json.loads(course_ids_str)
+    submitted_course_ids = json.loads(course_ids_str)
     
-    # Eligibility check
+    # Validate count check on submitted courses (2 to 6)
+    if len(submitted_course_ids) < 2 or len(submitted_course_ids) > 6:
+        flash('Pre-advising constraint: Must select between 2 and 6 courses.', 'error')
+        return redirect('/advising')
+        
+    # Eligibility check on submitted courses
     eligible_course_codes = get_eligible_courses_for_student(student)
-    for ccode in course_ids:
+    for ccode in submitted_course_ids:
         if ccode not in eligible_course_codes:
             flash(f"Pre-advising constraint: You are not eligible to take course {ccode} due to prerequisite or completed credit requirements.", "error")
             return redirect('/advising')
             
-    if len(course_ids) < 2 or len(course_ids) > 6:
-        flash('Pre-advising constraint: Must select between 2 and 6 courses.', 'error')
-        return redirect('/advising')
-        
+    # Auto-expand to include eligible labs
+    expanded_course_ids = []
+    for ccode in submitted_course_ids:
+        expanded_course_ids.append(ccode)
+        lab_code = ccode + " Lab"
+        if lab_code in eligible_course_codes:
+            expanded_course_ids.append(lab_code)
+    course_ids = list(set(expanded_course_ids))
+    
+    # Check credit limit on expanded list
     courses = PreAdvisingCourse.query.filter(PreAdvisingCourse.code.in_(course_ids)).all()
     total_credits = sum([c.credits for c in courses])
     if total_credits < 6 or total_credits > 21:
@@ -2468,6 +2536,12 @@ def create_section_offering():
         flash(f"Section offering '{sec_id}' already exists in the system.", 'error')
         return redirect(url_for('admin_dashboard'))
         
+    comp_cred_req = 0
+    try:
+        comp_cred_req = int(request.form.get('completed_credit_requirement', '0'))
+    except ValueError:
+        pass
+
     sec = SectionOffering(
         id=sec_id,
         course_code=ccode,
@@ -2480,7 +2554,8 @@ def create_section_offering():
         faculty_id=fac_id,
         is_lab=is_lab,
         linked_section_id=linked_id,
-        semester_id=get_next_semester()
+        semester_id=get_next_semester(),
+        completed_credit_requirement=comp_cred_req
     )
     sec.dedicated_departments = dedicated
     sec.prerequisites = prereqs
@@ -2914,17 +2989,24 @@ def add_pre_course():
     match = re.match(r'^([A-Za-z]+)', code)
     dept = match.group(1) if match else 'GEN'
     
+    comp_cred_req = 0
+    try:
+        comp_cred_req = int(request.form.get('completed_credit_requirement', '0'))
+    except ValueError:
+        pass
+
     course = PreAdvisingCourse(
         id=code,
         code=code,
         title=code,
         credits=credits,
         department_id=dept,
-        _prerequisites='[]'
+        _prerequisites='[]',
+        completed_credit_requirement=comp_cred_req
     )
     db.session.add(course)
     db.session.commit()
-    flash(f'Course {code} ({credits} Credits) added successfully.', 'success')
+    flash(f'Course {code} ({credits} Credits) added successfully with credit requirement {comp_cred_req}.', 'success')
     return redirect(url_for('admin_dashboard') + '?tab=pre-advising')
 
 @app.route('/admin/delete-pre-course/<course_id>', methods=['POST'])

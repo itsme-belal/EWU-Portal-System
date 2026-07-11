@@ -553,11 +553,43 @@
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 space-y-4">
-                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Pre-Advising Course Catalog</h3>
-                <div class="space-y-2">
+                <div class="flex justify-between items-center border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Pre-Advising Course Catalog</h3>
+                    <span class="text-xs text-slate-500">Combine Theory &amp; Lab</span>
+                </div>
+
+                <!-- Pre-advising filter row -->
+                <div class="flex flex-wrap gap-2 py-2">
+                    <button onclick="filterPreAdvising('all')" id="pre-filter-all" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all border border-transparent">
+                        All Courses
+                    </button>
+                    <button onclick="filterPreAdvising('recommended')" id="pre-filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                        Recommended Courses
+                    </button>
+                    <button onclick="filterPreAdvising('retake')" id="pre-filter-retake" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                        Retake Courses
+                    </button>
+                    <button onclick="filterPreAdvising('d_grade')" id="pre-filter-d_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                        D/D+ Courses
+                    </button>
+                    <button onclick="filterPreAdvising('f_grade')" id="pre-filter-f_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                        F Courses
+                    </button>
+                </div>
+
+                <div class="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                     {% for course in courses %}
                     {% set selected = course.code in plan_course_ids %}
-                    <div id="course-card-{{ course.code }}" class="stitch-card flex justify-between items-center py-3 px-4 border transition-all duration-150 {{ 'border-blue-500 bg-blue-50/10' if selected else 'border-[#e2e8f0] dark:border-[#1e293b]' }}">
+                    {% set is_f = (course.code in f_grades) or ( (course.code ~ ' Lab') in f_grades ) %}
+                    {% set is_d = (course.code in d_grades) or ( (course.code ~ ' Lab') in d_grades ) %}
+                    {% set is_retake = is_f or is_d %}
+                    {% set is_rec = course.code in recommended_courses %}
+                    <div id="course-card-{{ course.code }}" 
+                         data-is-recommended="{{ 'true' if is_rec else 'false' }}"
+                         data-is-f-grade="{{ 'true' if is_f else 'false' }}"
+                         data-is-d-grade="{{ 'true' if is_d else 'false' }}"
+                         data-is-retake="{{ 'true' if is_retake else 'false' }}"
+                         class="pre-course-card stitch-card flex justify-between items-center py-3 px-4 border transition-all duration-150 {{ 'border-blue-500 bg-blue-50/10' if selected else 'border-[#e2e8f0] dark:border-[#1e293b]' }}">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600">
                                 <i data-lucide="book-open" class="w-4 h-4"></i>
@@ -637,8 +669,28 @@
                     </div>
                 </div>
 
-                <div class="space-y-4 max-h-[700px] overflow-y-auto pr-2" id="advising-table-container">
-                    <!-- Populated / Filtered dynamically in JS -->
+                <div class="glass-card p-4 overflow-x-auto max-h-[700px]" id="advising-table-container">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-[#e2e8f0] dark:border-[#1e293b] text-slate-400">
+                                <th class="hidden">ID</th>
+                                <th class="py-3 px-2 font-bold">Course Code</th>
+                                <th class="py-3 px-2 font-bold">Section</th>
+                                <th class="py-3 px-2 font-bold">Date &amp; Time</th>
+                                <th class="py-3 px-2 font-bold text-center">Credit</th>
+                                <th class="py-3 px-2 font-bold text-center">Seat Capacity</th>
+                                <th class="py-3 px-2 font-bold">Dedicated Department</th>
+                                <th class="py-3 px-2 font-bold">Room</th>
+                                <th class="py-3 px-2 font-bold">Pre-Requisite</th>
+                                <th class="hidden">Linked Course ID</th>
+                                <th class="py-3 px-2 font-bold text-center">Completed Credit Requirement</th>
+                                <th class="py-3 px-2 font-bold text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="advising-table-body" class="divide-y divide-[#e2e8f0] dark:divide-[#1e293b] text-slate-800 dark:text-slate-200">
+                            <!-- Populated dynamically in JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -1686,6 +1738,44 @@
         }
     }
 
+    function filterPreAdvising(category) {
+        const btns = ['all', 'recommended', 'retake', 'd_grade', 'f_grade'];
+        btns.forEach(b => {
+            const btn = document.getElementById('pre-filter-' + b);
+            if (btn) {
+                if (b === category) {
+                    btn.classList.add('bg-blue-600', 'text-white');
+                    btn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+                } else {
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+                }
+            }
+        });
+
+        const cards = document.querySelectorAll('.pre-course-card');
+        cards.forEach(card => {
+            let show = false;
+            if (category === 'all') {
+                show = true;
+            } else if (category === 'recommended') {
+                show = card.getAttribute('data-is-recommended') === 'true';
+            } else if (category === 'retake') {
+                show = card.getAttribute('data-is-retake') === 'true';
+            } else if (category === 'd_grade') {
+                show = card.getAttribute('data-is-d-grade') === 'true';
+            } else if (category === 'f_grade') {
+                show = card.getAttribute('data-is-f-grade') === 'true';
+            }
+
+            if (show) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
+
     // Final advising AJAX booking and filtering logic
     let registrationsList = {{ selected_section_ids | tojson }};
     const sectionsData = {{ sections_json | safe }};
@@ -1742,144 +1832,131 @@
     }
 
     function loadAdvisingSections() {
-        const container = document.getElementById('advising-table-container');
-        if (!container) return;
-        container.innerHTML = '';
+        const tbody = document.getElementById('advising-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
 
-        // Group sections by Course Code
-        const grouped = {};
-        sectionsData.forEach(sec => {
-            const cCode = sec.course_code.replace(' Lab', '');
-            if (!grouped[cCode]) grouped[cCode] = [];
-            grouped[cCode].push(sec);
-        });
-
-        // Filter course codes based on advising sub-branch filter
-        const allAvailableCourseCodes = Object.keys(grouped);
-        let filteredCodes = allAvailableCourseCodes;
+        // Group / Filter sectionsData
+        let filteredSections = sectionsData;
+        
+        // Filter based on advising sub-branch filter
         if (currentAdvisingFilter === 'failed') {
-            filteredCodes = allAvailableCourseCodes.filter(c => failedCodes.includes(c));
+            filteredSections = sectionsData.filter(sec => failedCodes.includes(sec.course_code.replace(' Lab', '')));
         } else if (currentAdvisingFilter === 'recommended') {
-            filteredCodes = allAvailableCourseCodes.filter(c => recommendedCodes.includes(c));
+            filteredSections = sectionsData.filter(sec => recommendedCodes.includes(sec.course_code.replace(' Lab', '')));
         } else if (currentAdvisingFilter === 'retake') {
-            filteredCodes = allAvailableCourseCodes.filter(c => dCodes.includes(c));
+            filteredSections = sectionsData.filter(sec => dCodes.includes(sec.course_code.replace(' Lab', '')));
         }
 
         // Apply search query filter if present
         if (searchAdvisingQuery) {
-            filteredCodes = filteredCodes.filter(c => c.toUpperCase().includes(searchAdvisingQuery));
+            filteredSections = filteredSections.filter(sec => sec.course_code.toUpperCase().includes(searchAdvisingQuery));
         }
 
-        if (filteredCodes.length === 0) {
-            container.innerHTML = '<p class="text-xs text-[#94a3b8] py-8 text-center bg-white dark:bg-[#0a0f1e] rounded-xl border border-dashed border-[#e2e8f0] dark:border-[#1e293b]">No courses match the active filter criteria.</p>';
+        if (filteredSections.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="text-xs text-[#94a3b8] py-8 text-center bg-white dark:bg-[#0a0f1e] rounded-xl border border-dashed border-[#e2e8f0] dark:border-[#1e293b]">No courses match the active filter criteria.</td></tr>';
             return;
         }
 
-        filteredCodes.forEach(code => {
-            const matchingSecs = sectionsData.filter(s => s.course_code === code || s.course_code === (code + ' Lab'));
-            if (matchingSecs.length === 0) return;
-
-            const courseCard = document.createElement('div');
-            courseCard.className = "card p-0 overflow-hidden border border-[#e2e8f0] dark:border-[#1e293b] shadow-sm";
+        filteredSections.forEach(sec => {
+            const linkedSec = sec.linked_section_id ? sectionsData.find(s => s.id === sec.linked_section_id) : null;
+            const isSelected = registrationsList.includes(sec.id) || (linkedSec && registrationsList.includes(linkedSec.id));
             
-            let headerHtml = `
-                <div class="bg-slate-50 dark:bg-slate-900/50 py-2.5 px-4 border-b border-[#e2e8f0] dark:border-[#1e293b] flex justify-between items-center text-xs">
-                    <span class="font-extrabold text-slate-800 dark:text-slate-200">${code}</span>
-                    <span class="text-[0.65rem] text-slate-400">Available Sections</span>
-                </div>
-                <div class="p-2 space-y-1.5">
-            `;
-
-            matchingSecs.forEach(sec => {
-                const linkedSec = sec.linked_section_id ? sectionsData.find(s => s.id === sec.linked_section_id) : null;
-                const isSelected = registrationsList.includes(sec.id) || (linkedSec && registrationsList.includes(linkedSec.id));
-                
-                // Capacity Check: If either self or linked section is full, it's considered full
-                const isSelfFull = sec.enrolled_count >= sec.capacity;
-                const isLinkedFull = linkedSec ? (linkedSec.enrolled_count >= linkedSec.capacity) : false;
-                const isFull = isSelfFull || isLinkedFull;
-                
-                const isRestricted = sec.dedicated_departments && sec.dedicated_departments.length > 0 && !sec.dedicated_departments.includes('None') && !sec.dedicated_departments.includes('{{ student.department_id }}');
-                
-                // Conflict Check: Check if self or linked section conflicts with any other registered sections
-                let hasConflict = false;
-                if (!isSelected) {
-                    for (let regId of registrationsList) {
-                        if (regId === sec.id || (linkedSec && regId === linkedSec.id)) {
-                            continue;
+            // Capacity Check: If either self or linked section is full, it's considered full
+            const isSelfFull = sec.enrolled_count >= sec.capacity;
+            const isLinkedFull = linkedSec ? (linkedSec.enrolled_count >= linkedSec.capacity) : false;
+            const isFull = isSelfFull || isLinkedFull;
+            
+            const isRestricted = sec.dedicated_departments && sec.dedicated_departments.length > 0 && !sec.dedicated_departments.includes('None') && !sec.dedicated_departments.includes('{{ student.department_id }}');
+            
+            // Conflict Check: Check if self or linked section conflicts with any other registered sections
+            let hasConflict = false;
+            if (!isSelected) {
+                for (let regId of registrationsList) {
+                    if (regId === sec.id || (linkedSec && regId === linkedSec.id)) {
+                        continue;
+                    }
+                    const regSec = sectionsData.find(s => s.id === regId);
+                    if (regSec) {
+                        if (checkOverlap(regSec.schedule, sec.schedule)) {
+                            hasConflict = true;
+                            break;
                         }
-                        const regSec = sectionsData.find(s => s.id === regId);
-                        if (regSec) {
-                            if (checkOverlap(regSec.schedule, sec.schedule)) {
-                                hasConflict = true;
-                                break;
-                            }
-                            if (linkedSec && checkOverlap(regSec.schedule, linkedSec.schedule)) {
-                                hasConflict = true;
-                                break;
-                            }
+                        if (linkedSec && checkOverlap(regSec.schedule, linkedSec.schedule)) {
+                            hasConflict = true;
+                            break;
                         }
                     }
                 }
+            }
 
-                // Decide color coding class
-                let colorClass = "border-[#e2e8f0] dark:border-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-900/20";
-                let statusBadgeHtml = '';
-                
-                if (isSelected) {
-                    colorClass = "border-green-500 bg-green-50/10 text-green-700 dark:text-green-400";
-                    statusBadgeHtml = `<span class="badge badge-success text-[0.58rem] ml-1 bg-green-600 text-white">ENROLLED</span>`;
-                } else if (isFull) {
-                    colorClass = "border-blue-500 bg-blue-500/5 text-blue-700 dark:text-blue-400 cursor-not-allowed opacity-75";
-                    statusBadgeHtml = `<span class="badge badge-primary text-[0.58rem] ml-1 bg-blue-600 text-white">BLUE / FULL</span>`;
-                } else if (hasConflict) {
-                    colorClass = "border-red-500 bg-red-500/5 text-red-700 dark:text-red-400 cursor-not-allowed opacity-75";
-                    statusBadgeHtml = `<span class="stitch-badge badge-hold text-[0.58rem] ml-1 bg-red-600 text-white">RED / CONFLICT</span>`;
-                }
+            // Decide color coding class
+            let rowClass = "hover:bg-slate-50 dark:hover:bg-slate-900/20 transition-colors";
+            let statusText = '';
+            
+            if (isSelected) {
+                rowClass = "bg-green-500/10 dark:bg-green-500/5 text-green-700 dark:text-green-400 font-semibold";
+                statusText = ' (Enrolled)';
+            } else if (isFull) {
+                rowClass = "bg-blue-500/5 dark:bg-blue-500/5 text-blue-700 dark:text-blue-400 opacity-80";
+                statusText = ' (Full)';
+            } else if (hasConflict) {
+                rowClass = "bg-red-500/5 dark:bg-red-500/5 text-red-700 dark:text-red-400 opacity-80";
+                statusText = ' (Conflict)';
+            }
 
-                let btnHtml = '';
-                if (isFinalActive && (isFull || hasConflict)) {
+            let btnHtml = '';
+            if (isSelected) {
+                btnHtml = `
+                    <button onclick="toggleSectionAJAX('${sec.id}', ${isFull}, ${hasConflict}, ${isRestricted})" 
+                            class="px-2 py-1 text-[0.62rem] font-bold uppercase tracking-wider bg-red-600 hover:bg-red-700 text-white rounded transition-all">
+                        Drop
+                    </button>
+                `;
+            } else if (isRestricted) {
+                btnHtml = `<span class="text-[0.62rem] text-red-500 font-bold">Restricted</span>`;
+            } else if (isFinalActive) {
+                if (isFull || hasConflict) {
                     const reqType = isFull ? 'section_full' : 'schedule_conflict';
                     btnHtml = `
-                        <button onclick="event.stopPropagation(); openRequestModal('${sec.id}', '${code}', '${reqType}')" 
-                                class="px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500 hover:text-slate-900 text-amber-600 rounded border border-amber-500/20 transition-all">
-                            Waiver Request
+                        <button onclick="openRequestModal('${sec.id}', '${sec.course_code}', '${reqType}')" 
+                                class="px-2 py-1 text-[0.62rem] font-bold uppercase tracking-wider bg-amber-500 hover:bg-amber-600 text-white rounded transition-all">
+                            Waiver
+                        </button>
+                    `;
+                } else {
+                    btnHtml = `
+                        <button onclick="toggleSectionAJAX('${sec.id}', ${isFull}, ${hasConflict}, ${isRestricted})" 
+                                class="px-2 py-1 text-[0.62rem] font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded transition-all">
+                            Add
                         </button>
                     `;
                 }
+            } else {
+                btnHtml = `<span class="text-[0.62rem] text-slate-400 font-bold">View Only</span>`;
+            }
 
-                let clickHandler = `onclick="toggleSectionAJAX('${sec.id}', ${isFull}, ${hasConflict}, ${isRestricted})"`;
-
-                headerHtml += `
-                    <div ${clickHandler} 
-                         class="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 cursor-pointer ${colorClass}">
-                         <div class="space-y-1">
-                            <p class="text-xs font-bold">
-                                Section ${sec.section_number}
-                                <span class="badge ${sec.is_lab ? 'badge-warning' : 'badge-info'} text-[0.58rem] ml-1">
-                                    ${sec.is_lab ? 'LAB' : 'THEORY'}
-                                </span>
-                                ${statusBadgeHtml}
-                            </p>
-                            <p class="text-[0.7rem] text-[#94a3b8]">
-                                Room: ${sec.room} • Faculty: ${sec.faculty_id || 'TBA'} • Schedule: ${sec.schedule}
-                            </p>
-                            ${isRestricted ? `<p class="text-[0.62rem] text-red-500 font-bold">⚠ Restrict: ${sec.dedicated_departments.join('-')}</p>` : ''}
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <div class="text-right">
-                                <p class="text-xs font-mono font-bold">${sec.enrolled_count} / ${sec.capacity}</p>
-                                <p class="text-[0.6rem] text-[#94a3b8]">Enrolled</p>
-                            </div>
-                            ${btnHtml}
-                        </div>
-                    </div>
-                `;
-            });
-
-            headerHtml += '</div>';
-            courseCard.innerHTML = headerHtml;
-            container.appendChild(courseCard);
+            const tr = document.createElement('tr');
+            tr.className = rowClass;
+            
+            const prereqList = sec.prerequisites && sec.prerequisites.length > 0 ? sec.prerequisites.join(', ') : 'None';
+            const dedicatedDpts = sec.dedicated_departments && sec.dedicated_departments.length > 0 ? sec.dedicated_departments.join(', ') : 'None';
+            
+            tr.innerHTML = `
+                <td class="hidden">${sec.id}</td>
+                <td class="py-2.5 px-2 font-bold">${sec.course_code}${statusText}</td>
+                <td class="py-2.5 px-2 font-mono">${sec.section_number}</td>
+                <td class="py-2.5 px-2">${sec.schedule}</td>
+                <td class="py-2.5 px-2 text-center">${sec.credits} CR</td>
+                <td class="py-2.5 px-2 text-center font-mono">${sec.enrolled_count} / ${sec.capacity}</td>
+                <td class="py-2.5 px-2">${dedicatedDpts}</td>
+                <td class="py-2.5 px-2">${sec.room}</td>
+                <td class="py-2.5 px-2">${prereqList}</td>
+                <td class="hidden">${sec.linked_section_id || 'None'}</td>
+                <td class="py-2.5 px-2 text-center font-mono">${sec.completed_credit_requirement || 0} CR</td>
+                <td class="py-2.5 px-2 text-right">${btnHtml}</td>
+            `;
+            tbody.appendChild(tr);
         });
 
         updateCartUI();

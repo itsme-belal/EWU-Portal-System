@@ -45,37 +45,36 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-[#f8fafc] dark:bg-[#070c18] text-[#0f172a] dark:text-[#f0f6ff] sidebar-closed">
+<body class="sidebar-closed">
     <div class="flex min-h-screen">
         <!-- Sidebar -->
-        <aside class="w-[var(--sidebar-w)] flex flex-col h-screen fixed top-0 left-0 z-50 overflow-y-auto bg-white dark:bg-[#080e1d] border-r border-[#e2e8f0] dark:border-white/5">
+        <aside class="w-[var(--sidebar-w)] flex flex-col h-screen fixed top-0 left-0 z-50 overflow-y-auto">
             <!-- Sidebar Brand Header -->
-            <div class="px-4 py-5 border-b border-[#e2e8f0] dark:border-white/5 flex items-center justify-between flex-shrink-0">
+            <div class="px-4 py-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-500/20"
-                         style="background:linear-gradient(135deg,#059669,#10b981);">
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/15">
                         <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
                     </div>
                     <div>
-                        <p class="text-sm font-black text-slate-800 dark:text-white tracking-tight leading-none">EWU Portal</p>
-                        <p class="text-[0.6rem] text-emerald-500 dark:text-emerald-400 font-bold uppercase tracking-widest mt-0.5">Admin System</p>
+                        <p class="text-sm font-black text-white tracking-tight leading-none">EWU Portal</p>
+                        <p class="text-[0.6rem] text-white/50 font-bold uppercase tracking-widest mt-0.5">East West University</p>
                     </div>
                 </div>
-                <button onclick="toggleSidebar()" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors" title="Close">
+                <button onclick="toggleSidebar()" class="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors" title="Close">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
             <!-- Navigation Links -->
             <nav class="flex-1 p-3 overflow-y-auto space-y-0.5">
-                <div class="text-[0.58rem] font-black text-slate-400 dark:text-slate-700 uppercase tracking-[0.15em] px-3 mb-3 mt-1">Main Navigation</div>
+                <div class="text-[0.56rem] font-black text-white/35 uppercase tracking-[0.15em] px-3 mb-3 mt-2">Navigation</div>
                 {% block sidebar_nav %}{% endblock %}
             </nav>
 
-            <!-- Bottom: User + Logout -->
-            <div class="p-3 border-t border-[#e2e8f0] dark:border-white/5 flex-shrink-0">
+            <!-- Bottom: Logout -->
+            <div class="p-3 border-t border-white/10 flex-shrink-0">
                 <a href="{{ url_for('logout') }}"
-                   class="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300 transition-all border border-transparent hover:border-red-500/20">
+                   class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-semibold text-white/60 hover:bg-white/10 hover:text-white transition-all">
                     <i data-lucide="log-out" class="w-4 h-4 flex-shrink-0"></i>
                     <span>Logout</span>
                 </a>
@@ -85,21 +84,25 @@
         <!-- Main Content Wrapper -->
         <div class="main-content-container ml-[var(--sidebar-w)] flex-1 flex flex-col min-w-0">
             <!-- Top Header Bar -->
-            <header class="h-[60px] flex items-center justify-between px-6 sticky top-0 z-40 flex-shrink-0 bg-white/90 dark:bg-[#070c18]/90 backdrop-blur-xl border-b border-[#e2e8f0] dark:border-white/5">
+            <header class="h-[60px] flex items-center justify-between px-6 sticky top-0 z-40 flex-shrink-0">
                 <div class="flex items-center gap-3">
                     <button onclick="toggleSidebar()"
-                            class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/6 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white focus:outline-none transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10"
+                            class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white focus:outline-none transition-all"
                             title="Toggle Sidebar">
                         <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
+                    <!-- Breadcrumb -->
+                    <span class="text-xs text-slate-400 font-medium hidden sm:block">
+                        Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Dashboard</span>
+                    </span>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="px-3 py-1 rounded-full text-[0.68rem] font-black uppercase tracking-widest border"
-                          style="background-color:{{ role_color }}18;color:{{ role_color }};border-color:{{ role_color }}40;">
+                    <span class="px-3 py-1 rounded text-[0.68rem] font-black uppercase tracking-widest"
+                          style="background-color:{{ role_color }}18;color:{{ role_color }};border:1px solid {{ role_color }}40;">
                         {{ current_user.role }}
                     </span>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 hidden sm:block">{{ profile_name }}</span>
+                        <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 hidden sm:block">Hi, {{ profile_name }}</span>
                         <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-white text-sm overflow-hidden ring-2 ring-slate-200 dark:ring-white/10"
                              style="background:linear-gradient(135deg,{{ role_color }},{{ role_color }}aa);">
                             {% if profile_pic %}
@@ -166,20 +169,20 @@
         })();
 
         function applyTheme(theme) {
-            if (!['light', 'cosmic', 'image'].includes(theme)) theme = 'light';
-
+            if (!['light','dark','cosmic','image'].includes(theme)) theme = 'light';
             localStorage.setItem('theme', theme);
             localStorage.setItem('ewu_theme', theme);
 
-            // Reset all theme classes/styles
-            document.body.classList.remove('theme-cosmic', 'theme-image');
+            document.body.classList.remove('theme-cosmic','theme-image');
             document.documentElement.classList.remove('dark');
             document.body.style.backgroundImage = '';
             document.body.style.backgroundSize = '';
             document.body.style.backgroundPosition = '';
             document.body.style.backgroundAttachment = '';
 
-            if (theme === 'cosmic') {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else if (theme === 'cosmic') {
                 document.documentElement.classList.add('dark');
                 document.body.classList.add('theme-cosmic');
                 document.body.style.backgroundImage = 'radial-gradient(ellipse at top left,#0d1b3e 0%,#020617 40%,#080814 100%)';
@@ -187,16 +190,13 @@
             } else if (theme === 'image') {
                 document.documentElement.classList.add('dark');
                 document.body.classList.add('theme-image');
-                document.body.style.backgroundImage = "linear-gradient(rgba(5,9,20,.88),rgba(5,9,20,.94)),url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=1400')";
                 document.body.style.backgroundSize = 'cover';
                 document.body.style.backgroundPosition = 'center';
                 document.body.style.backgroundAttachment = 'fixed';
-            } else {
-                // light (default) - no dark class
             }
+            // light: no dark class, clean white
 
-            // Highlight active theme buttons
-            document.querySelectorAll('.adm-sub-item[id^="theme-btn-"],.nav-sub-item[id^="theme-btn-"]').forEach(btn => {
+            document.querySelectorAll('[id^="theme-btn-"]').forEach(btn => {
                 btn.classList.remove('active');
                 if (btn.id === 'theme-btn-' + theme) btn.classList.add('active');
             });

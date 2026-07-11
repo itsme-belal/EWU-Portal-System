@@ -456,6 +456,18 @@
         <p class="text-xs text-slate-500 mt-1">Add, update, and manage official course section offerings and enrollment capacities</p>
     </div>
 
+    <!-- Import Excel Schedule Card -->
+    <div class="glass-card p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Import Course Schedule (Excel Upload)</h3>
+        <p class="text-xs text-slate-400">Upload department, common, or non-departmental schedule spreadsheets (.xlsx). Supported format contains: ID, Course Code, Section, Date &amp; Time, Credit, Seat Capacity, Dedicated Department, Room, Pre-Requisite, Linked Course ID, Completed Credit Requirement.</p>
+        <form action="{{ url_for('upload_schedule') }}" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row items-center gap-3">
+            <input type="file" name="file" accept=".xlsx" required class="input text-xs flex-1">
+            <button type="submit" class="btn-primary rounded-lg text-xs py-2.5 px-4 w-full sm:w-auto">
+                <i data-lucide="upload" class="w-4 h-4"></i> Upload &amp; Import
+            </button>
+        </form>
+    </div>
+
     <!-- Add Section Offering Form -->
     <div class="glass-card p-6 space-y-4">
         <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Add Course Section Offering</h3>
@@ -524,14 +536,20 @@
                 </div>
             </div>
 
-            <div>
-                <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Link with Section ID (Optional)</label>
-                <select name="linked_section_id" class="input text-xs">
-                    <option value="">-- Link to Lab/Theory section --</option>
-                    {% for sec in section_offerings %}
-                    <option value="{{ sec.id }}">{{ sec.course_code }} Sec {{ sec.section_number }} ({{ sec.id }})</option>
-                    {% endfor %}
-                </select>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Completed Credit Requirement</label>
+                    <input type="number" name="completed_credit_requirement" value="0" min="0" max="200" required class="input text-xs w-full">
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Link with Section ID (Optional)</label>
+                    <select name="linked_section_id" class="input text-xs">
+                        <option value="">-- Link to Lab/Theory section --</option>
+                        {% for sec in section_offerings %}
+                        <option value="{{ sec.id }}">{{ sec.course_code }} Sec {{ sec.section_number }} ({{ sec.id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
             <button type="submit" class="btn-primary rounded-lg text-xs py-2.5 px-4">
@@ -704,7 +722,7 @@
             <div class="glass-card p-6 space-y-4">
                 <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-white/5 pb-2">Add Course to Pre-Advising Catalog</h3>
                 <form action="/admin/add-pre-course" method="POST" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Course Code</label>
                             <input type="text" name="code" required placeholder="e.g. CSE103" class="input text-xs w-full">
@@ -712,6 +730,10 @@
                         <div>
                             <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Credits</label>
                             <input type="number" step="0.5" min="1" max="6" name="credits" value="3.0" required class="input text-xs w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Completed Credit Requirement</label>
+                            <input type="number" name="completed_credit_requirement" value="0" min="0" max="200" required class="input text-xs w-full">
                         </div>
                     </div>
                     <button type="submit" class="btn-primary rounded-lg text-xs py-2 px-4">
@@ -1394,14 +1416,18 @@
                     {% for std in students %}
                     {% set adv = faculty_map.get(std.advisor_id) %}
                     <tr class="advisor-assignment-row" data-student-id="{{ std.id }}" data-student-name="{{ std.name }}">
-                        <td class="font-mono font-bold text-xs">{{ std.id }}</td>
-                        <td class="text-xs">{{ std.name }}</td>
+                        <td class="font-mono font-bold text-xs">
+                            <a href="javascript:void(0)" onclick="viewStudentDetails('{{ std.id }}')" class="text-violet-400 hover:text-violet-300 hover:underline">{{ std.id }}</a>
+                        </td>
+                        <td class="text-xs font-bold text-slate-200">
+                            <a href="javascript:void(0)" onclick="viewStudentDetails('{{ std.id }}')" class="hover:text-violet-300 hover:underline">{{ std.name }}</a>
+                        </td>
                         <td><span class="badge badge-neutral text-[0.62rem]">{{ std.department_id }}</span></td>
                         <td class="text-xs font-semibold">{{ std.completed_credits }} CR</td>
                         <td>
                             {% if adv %}
-                            <span class="text-xs font-bold text-violet-600">{{ adv.name }}</span>
-                            <span class="text-[0.65rem] text-[#94a3b8] ml-1">({{ std.advisor_id }})</span>
+                            <a href="javascript:void(0)" onclick="viewFacultyDetails('{{ std.advisor_id }}')" class="text-xs font-bold text-violet-600 hover:text-violet-400 hover:underline">{{ adv.name }}</a>
+                            <span class="text-[0.65rem] text-[#94a3b8] ml-1">(<a href="javascript:void(0)" onclick="viewFacultyDetails('{{ std.advisor_id }}')" class="text-violet-400 hover:text-violet-300 hover:underline font-bold font-mono">{{ std.advisor_id }}</a>)</span>
                             {% else %}
                             <span class="badge badge-warning text-[0.62rem]">Not Assigned</span>
                             {% endif %}
@@ -1757,8 +1783,12 @@
                     {% set std = student_map.get(req.student_id) %}
                     <tr class="request-row border-b border-white/5 hover:bg-white/5 transition-colors" data-student-id="{{ req.student_id }}" data-student-name="{{ std.name | lower if std else '' }}" data-course-id="{{ req.course_id | lower }}" data-type="{{ req.type }}" data-status="{{ req.status }}">
                         <td class="px-4 py-3">
-                            <div class="font-mono font-bold text-xs text-emerald-400">{{ req.student_id }}</div>
-                            <div class="text-[0.7rem] text-slate-400">{{ std.name if std else 'Unknown' }}</div>
+                            <div class="font-mono font-bold text-xs">
+                                <a href="javascript:void(0)" onclick="viewStudentDetails('{{ req.student_id }}')" class="text-violet-400 hover:text-violet-300 hover:underline">{{ req.student_id }}</a>
+                            </div>
+                            <div class="text-[0.7rem] text-slate-400 font-semibold">
+                                <a href="javascript:void(0)" onclick="viewStudentDetails('{{ req.student_id }}')" class="hover:text-violet-300 hover:underline">{{ std.name if std else 'Unknown' }}</a>
+                            </div>
                         </td>
                         <td class="px-4 py-3 text-xs">
                             <div class="font-semibold text-slate-200">{{ req.course_id }}</div>
@@ -2566,7 +2596,7 @@
             tr.className = 'hover:bg-white/5 border-b border-white/5 transition-colors';
             tr.innerHTML = `
                 <td class="px-6 py-4 font-mono font-bold text-xs text-emerald-400 cursor-pointer hover:underline" onclick="showAcademicReport('${std.id}')">${std.id}</td>
-                <td class="px-6 py-4 text-xs font-semibold text-slate-200">${std.name}</td>
+                <td class="px-6 py-4 text-xs font-semibold text-slate-200 cursor-pointer hover:text-violet-300 hover:underline" onclick="viewStudentDetails('${std.id}')">${std.name}</td>
                 <td class="px-6 py-4 text-xs"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">${std.department_id}</span></td>
                 <td class="px-6 py-4 text-xs font-medium text-slate-300">${std.completed_credits.toFixed(1)} CR</td>
                 <td class="px-6 py-4 text-xs font-bold text-slate-200">${std.cgpa.toFixed(2)}</td>
