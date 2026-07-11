@@ -65,6 +65,7 @@ class PreAdvisingCourse(db.Model):
     title = db.Column(db.String(100), nullable=False)
     credits = db.Column(db.Float, nullable=False)
     department_id = db.Column(db.String(20), nullable=False)
+    completed_credit_requirement = db.Column(db.Integer, default=0, nullable=False)
     _prerequisites = db.Column(db.Text, default='[]') # Saved as JSON string
 
     @property
@@ -87,6 +88,7 @@ class SectionOffering(db.Model):
     _dedicated_departments = db.Column(db.Text, default='[]') # Saved as JSON string
     capacity = db.Column(db.Integer, default=30)
     enrolled_count = db.Column(db.Integer, default=0)
+    completed_credit_requirement = db.Column(db.Integer, default=0, nullable=False)
     _prerequisites = db.Column(db.Text, default='[]') # Saved as JSON string
     semester_id = db.Column(db.String(20), default='summer-2026')
     is_lab = db.Column(db.Boolean, default=False)

@@ -1026,7 +1026,13 @@
 
     <!-- Students Roster -->
     <div class="glass-card p-6 space-y-4">
-        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Enrolled Students Roster ({{ students | length }} total)</h3>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Enrolled Students Roster ({{ students | length }} total)</h3>
+            <div class="relative w-full sm:w-72">
+                <input type="text" id="admin-student-search-input" oninput="filterAdminStudents()" placeholder="Search Student ID or Name..." class="pl-9 pr-4 py-1.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs w-full focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-200">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+            </div>
+        </div>
         <div class="table-wrap">
             <table>
                 <thead>
@@ -1044,8 +1050,8 @@
                 <tbody>
                     {% for std in students %}
                     {% set usr = users_map.get(std.user_id) %}
-                    <tr>
-                        <td class="font-bold text-xs font-mono">{{ std.id }}</td>
+                    <tr class="admin-student-row" data-id="{{ std.id }}" data-name="{{ std.name }}">
+                        <td class="font-bold text-xs font-mono"><a href="javascript:void(0)" onclick="viewStudentDetails('{{ std.id }}')" class="text-violet-400 hover:text-violet-300 hover:underline">{{ std.id }}</a></td>
                         <td class="font-medium text-xs">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
@@ -1056,7 +1062,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="text-left">
-                                    <p class="font-bold text-slate-200">{{ std.name }}</p>
+                                    <p class="font-bold text-slate-200"><a href="javascript:void(0)" onclick="viewStudentDetails('{{ std.id }}')" class="hover:text-violet-300 hover:underline">{{ std.name }}</a></p>
                                     {% if std.about %}
                                     <p class="text-[0.65rem] text-slate-500 max-w-[200px] truncate" title="{{ std.about }}">{{ std.about }}</p>
                                     {% endif %}
@@ -1166,9 +1172,68 @@
         </form>
     </div>
 
+    <!-- Assign Course Sections to Faculty -->
+    <div class="glass-card p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2 flex items-center gap-2">
+            <i data-lucide="book-user" class="w-4 h-4 text-violet-400"></i>
+            Assign Course Sections to Faculty (Bulk)
+        </h3>
+        <p class="text-xs text-slate-400 mb-2">
+            Select a faculty member, search sections, and check all course section offerings you wish to assign to them at once. Conflict validations will run automatically.
+        </p>
+        <form action="/admin/assign-faculty-sections-bulk" method="POST" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Faculty Member</label>
+                    <select name="faculty_id" required class="input text-xs w-full">
+                        <option value="">-- Choose Faculty --</option>
+                        {% for fac in faculties %}
+                        <option value="{{ fac.id }}">{{ fac.name }} ({{ fac.id }}) [{{ fac.department_id }}]</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Search Sections</label>
+                    <input type="text" id="bulk-section-search" oninput="filterBulkSections()" placeholder="Search course code or schedule..." class="input text-xs w-full">
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Course Section Offerings (Check all to assign)</label>
+                <div class="border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl max-h-60 overflow-y-auto p-3 space-y-2 bg-[#f8fafc] dark:bg-[#0f172a]" id="bulk-sections-container">
+                    {% for sec in section_offerings %}
+                    <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-pointer transition-colors bulk-section-item" data-code="{{ sec.course_code }}" data-sched="{{ sec.schedule }}">
+                        <input type="checkbox" name="section_ids" value="{{ sec.id }}" class="w-4 h-4 rounded text-violet-600 focus:ring-violet-500">
+                        <div class="text-xs">
+                            <span class="font-extrabold text-violet-500 dark:text-violet-400">{{ sec.course_code }}</span> - Sec <span class="font-bold">{{ sec.section_number }}</span>
+                            <span class="text-slate-400 ml-2">({{ sec.schedule }}) [{{ sec.room }}]</span>
+                            {% if sec.faculty_id %}
+                            <span class="ml-2 px-1.5 py-0.5 text-[0.6rem] font-bold rounded bg-amber-500/10 text-amber-500">Currently: {{ sec.faculty_id }}</span>
+                            {% endif %}
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="flex justify-end">
+                <button type="submit" class="btn-primary py-2 px-6 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700">
+                    <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                    Assign Selected Sections
+                </button>
+            </div>
+        </form>
+    </div>
+
     <!-- Faculty Roster -->
     <div class="glass-card p-6 space-y-4">
-        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Faculty Members Roster ({{ faculties | length }} total)</h3>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Faculty Members Roster ({{ faculties | length }} total)</h3>
+            <div class="relative w-full sm:w-72">
+                <input type="text" id="admin-faculty-search-input" oninput="filterAdminFaculty()" placeholder="Search Faculty ID or Name..." class="pl-9 pr-4 py-1.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs w-full focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-200">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+            </div>
+        </div>
         <div class="table-wrap">
             <table>
                 <thead>
@@ -1179,6 +1244,7 @@
                         <th>Email</th>
                         <th>Portal Status</th>
                         <th>Advisees</th>
+                        <th>Assigned Sections</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -1186,8 +1252,8 @@
                     {% for fac in faculties %}
                     {% set usr = users_map.get(fac.user_id) %}
                     {% set advisee_count = students | selectattr('advisor_id', 'equalto', fac.id) | list | length %}
-                    <tr>
-                        <td class="font-bold text-xs font-mono">{{ fac.id }}</td>
+                    <tr class="admin-faculty-row" data-id="{{ fac.id }}" data-name="{{ fac.name }}">
+                        <td class="font-bold text-xs font-mono"><a href="javascript:void(0)" onclick="viewFacultyDetails('{{ fac.id }}')" class="text-violet-400 hover:text-violet-300 hover:underline">{{ fac.id }}</a></td>
                         <td class="font-medium text-xs">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
@@ -1198,7 +1264,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="text-left">
-                                    <p class="font-bold text-slate-200">{{ fac.name }}</p>
+                                    <p class="font-bold text-slate-200"><a href="javascript:void(0)" onclick="viewFacultyDetails('{{ fac.id }}')" class="hover:text-violet-300 hover:underline">{{ fac.name }}</a></p>
                                     {% if fac.about %}
                                     <p class="text-[0.65rem] text-slate-500 max-w-[200px] truncate" title="{{ fac.about }}">{{ fac.about }}</p>
                                     {% endif %}
@@ -1206,7 +1272,7 @@
                             </div>
                         </td>
                         <td><span class="badge badge-neutral text-[0.62rem]">{{ fac.department_id }}</span></td>
-                        <td class="text-xs text-[#475569] dark:text-[#94a3b8]">{{ usr.email if usr else 'â€”' }}</td>
+                        <td class="text-xs text-[#475569] dark:text-[#94a3b8]">{{ usr.email if usr else '—' }}</td>
                         <td>
                             {% if usr %}
                                 {% if usr.is_active and usr.is_activated %}
@@ -1219,6 +1285,25 @@
                             {% endif %}
                         </td>
                         <td class="text-xs font-bold text-violet-600">{{ advisee_count }} students</td>
+                        <td class="text-xs">
+                            {% set assigned_secs = section_offerings | selectattr('faculty_id', 'equalto', fac.id) | list %}
+                            {% if assigned_secs %}
+                                <div class="flex flex-wrap gap-1.5 max-w-[280px]">
+                                    {% for sec in assigned_secs %}
+                                        <span class="inline-flex items-center gap-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded text-[0.62rem] font-bold">
+                                            {{ sec.course_code }} Sec {{ sec.section_number }}
+                                            <form action="/admin/unassign-faculty-section/{{ sec.id }}" method="POST" class="inline" onsubmit="return confirm('Remove assignment of {{ sec.course_code }} section {{ sec.section_number }} from {{ fac.name }}?')">
+                                                <button type="submit" class="hover:text-red-400 focus:outline-none ml-0.5" title="Unassign">
+                                                    <i data-lucide="x" class="w-2.5 h-2.5"></i>
+                                                </button>
+                                            </form>
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="text-slate-500 italic text-[0.7rem]">None assigned</span>
+                            {% endif %}
+                        </td>
                         <td class="flex gap-2 items-center">
                             {% if usr %}
                             <form action="{{ url_for('toggle_user_status', user_id=fac.user_id) }}" method="POST">
@@ -1233,7 +1318,7 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="7" class="text-center text-[#94a3b8] py-4">No faculty members created yet.</td></tr>
+                    <tr><td colspan="8" class="text-center text-[#94a3b8] py-4">No faculty members created yet.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -2100,6 +2185,159 @@
     </div>
 </div>
 
+<!-- STUDENT PROFILE MODAL -->
+<div id="student-profile-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" onclick="closeStudentModal(event)">
+    <div class="glass-card w-full max-w-4xl max-h-[85vh] overflow-y-auto p-6 relative flex flex-col gap-6" onclick="event.stopPropagation()">
+        <!-- Close Button -->
+        <button onclick="closeStudentModal(null)" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+            <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+
+        <!-- Profile Header -->
+        <div class="flex flex-col sm:flex-row items-center gap-5 border-b border-white/5 pb-5">
+            <div id="std-modal-pic-container" class="w-20 h-20 rounded-full overflow-hidden border-2 border-violet-500/30 bg-slate-800 flex items-center justify-center">
+                <!-- Image or default user icon dynamically loaded -->
+            </div>
+            <div class="text-center sm:text-left flex-1">
+                <h2 id="std-modal-name" class="text-xl font-black text-white"></h2>
+                <p id="std-modal-id-dept" class="text-xs text-violet-400 font-bold uppercase tracking-wider mt-1"></p>
+                <p id="std-modal-about" class="text-xs text-slate-400 mt-2 italic max-w-xl"></p>
+            </div>
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 gap-3 bg-slate-900/50 p-3.5 rounded-xl border border-white/5">
+                <div class="text-center">
+                    <p class="text-[0.6rem] text-slate-500 font-bold uppercase tracking-wider">Completed Credits</p>
+                    <p id="std-modal-credits" class="text-lg font-black text-emerald-400 mt-0.5"></p>
+                </div>
+                <div class="text-center">
+                    <p class="text-[0.6rem] text-slate-500 font-bold uppercase tracking-wider">CGPA</p>
+                    <p id="std-modal-cgpa" class="text-lg font-black text-indigo-400 mt-0.5"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Academic & Advising Details -->
+            <div class="space-y-4">
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pb-1">
+                    <i data-lucide="graduation-cap" class="w-4 h-4 text-violet-400"></i> Academic Info
+                </h3>
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <span class="text-slate-500">Email Address:</span>
+                        <p id="std-modal-email" class="font-semibold text-slate-200 mt-0.5 break-all"></p>
+                    </div>
+                    <div>
+                        <span class="text-slate-500">Academic Advisor:</span>
+                        <p id="std-modal-advisor" class="font-semibold text-slate-200 mt-0.5"></p>
+                    </div>
+                    <div>
+                        <span class="text-slate-500">Financial Status:</span>
+                        <p id="std-modal-financial" class="mt-0.5"></p>
+                    </div>
+                    <div>
+                        <span class="text-slate-500">Advising Status:</span>
+                        <p id="std-modal-advising-status" class="mt-0.5"></p>
+                    </div>
+                </div>
+
+                <!-- Current Semester Registrations -->
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pt-2 pb-1">
+                    <i data-lucide="calendar" class="w-4 h-4 text-emerald-400"></i> Current Registrations
+                </h3>
+                <div id="std-modal-registrations" class="space-y-2 max-h-40 overflow-y-auto text-xs pr-1">
+                    <!-- Dynamic list -->
+                </div>
+            </div>
+
+            <!-- Grades History & Financial Ledgers -->
+            <div class="space-y-4">
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pb-1">
+                    <i data-lucide="award" class="w-4 h-4 text-amber-400"></i> Academic Transcript / Grades
+                </h3>
+                <div id="std-modal-grades" class="space-y-2 max-h-40 overflow-y-auto text-xs pr-1">
+                    <!-- Dynamic list -->
+                </div>
+
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pt-2 pb-1">
+                    <i data-lucide="receipt" class="w-4 h-4 text-rose-400"></i> Financial Ledger &amp; Dues
+                </h3>
+                <div id="std-modal-ledger" class="space-y-2 max-h-32 overflow-y-auto text-xs pr-1">
+                    <!-- Dynamic list -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FACULTY PROFILE MODAL -->
+<div id="faculty-profile-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" onclick="closeFacultyModal(event)">
+    <div class="glass-card w-full max-w-3xl max-h-[80vh] overflow-y-auto p-6 relative flex flex-col gap-6" onclick="event.stopPropagation()">
+        <!-- Close Button -->
+        <button onclick="closeFacultyModal(null)" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+            <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+
+        <!-- Profile Header -->
+        <div class="flex flex-col sm:flex-row items-center gap-5 border-b border-white/5 pb-5">
+            <div id="fac-modal-pic-container" class="w-20 h-20 rounded-full overflow-hidden border-2 border-violet-500/30 bg-slate-800 flex items-center justify-center">
+                <!-- Image or default user icon dynamically loaded -->
+            </div>
+            <div class="text-center sm:text-left flex-1">
+                <h2 id="fac-modal-name" class="text-xl font-black text-white"></h2>
+                <p id="fac-modal-id-dept" class="text-xs text-violet-400 font-bold uppercase tracking-wider mt-1"></p>
+                <p id="fac-modal-about" class="text-xs text-slate-400 mt-2 italic max-w-xl"></p>
+            </div>
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 gap-3 bg-slate-900/50 p-3.5 rounded-xl border border-white/5">
+                <div class="text-center">
+                    <p class="text-[0.6rem] text-slate-500 font-bold uppercase tracking-wider">Courses Taught</p>
+                    <p id="fac-modal-courses-count" class="text-lg font-black text-emerald-400 mt-0.5"></p>
+                </div>
+                <div class="text-center">
+                    <p class="text-[0.6rem] text-slate-500 font-bold uppercase tracking-wider">Total Advisees</p>
+                    <p id="fac-modal-advisees-count" class="text-lg font-black text-indigo-400 mt-0.5"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Faculty Information & Email -->
+            <div class="space-y-4">
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pb-1">
+                    <i data-lucide="info" class="w-4 h-4 text-violet-400"></i> Faculty Information
+                </h3>
+                <div class="text-xs space-y-2">
+                    <div>
+                        <span class="text-slate-500">Email Address:</span>
+                        <p id="fac-modal-email" class="font-semibold text-slate-200 mt-0.5 break-all"></p>
+                    </div>
+                </div>
+
+                <!-- Faculty Advisees -->
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pt-2 pb-1">
+                    <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i> Advisees List
+                </h3>
+                <div id="fac-modal-advisees" class="space-y-2 max-h-48 overflow-y-auto text-xs pr-1">
+                    <!-- Dynamic list -->
+                </div>
+            </div>
+
+            <!-- Faculty Course Offerings -->
+            <div class="space-y-4">
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pb-1">
+                    <i data-lucide="book-open" class="w-4 h-4 text-emerald-400"></i> Active Assigned Sections
+                </h3>
+                <div id="fac-modal-sections" class="space-y-2 max-h-60 overflow-y-auto text-xs pr-1">
+                    <!-- Dynamic list -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     function validateSectionForm(form) {
         // Validate building name AB1, AB2, AB3, FUB, Main
@@ -2648,6 +2886,231 @@
                 }
             }
         });
+    }
+
+    function filterBulkSections() {
+        const q = document.getElementById('bulk-section-search').value.toLowerCase();
+        const items = document.querySelectorAll('.bulk-section-item');
+        items.forEach(item => {
+            const code = item.getAttribute('data-code').toLowerCase();
+            const sched = item.getAttribute('data-sched').toLowerCase();
+            if (code.includes(q) || sched.includes(q)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function filterAdminStudents() {
+        const q = document.getElementById('admin-student-search-input').value.toLowerCase();
+        const rows = document.querySelectorAll('.admin-student-row');
+        rows.forEach(row => {
+            const id = row.getAttribute('data-id').toLowerCase();
+            const name = row.getAttribute('data-name').toLowerCase();
+            if (id.includes(q) || name.includes(q)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    function filterAdminFaculty() {
+        const q = document.getElementById('admin-faculty-search-input').value.toLowerCase();
+        const rows = document.querySelectorAll('.admin-faculty-row');
+        rows.forEach(row => {
+            const id = row.getAttribute('data-id').toLowerCase();
+            const name = row.getAttribute('data-name').toLowerCase();
+            if (id.includes(q) || name.includes(q)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    function viewStudentDetails(stdId) {
+        fetch(`/admin/student-details/${stdId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('std-modal-name').innerText = data.name;
+                    document.getElementById('std-modal-id-dept').innerText = `${data.id} • ${data.department_id}`;
+                    document.getElementById('std-modal-about').innerText = data.about || 'No about profile text provided.';
+                    document.getElementById('std-modal-credits').innerText = `${data.completed_credits} CR`;
+                    document.getElementById('std-modal-cgpa').innerText = Number(data.cgpa).toFixed(2);
+                    document.getElementById('std-modal-email').innerText = data.email;
+                    document.getElementById('std-modal-advisor').innerText = data.advisor_name;
+                    
+                    const fin = document.getElementById('std-modal-financial');
+                    if (data.financial_cleared && data.outstanding_balance === 0) {
+                        fin.innerHTML = `<span class="badge badge-success text-[0.62rem]">Cleared</span>`;
+                    } else {
+                        fin.innerHTML = `<span class="badge badge-danger text-[0.62rem]">Hold • ${data.outstanding_balance} Tk</span>`;
+                    }
+                    
+                    const advStat = document.getElementById('std-modal-advising-status');
+                    if (data.advising_status === 'registered') {
+                        advStat.innerHTML = `<span class="badge badge-success text-[0.62rem]">Registered</span>`;
+                    } else if (data.advising_status === 'planned') {
+                        advStat.innerHTML = `<span class="badge badge-warning text-[0.62rem]">Planned</span>`;
+                    } else {
+                        advStat.innerHTML = `<span class="badge badge-neutral text-[0.62rem]">${data.advising_status || 'Pending'}</span>`;
+                    }
+                    
+                    const picContainer = document.getElementById('std-modal-pic-container');
+                    if (data.profile_pic) {
+                        picContainer.innerHTML = `<img src="/static/uploads/${data.profile_pic}" class="w-full h-full object-cover">`;
+                    } else {
+                        picContainer.innerHTML = `<i data-lucide="user" class="w-8 h-8 text-slate-400"></i>`;
+                    }
+                    
+                    const regsDiv = document.getElementById('std-modal-registrations');
+                    regsDiv.innerHTML = '';
+                    if (data.registrations.length === 0) {
+                        regsDiv.innerHTML = `<p class="text-slate-500 italic py-1">No registrations in the next semester.</p>`;
+                    } else {
+                        data.registrations.forEach(r => {
+                            regsDiv.innerHTML += `
+                                <div class="flex justify-between items-center bg-slate-900/40 p-2 rounded-lg border border-white/5">
+                                    <div>
+                                        <span class="font-extrabold text-violet-400">${r.course_code}</span> - Sec <span class="font-bold text-slate-200">${r.section_number}</span>
+                                        <p class="text-[0.65rem] text-slate-400 mt-0.5">${r.schedule} • Room ${r.room}</p>
+                                    </div>
+                                    <span class="text-[0.65rem] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">${r.semester_id}</span>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    const gradesDiv = document.getElementById('std-modal-grades');
+                    gradesDiv.innerHTML = '';
+                    if (data.grades.length === 0) {
+                        gradesDiv.innerHTML = `<p class="text-slate-500 italic py-1">No completed course grades recorded.</p>`;
+                    } else {
+                        data.grades.forEach(g => {
+                            gradesDiv.innerHTML += `
+                                <div class="flex justify-between items-center bg-slate-900/40 p-2 rounded-lg border border-white/5">
+                                    <div>
+                                        <span class="font-bold text-slate-200">${g.course_code}</span>
+                                        <span class="text-[0.65rem] text-slate-500 ml-1.5">${g.semester_id}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[0.65rem] text-slate-400 font-mono">GP: ${Number(g.grade_point).toFixed(2)}</span>
+                                        <span class="font-extrabold text-xs px-2 py-0.5 rounded ${g.grade_letter === 'F' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}">${g.grade_letter}</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    const ledgerDiv = document.getElementById('std-modal-ledger');
+                    ledgerDiv.innerHTML = '';
+                    if (data.ledger.length === 0) {
+                        ledgerDiv.innerHTML = `<p class="text-slate-500 italic py-1">No financial transactions recorded.</p>`;
+                    } else {
+                        data.ledger.forEach(l => {
+                            ledgerDiv.innerHTML += `
+                                <div class="flex justify-between items-center bg-slate-900/40 p-2 rounded-lg border border-white/5">
+                                    <div class="text-left">
+                                        <span class="font-semibold text-slate-300">${l.description}</span>
+                                        <p class="text-[0.6rem] text-slate-500 mt-0.5">${l.date || ''}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="font-black text-xs ${l.amount < 0 ? 'text-red-400' : 'text-emerald-400'}">${l.amount} Tk</span>
+                                        <p class="text-[0.60rem] font-bold ${l.status === 'paid' ? 'text-emerald-500' : 'text-amber-500'} uppercase mt-0.5">${l.status}</p>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    document.getElementById('student-profile-modal').classList.remove('hidden');
+                    lucide.createIcons();
+                } else {
+                    alert(data.message || 'Failed to retrieve student details.');
+                }
+            });
+    }
+
+    function closeStudentModal(event) {
+        if (event === null || event.target === document.getElementById('student-profile-modal')) {
+            document.getElementById('student-profile-modal').classList.add('hidden');
+        }
+    }
+
+    // Faculty modal
+    function viewFacultyDetails(facId) {
+        fetch(`/admin/faculty-details/${facId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('fac-modal-name').innerText = data.name;
+                    document.getElementById('fac-modal-id-dept').innerText = `${data.id} • ${data.department_id}`;
+                    document.getElementById('fac-modal-about').innerText = data.about || 'No about profile text provided.';
+                    document.getElementById('fac-modal-courses-count').innerText = data.sections.length;
+                    document.getElementById('fac-modal-advisees-count').innerText = data.advisees.length;
+                    document.getElementById('fac-modal-email').innerText = data.email;
+                    
+                    const picContainer = document.getElementById('fac-modal-pic-container');
+                    if (data.profile_pic) {
+                        picContainer.innerHTML = `<img src="/static/uploads/${data.profile_pic}" class="w-full h-full object-cover">`;
+                    } else {
+                        picContainer.innerHTML = `<i data-lucide="user" class="w-8 h-8 text-slate-400"></i>`;
+                    }
+                    
+                    const adviseesDiv = document.getElementById('fac-modal-advisees');
+                    adviseesDiv.innerHTML = '';
+                    if (data.advisees.length === 0) {
+                        adviseesDiv.innerHTML = `<p class="text-slate-500 italic py-1">No advisee students assigned.</p>`;
+                    } else {
+                        data.advisees.forEach(a => {
+                            adviseesDiv.innerHTML += `
+                                <div class="flex justify-between items-center bg-slate-900/40 p-2 rounded-lg border border-white/5">
+                                    <div>
+                                        <span class="font-extrabold text-slate-200">${a.name}</span>
+                                        <p class="text-[0.65rem] text-slate-400 mt-0.5">${a.id} • ${a.department_id}</p>
+                                    </div>
+                                    <span class="text-[0.65rem] font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400">GPA: ${Number(a.cgpa).toFixed(2)}</span>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    const sectionsDiv = document.getElementById('fac-modal-sections');
+                    sectionsDiv.innerHTML = '';
+                    if (data.sections.length === 0) {
+                        sectionsDiv.innerHTML = `<p class="text-slate-500 italic py-1">No assigned section offerings for next semester.</p>`;
+                    } else {
+                        data.sections.forEach(s => {
+                            sectionsDiv.innerHTML += `
+                                <div class="flex justify-between items-center bg-slate-900/40 p-2 rounded-lg border border-white/5">
+                                    <div class="text-left">
+                                        <span class="font-black text-violet-400">${s.course_code}</span> - Sec <span class="font-bold text-slate-200">${s.section_number}</span>
+                                        <p class="text-[0.65rem] text-slate-400 mt-0.5">${s.schedule} • Room ${s.room}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-[0.65rem] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">${s.enrolled_count}/${s.capacity} Students</span>
+                                        <p class="text-[0.6rem] text-slate-500 mt-0.5">${s.semester_id}</p>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    document.getElementById('faculty-profile-modal').classList.remove('hidden');
+                    lucide.createIcons();
+                } else {
+                    alert(data.message || 'Failed to retrieve faculty details.');
+                }
+            });
+    }
+
+    function closeFacultyModal(event) {
+        if (event === null || event.target === document.getElementById('faculty-profile-modal')) {
+            document.getElementById('faculty-profile-modal').classList.add('hidden');
+        }
     }
 
     // Initial call on DOMContentLoaded for academic records and charts

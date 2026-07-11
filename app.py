@@ -45,6 +45,8 @@ def ensure_runtime_schema():
     profile_columns = {
         'students': {'profile_pic': 'VARCHAR(255)', 'about': 'VARCHAR(500)'},
         'faculty': {'profile_pic': 'VARCHAR(255)', 'about': 'VARCHAR(500)'},
+        'pre_advising_courses': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
+        'section_offerings': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
     }
 
     for table_name, columns in profile_columns.items():
@@ -590,6 +592,88 @@ def student_dashboard():
 def student_advising():
     return render_student_portal('advising')
 
+def get_eligible_courses_for_student(student):
+    """
+    Returns a set of course codes that the student is eligible to take this semester
+    based on:
+    1. Department restrictions (Core Dept, Common, Non-Dept <= 3 limit).
+    2. Prerequisite completion (including current ongoing courses).
+    3. Completed credit thresholds.
+    """
+    # 1. Fetch all student grades & registrations
+    grades = Grade.query.filter_by(student_id=student.id).all()
+    passed_codes = {g.section_id for g in grades if g.grade_letter != 'F'}
+    
+    current_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    current_course_codes = []
+    ongoing_credits = 0.0
+    for r in current_regs:
+        sec_obj = SectionOffering.query.get(r.section_id)
+        if sec_obj:
+            current_course_codes.append(sec_obj.course_code)
+            ongoing_credits += sec_obj.credits
+            
+    all_completed_or_ongoing = passed_codes | set(current_course_codes)
+    student_total_credits = student.completed_credits + ongoing_credits
+    
+    # Define categories
+    COMMON_COURSES = {
+        'CHE109', 'CHE109 Lab', 'ENG101', 'ENG102', 'GEN226', 'MAT101', 
+        'MAT102', 'MAT104', 'MAT205', 'PHY109', 'PHY109 Lab', 'PHY209', 'SAT101'
+    }
+    NON_DEPT_COURSES = {
+        'ACT101', 'BUS231', 'BUS321', 'ECO101', 'FIN101', 'GEN210', 
+        'MGT321', 'MGT337', 'MKT101'
+    }
+    
+    # Count how many non-dept courses student has already completed or is currently taking
+    completed_non_dept_count = sum(1 for c in all_completed_or_ongoing if c in NON_DEPT_COURSES)
+    
+    courses = PreAdvisingCourse.query.all()
+    eligible_codes = set()
+    
+    for c in courses:
+        # Rule 1: Department Check
+        # If it's a common course or non-departmental course, it is allowed (with limits)
+        is_common = c.code in COMMON_COURSES
+        is_non_dept = c.code in NON_DEPT_COURSES
+        
+        # Core Department Check:
+        # E.g. starts with CSE and student is CSE -> Core
+        # If it starts with EEE/CSE/ICE and does not match student dept -> Other Core
+        is_core_other = False
+        if c.code.startswith('CSE') and student.department_id != 'CSE':
+            is_core_other = True
+        elif c.code.startswith('EEE') and student.department_id != 'EEE':
+            is_core_other = True
+        elif c.code.startswith('ICE') and student.department_id != 'ICE':
+            is_core_other = True
+            
+        if is_core_other:
+            continue
+            
+        # Non-Departmental Limit: at most 3 courses (9 credits)
+        if is_non_dept and c.code not in all_completed_or_ongoing:
+            if completed_non_dept_count >= 3:
+                continue
+                
+        # Rule 2: Prerequisite Check
+        prereqs_met = True
+        for pre in c.prerequisites:
+            if pre not in all_completed_or_ongoing:
+                prereqs_met = False
+                break
+        if not prereqs_met:
+            continue
+            
+        # Rule 3: Completed Credit Requirement Check
+        if student_total_credits < c.completed_credit_requirement:
+            continue
+            
+        eligible_codes.add(c.code)
+        
+    return eligible_codes
+
 def render_student_portal(active_tab):
     if current_user.role != 'student':
         return redirect(url_for('home'))
@@ -600,8 +684,6 @@ def render_student_portal(active_tab):
         logout_user()
         return redirect(url_for('login_page'))
     
-
-        
     dept = Department.query.get(student.department_id)
     if not dept:
         class DummyDept:
@@ -619,8 +701,13 @@ def render_student_portal(active_tab):
     total_required = MAJOR_CREDITS.get(student.department_id, 140.0)
     remaining_credits = max(0.0, total_required - student.completed_credits)
     
-    # Pre-advising data
-    courses = PreAdvisingCourse.query.all()
+    # Pre-advising data (filtered by eligibility)
+    eligible_course_codes = get_eligible_courses_for_student(student)
+    courses = [c for c in PreAdvisingCourse.query.all() if c.code in eligible_course_codes]
+    
+    all_courses = PreAdvisingCourse.query.all()
+    all_courses_dict = {c.code: c for c in all_courses}
+    
     courses_json = json.dumps([{
         'code': c.code,
         'title': c.title,
@@ -630,10 +717,15 @@ def render_student_portal(active_tab):
 
     plan = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_next_semester()).first()
     plan_course_ids = plan.course_ids if plan else []
-    plan_credits = sum([c.credits for c in courses if c.code in plan_course_ids])
+    plan_credits = sum([all_courses_dict[code].credits for code in plan_course_ids if code in all_courses_dict])
     
     # Offering sections
-    sections = SectionOffering.query.filter_by(semester_id=get_next_semester()).all()
+    registrations = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
+    selected_section_ids = [r.section_id for r in registrations]
+    
+    sections = [s for s in SectionOffering.query.filter_by(semester_id=get_next_semester()).all()
+                if s.course_code in eligible_course_codes or s.id in selected_section_ids]
+                
     sections_json = json.dumps([{
         'id': s.id,
         'course_code': s.course_code,
@@ -650,9 +742,6 @@ def render_student_portal(active_tab):
         'linked_section_id': s.linked_section_id,
         'faculty_id': s.faculty_id
     } for s in sections])
-
-    registrations = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
-    selected_section_ids = [r.section_id for r in registrations]
     
     # System Advising States (Toggle switches controlled by admin settings)
     # System Advising States (pre and final determined dynamically by window timings & credit requirements)
@@ -849,6 +938,13 @@ def save_plan():
     course_ids_str = request.form.get('course_ids', '[]')
     course_ids = json.loads(course_ids_str)
     
+    # Eligibility check
+    eligible_course_codes = get_eligible_courses_for_student(student)
+    for ccode in course_ids:
+        if ccode not in eligible_course_codes:
+            flash(f"Pre-advising constraint: You are not eligible to take course {ccode} due to prerequisite or completed credit requirements.", "error")
+            return redirect('/advising')
+            
     if len(course_ids) < 2 or len(course_ids) > 6:
         flash('Pre-advising constraint: Must select between 2 and 6 courses.', 'error')
         return redirect('/advising')
@@ -908,7 +1004,12 @@ def toggle_section():
         return jsonify({'status': 'error', 'message': 'Section offering not found.'})
         
     existing_reg = Registration.query.filter_by(student_id=student.id, section_id=sec.id, semester_id=get_next_semester()).first()
-    
+    if not existing_reg:
+        # Eligibility check
+        eligible_course_codes = get_eligible_courses_for_student(student)
+        if sec.course_code not in eligible_course_codes:
+            return jsonify({'status': 'error', 'message': f"You are not eligible to register for course {sec.course_code} due to prerequisite or completed credit requirements."})
+            
     if existing_reg:
         # Drop logic
         # If dropping a theory that has a linked lab, drop lab too
@@ -2458,6 +2559,324 @@ def create_window():
     flash('Advising timeline slot added successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
 
+def import_excel_schedule(file_source):
+    import openpyxl
+    wb = openpyxl.load_workbook(file_source)
+    for sheet_name in wb.sheetnames:
+        sheet = wb[sheet_name]
+        header_row = next(sheet.iter_rows(max_row=1), None)
+        if not header_row:
+            continue
+            
+        headers = [str(cell.value).strip() for cell in header_row]
+        required_cols = ['ID', 'Course Code', 'Section', 'Date & Time', 'Credit', 'Seat Capacity', 'Dedicated Department', 'Room', 'Pre-Requisite', 'Linked Course ID', 'Completed Credit Requirement']
+        
+        col_map = {}
+        for name in required_cols:
+            if name in headers:
+                col_map[name] = headers.index(name)
+            else:
+                for idx, h in enumerate(headers):
+                    if h.lower().replace(' ', '').replace('-', '') == name.lower().replace(' ', '').replace('-', ''):
+                        col_map[name] = idx
+                        break
+                        
+        fac_col = None
+        for idx, h in enumerate(headers):
+            if h.lower().replace(' ', '').replace('_', '').replace('-', '') in ['faculty', 'facultyid', 'assignedfaculty']:
+                fac_col = idx
+                break
+                
+        if 'Course Code' not in col_map or 'Section' not in col_map:
+            continue
+            
+        rows = list(sheet.iter_rows(min_row=2, values_only=True))
+        row_mapping = {}
+        semester_id = get_next_semester()
+        
+        # Pass 1: Add/Update Courses and Sections
+        for row in rows:
+            if not row or all(v is None for v in row):
+                continue
+                
+            row_id = row[col_map['ID']] if 'ID' in col_map else None
+            ccode = str(row[col_map['Course Code']]).strip() if row[col_map['Course Code']] is not None else ''
+            if not ccode or ccode.lower() == 'none':
+                continue
+                
+            section_val = row[col_map['Section']]
+            if section_val is None:
+                continue
+            snum = f"{int(section_val):02d}"
+            sec_id = f"{ccode}-{snum}-{semester_id}"
+            if row_id is not None:
+                row_mapping[row_id] = sec_id
+                
+            credits_val = float(row[col_map['Credit']]) if ('Credit' in col_map and row[col_map['Credit']] is not None) else 3.0
+            
+            dept_str = str(row[col_map['Dedicated Department']]).strip() if ('Dedicated Department' in col_map and row[col_map['Dedicated Department']]) else ''
+            depts = [d.strip() for d in dept_str.split(',') if d.strip()]
+            first_dept = depts[0] if depts else 'CSE'
+            
+            prereq_str = str(row[col_map['Pre-Requisite']]).strip() if ('Pre-Requisite' in col_map and row[col_map['Pre-Requisite']]) else ''
+            prereqs = [p.strip() for p in prereq_str.split(',') if p.strip() and p.strip().lower() != 'none']
+            
+            comp_cred_req = 0
+            if 'Completed Credit Requirement' in col_map and row[col_map['Completed Credit Requirement']] is not None:
+                try:
+                    comp_cred_req = int(row[col_map['Completed Credit Requirement']])
+                except ValueError:
+                    comp_cred_req = 0
+
+            # Parse Faculty Assignment from Excel if present
+            fac_id = None
+            if fac_col is not None and row[fac_col] is not None:
+                fac_val = str(row[fac_col]).strip()
+                if fac_val and fac_val.lower() != 'none':
+                    faculty = Faculty.query.get(fac_val)
+                    if not faculty:
+                        faculty = Faculty.query.filter(Faculty.id.ilike(fac_val)).first()
+                    if not faculty:
+                        faculty = Faculty.query.filter(Faculty.name.ilike(fac_val)).first()
+                    if faculty:
+                        fac_id = faculty.id
+            
+            # Course Catalog sync
+            course = PreAdvisingCourse.query.get(ccode)
+            if not course:
+                course = PreAdvisingCourse(
+                    id=ccode,
+                    code=ccode,
+                    title=ccode,
+                    credits=credits_val,
+                    department_id=first_dept,
+                    completed_credit_requirement=comp_cred_req
+                )
+                course.prerequisites = prereqs
+                db.session.add(course)
+            else:
+                course.credits = credits_val
+                course.department_id = first_dept
+                course.prerequisites = prereqs
+                course.completed_credit_requirement = comp_cred_req
+                
+            # SectionOffering sync
+            sched = str(row[col_map['Date & Time']]).strip() if ('Date & Time' in col_map and row[col_map['Date & Time']]) else 'TBA'
+            room = str(row[col_map['Room']]).strip() if ('Room' in col_map and row[col_map['Room']]) else 'TBA'
+            
+            cap_val = str(row[col_map['Seat Capacity']]).strip() if ('Seat Capacity' in col_map and row[col_map['Seat Capacity']] is not None) else '30'
+            capacity = int(cap_val.split('/')[-1]) if '/' in cap_val else int(cap_val)
+            
+            is_lab = 'Lab' in ccode
+            
+            sec = SectionOffering.query.get(sec_id)
+            if not sec:
+                sec = SectionOffering(
+                    id=sec_id,
+                    course_code=ccode,
+                    course_title=ccode,
+                    section_number=snum,
+                    credits=credits_val,
+                    schedule=sched,
+                    room=room,
+                    capacity=capacity,
+                    is_lab=is_lab,
+                    semester_id=semester_id,
+                    completed_credit_requirement=comp_cred_req
+                )
+                sec.dedicated_departments = depts
+                sec.prerequisites = prereqs
+                db.session.add(sec)
+            else:
+                sec.credits = credits_val
+                sec.schedule = sched
+                sec.room = room
+                sec.capacity = capacity
+                sec.dedicated_departments = depts
+                sec.prerequisites = prereqs
+                sec.completed_credit_requirement = comp_cred_req
+            
+            if fac_id:
+                # Validate schedule conflict for this faculty
+                conflict = False
+                assigned_secs = SectionOffering.query.filter_by(faculty_id=fac_id, semester_id=semester_id).all()
+                for a in assigned_secs:
+                    if a.id != sec_id and schedules_conflict(a.schedule, sched):
+                        conflict = True
+                        break
+                if not conflict:
+                    sec.faculty_id = fac_id
+                else:
+                    print(f"Warning: Faculty {fac_id} has conflict with section {sec_id} in sheet schedule.")
+                
+        db.session.commit()
+        
+        # Pass 2: Setup linked Lab/Theory relations
+        if 'Linked Course ID' in col_map:
+            for row in rows:
+                if not row or all(v is None for v in row):
+                    continue
+                row_id = row[col_map['ID']] if 'ID' in col_map else None
+                linked_val = row[col_map['Linked Course ID']]
+                if row_id is None or linked_val is None or str(linked_val).strip().lower() == 'none':
+                    continue
+                    
+                try:
+                    linked_row_id = int(linked_val)
+                except ValueError:
+                    continue
+                    
+                sec_id = row_mapping.get(row_id)
+                linked_sec_id = row_mapping.get(linked_row_id)
+                if sec_id and linked_sec_id:
+                    sec = SectionOffering.query.get(sec_id)
+                    if sec:
+                        sec.linked_section_id = linked_sec_id
+            db.session.commit()
+
+@app.route('/admin/upload-schedule', methods=['POST'])
+@login_required
+def upload_schedule():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        flash('No file selected.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=course-management')
+        
+    if not file.filename.endswith('.xlsx'):
+        flash('Invalid file format. Only Excel files (.xlsx) are allowed.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=course-management')
+        
+    try:
+        import_excel_schedule(file)
+        flash('Course schedule imported successfully!', 'success')
+    except Exception as e:
+        flash(f'Error importing schedule: {str(e)}', 'error')
+        
+    return redirect(url_for('admin_dashboard') + '?tab=course-management')
+
+@app.route('/admin/assign-faculty-section', methods=['POST'])
+@login_required
+def assign_faculty_section():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    fac_id = request.form.get('faculty_id')
+    sec_id = request.form.get('section_id')
+    
+    faculty = Faculty.query.get(fac_id)
+    section = SectionOffering.query.get(sec_id)
+    
+    if not faculty:
+        flash('Faculty member not found.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
+        
+    if not section:
+        flash('Course section offering not found.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
+        
+    # Check for schedule conflicts
+    next_sem = get_next_semester()
+    assigned = SectionOffering.query.filter_by(faculty_id=fac_id, semester_id=next_sem).all()
+    for a in assigned:
+        if a.id != sec_id and schedules_conflict(a.schedule, section.schedule):
+            flash(f"Conflict detected! This section ({section.course_code} Sec {section.section_number}: {section.schedule}) conflicts with {a.course_code} Sec {a.section_number} ({a.schedule}) which is already assigned to {faculty.name}.", "error")
+            return redirect(url_for('admin_dashboard') + '?tab=faculty')
+            
+    # Assign
+    section.faculty_id = fac_id
+    db.session.commit()
+    flash(f"Successfully assigned {section.course_code} Sec {section.section_number} ({section.schedule}) to {faculty.name}.", "success")
+    return redirect(url_for('admin_dashboard') + '?tab=faculty')
+
+@app.route('/admin/assign-faculty-sections-bulk', methods=['POST'])
+@login_required
+def assign_faculty_sections_bulk():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    faculty_id = request.form.get('faculty_id')
+    section_ids = request.form.getlist('section_ids')
+    
+    faculty = Faculty.query.get(faculty_id)
+    if not faculty:
+        flash("Faculty member not found.", "error")
+        return redirect(url_for('admin_dashboard') + "?tab=faculty")
+        
+    if not section_ids:
+        flash("No sections selected for assignment.", "error")
+        return redirect(url_for('admin_dashboard') + "?tab=faculty")
+        
+    success_count = 0
+    conflict_count = 0
+    semester_id = get_next_semester()
+    
+    assigned_secs = SectionOffering.query.filter(
+        SectionOffering.faculty_id == faculty_id,
+        SectionOffering.semester_id == semester_id,
+        ~SectionOffering.id.in_(section_ids)
+    ).all()
+    
+    to_assign = []
+    current_schedule_list = [(s.id, s.schedule, f"{s.course_code}-Sec{s.section_number}") for s in assigned_secs]
+    
+    for sec_id in section_ids:
+        sec = SectionOffering.query.get(sec_id)
+        if not sec:
+            continue
+            
+        has_conflict = False
+        for aid, asched, acode in current_schedule_list:
+            if schedules_conflict(asched, sec.schedule):
+                has_conflict = True
+                flash(f"Conflict: Section {sec.course_code}-Sec{sec.section_number} ({sec.schedule}) conflicts with already assigned {acode} ({asched}).", "error")
+                break
+        
+        if not has_conflict:
+            for tid, tsched, tcode in to_assign:
+                if schedules_conflict(tsched, sec.schedule):
+                    has_conflict = True
+                    flash(f"Conflict: Section {sec.course_code}-Sec{sec.section_number} ({sec.schedule}) conflicts with selected {tcode} ({tsched}).", "error")
+                    break
+                    
+        if not has_conflict:
+            to_assign.append((sec.id, sec.schedule, f"{sec.course_code}-Sec{sec.section_number}"))
+            sec.faculty_id = faculty_id
+            success_count += 1
+        else:
+            conflict_count += 1
+            
+    db.session.commit()
+    
+    if success_count > 0:
+        flash(f"Successfully assigned {success_count} section(s) to {faculty.name}.", "success")
+    if conflict_count > 0:
+        flash(f"{conflict_count} section(s) could not be assigned due to scheduling conflicts.", "error")
+        
+    return redirect(url_for('admin_dashboard') + "?tab=faculty")
+
+@app.route('/admin/unassign-faculty-section/<sec_id>', methods=['POST'])
+@login_required
+def unassign_faculty_section(sec_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    section = SectionOffering.query.get(sec_id)
+    if not section:
+        flash('Course section offering not found.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
+        
+    fac_id = section.faculty_id
+    faculty = Faculty.query.get(fac_id) if fac_id else None
+    fac_name = faculty.name if faculty else "Faculty"
+    
+    section.faculty_id = None
+    db.session.commit()
+    flash(f"Successfully unassigned {section.course_code} Sec {section.section_number} from {fac_name}.", "success")
+    return redirect(url_for('admin_dashboard') + '?tab=faculty')
+
 @app.route('/admin/delete-window/<win_id>', methods=['POST'])
 @login_required
 def delete_window(win_id):
@@ -2649,6 +3068,123 @@ def delete_grade(grade_id):
     else:
         flash("Grade not found.", "error")
     return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/student-details/<std_id>')
+@login_required
+def admin_student_details(std_id):
+    if current_user.role != 'admin':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+        
+    student = Student.query.get(std_id)
+    if not student:
+        return jsonify({'status': 'error', 'message': 'Student not found.'}), 404
+        
+    user = User.query.get(student.user_id)
+    email = user.email if user else 'N/A'
+    
+    requests = AdvisingRequest.query.filter_by(student_id=student.id).all()
+    requests_list = [{
+        'course_id': r.course_id,
+        'type': r.type,
+        'status': r.status,
+        'created_at': r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else ''
+    } for r in requests]
+    
+    regs = Registration.query.filter_by(student_id=student.id).all()
+    regs_list = []
+    for r in regs:
+        sec = SectionOffering.query.get(r.section_id)
+        if sec:
+            regs_list.append({
+                'course_code': sec.course_code,
+                'section_number': sec.section_number,
+                'semester_id': r.semester_id,
+                'schedule': sec.schedule,
+                'room': sec.room
+            })
+            
+    grades = Grade.query.filter_by(student_id=student.id).all()
+    grades_list = [{
+        'id': g.id,
+        'course_code': g.section_id,
+        'grade_letter': g.grade_letter,
+        'grade_point': g.grade_point,
+        'semester_id': g.semester_id
+    } for g in grades]
+    
+    advisor = Faculty.query.get(student.advisor_id) if student.advisor_id else None
+    advisor_name = advisor.name if advisor else 'Not Assigned'
+    
+    ledger = LedgerEntry.query.filter_by(student_id=student.id).all()
+    ledger_list = [{
+        'description': l.description,
+        'amount': l.amount,
+        'status': l.status,
+        'date': l.date
+    } for l in ledger]
+    
+    return jsonify({
+        'status': 'success',
+        'id': student.id,
+        'name': student.name,
+        'email': email,
+        'department_id': student.department_id,
+        'completed_credits': student.completed_credits,
+        'cgpa': student.cgpa,
+        'outstanding_balance': student.outstanding_balance,
+        'financial_cleared': student.financial_cleared,
+        'advising_status': student.advising_status,
+        'about': student.about or '',
+        'profile_pic': student.profile_pic or '',
+        'advisor_name': advisor_name,
+        'registrations': regs_list,
+        'grades': grades_list,
+        'ledger': ledger_list
+    })
+
+@app.route('/admin/faculty-details/<fac_id>')
+@login_required
+def admin_faculty_details(fac_id):
+    if current_user.role != 'admin':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+        
+    faculty = Faculty.query.get(fac_id)
+    if not faculty:
+        return jsonify({'status': 'error', 'message': 'Faculty not found.'}), 404
+        
+    user = User.query.get(faculty.user_id)
+    email = user.email if user else 'N/A'
+    
+    sections = SectionOffering.query.filter_by(faculty_id=faculty.id).all()
+    sections_list = [{
+        'course_code': s.course_code,
+        'section_number': s.section_number,
+        'semester_id': s.semester_id,
+        'schedule': s.schedule,
+        'room': s.room,
+        'capacity': s.capacity,
+        'enrolled_count': s.enrolled_count
+    } for s in sections]
+    
+    advisees = Student.query.filter_by(advisor_id=faculty.id).all()
+    advisees_list = [{
+        'id': std.id,
+        'name': std.name,
+        'department_id': std.department_id,
+        'cgpa': std.cgpa
+    } for std in advisees]
+    
+    return jsonify({
+        'status': 'success',
+        'id': faculty.id,
+        'name': faculty.name,
+        'email': email,
+        'department_id': faculty.department_id,
+        'about': faculty.about or '',
+        'profile_pic': faculty.profile_pic or '',
+        'sections': sections_list,
+        'advisees': advisees_list
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, port=3001)

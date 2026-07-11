@@ -127,6 +127,23 @@ def seed_db():
         for d in departments:
             db.session.add(d)
         db.session.commit()
+
+        # Seed excel files
+        print("Importing Excel schedules...")
+        excel_files = [
+            'CSE_Course_Schedule.xlsx',
+            'EEE_Course_Schedule.xlsx',
+            'Common_Course_Schedule_(CSE-ICE-EEE).xlsx',
+            'Non_Departmental_Schedule_(CSE-ICE-EEE).xlsx'
+        ]
+        from app import import_excel_schedule
+        for f in excel_files:
+            if os.path.exists(f):
+                import_excel_schedule(f)
+                print(f"Imported {f}")
+            else:
+                print(f"Warning: {f} not found.")
+
         print("Database successfully initialized and seeded. Done.")
 
 if __name__ == '__main__':

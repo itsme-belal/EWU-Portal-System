@@ -93,9 +93,30 @@ body {
 
 /* Cosmic theme */
 .theme-cosmic {
-  background: radial-gradient(ellipse at top left, #0d1b3e 0%, #020617 40%, #0a0a1a 100%) !important;
+  background: radial-gradient(circle at 10% 20%, rgba(4, 21, 45, 1) 0%, rgba(13, 9, 32, 1) 45%, rgba(4, 5, 12, 1) 90%) !important;
 }
 .theme-cosmic .dark { background: transparent; }
+.theme-cosmic .glass-card {
+  background: rgba(20, 24, 45, 0.4) !important;
+  border: 1px solid rgba(139, 92, 246, 0.18) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+}
+.theme-cosmic .card {
+  background: rgba(15, 18, 38, 0.85) !important;
+  border-color: rgba(139, 92, 246, 0.15) !important;
+}
+.theme-cosmic .btn-primary {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4) !important;
+}
+.theme-cosmic .btn-primary:hover {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.55) !important;
+}
+.theme-cosmic select option {
+  background: #111322 !important;
+  color: #f0f6ff !important;
+}
 
 /* University image theme */
 .theme-image {

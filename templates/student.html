@@ -211,7 +211,7 @@
             <div class="space-y-3 text-xs">
                 <div class="flex justify-between border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
                     <span>Account Balance:</span>
-                    <span class="font-bold text-red-500">BDT {{ student.outstanding_balance }}</span>
+                    <span class="font-bold text-red-500">TAKA {{ student.outstanding_balance }}</span>
                 </div>
                 <div class="flex justify-between border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
                     <span>Advising Status:</span>
@@ -439,8 +439,8 @@
                         START PRE-ADVISING
                     </button>
                     {% else %}
-                    <button disabled class="w-full py-2.5 rounded-xl bg-slate-800 text-slate-500 text-xs font-black cursor-not-allowed">
-                        LOCKED: PRE-ADVISING CLOSED
+                    <button onclick="enterPreAdvisingPhase()" class="w-full py-2.5 rounded-xl border border-slate-500/30 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 text-xs font-black transition-all">
+                        ENTER PRE-ADVISING (VIEW ONLY)
                     </button>
                     {% endif %}
                 </div>
@@ -832,7 +832,7 @@
                         <td class="p-3 font-bold">{{ s.course_code }}</td>
                         <td class="p-3">Sec {{ s.section_number }}</td>
                         <td class="p-3">{{ s.credits }} CR</td>
-                        <td class="p-3 text-right font-mono font-bold">BDT {{ "{:,.0f}".format(course_cost) }}</td>
+                        <td class="p-3 text-right font-mono font-bold">TAKA {{ "{:,.0f}".format(course_cost) }}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -852,19 +852,19 @@
                 </div>
                 <div class="flex justify-between border-b border-[#e2e8f0]/40 dark:border-[#1e293b]/40 pb-2">
                     <span class="text-slate-400">Tuition Rate per Credit:</span>
-                    <span class="font-mono">BDT {{ "{:,.0f}".format(credit_rate) }}</span>
+                    <span class="font-mono">TAKA {{ "{:,.0f}".format(credit_rate) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-slate-400">Gross Tuition Fee:</span>
-                    <span class="font-mono font-bold">BDT {{ "{:,.0f}".format(ns.total_cost) }}</span>
+                    <span class="font-mono font-bold">TAKA {{ "{:,.0f}".format(ns.total_cost) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-slate-400">Activity & Lab Fees:</span>
-                    <span class="font-mono font-bold">BDT {{ "{:,.0f}".format(ns.total_credits * 200) }}</span>
+                    <span class="font-mono font-bold">TAKA {{ "{:,.0f}".format(ns.total_credits * 200) }}</span>
                 </div>
                 <div class="flex justify-between border-t border-slate-800 pt-3 text-sm font-black">
                     <span>Total Amount Payable:</span>
-                    <span class="font-mono text-blue-600">BDT {{ "{:,.0f}".format(ns.total_cost + (ns.total_credits * 200)) }}</span>
+                    <span class="font-mono text-blue-600">TAKA {{ "{:,.0f}".format(ns.total_cost + (ns.total_credits * 200)) }}</span>
                 </div>
             </div>
         </div>
@@ -932,7 +932,7 @@
                         {% for le in ledger %}
                         <tr>
                             <td class="font-semibold text-xs">{{ le.description }}</td>
-                            <td class="font-mono font-bold text-xs">BDT {{ "{:,.0f}".format(le.amount) }}</td>
+                            <td class="font-mono font-bold text-xs">TAKA {{ "{:,.0f}".format(le.amount) }}</td>
                             <td>
                                 <span class="badge {{ 'badge-success' if le.status == 'paid' else 'badge-danger' }} text-[0.62rem]">
                                     {{ le.status | upper }}
@@ -961,7 +961,7 @@
                         <p class="text-[0.65rem] text-[#94a3b8] mt-0.5">Due: {{ inst.due_date }}</p>
                     </div>
                     <div class="text-right">
-                        <p class="font-bold">BDT {{ "{:,.0f}".format(inst.amount) }}</p>
+                        <p class="font-bold">TAKA {{ "{:,.0f}".format(inst.amount) }}</p>
                         <span class="badge {{ 'badge-success' if inst.status == 'paid' else 'badge-danger' }} text-[0.6rem] px-2 py-0.5 mt-1 block">
                             {{ inst.status | upper }}
                         </span>
