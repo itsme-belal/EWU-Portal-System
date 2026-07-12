@@ -585,14 +585,18 @@
                     {% set combined_credits = (course.credits + lab_course.credits) if lab_course else course.credits %}
                     {% set is_f = (course.code in f_grades) or ( (course.code ~ ' Lab') in f_grades ) %}
                     {% set is_d = (course.code in d_grades) or ( (course.code ~ ' Lab') in d_grades ) %}
-                    {% set is_retake = is_f or is_d %}
+                    {% set is_retake = (course.code in passed_codes) or ( (course.code ~ ' Lab') in passed_codes ) %}
                     {% set is_rec = course.code in recommended_courses %}
                     <div id="course-card-{{ course.code }}" 
                          data-is-recommended="{{ 'true' if is_rec else 'false' }}"
                          data-is-f-grade="{{ 'true' if is_f else 'false' }}"
                          data-is-d-grade="{{ 'true' if is_d else 'false' }}"
                          data-is-retake="{{ 'true' if is_retake else 'false' }}"
-                         class="pre-course-card stitch-card flex justify-between items-center py-3 px-4 border transition-all duration-150 {{ 'border-blue-500 bg-blue-50/10' if selected else 'border-[#e2e8f0] dark:border-[#1e293b]' }}">
+                         {% if pre_advising_active %}
+                         onclick="togglePlanCourse('{{ course.code }}')"
+                         style="cursor: pointer;"
+                         {% endif %}
+                         class="pre-course-card stitch-card flex justify-between items-center py-3 px-4 border transition-all duration-150 hover:bg-slate-50 dark:hover:bg-slate-900/10 {{ 'border-blue-500 bg-blue-50/10' if selected else 'border-[#e2e8f0] dark:border-[#1e293b]' }}">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600">
                                 <i data-lucide="book-open" class="w-4 h-4"></i>
@@ -602,9 +606,6 @@
                                 <p class="text-[0.65rem] text-[#94a3b8]">Credits: {{ combined_credits }} CR {% if course.prerequisites %}• Prereq: {{ course.prerequisites | join(', ') }}{% endif %}</p>
                             </div>
                         </div>
-                        <button id="course-btn-{{ course.code }}" {% if not pre_advising_active %}disabled{% endif %} onclick="togglePlanCourse('{{ course.code }}')" class="px-3.5 py-1 text-xs font-bold rounded-lg border transition-colors {{ 'bg-blue-600 border-blue-600 text-white' if selected else 'border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800' }} {% if not pre_advising_active %}opacity-50 cursor-not-allowed{% endif %}">
-                            {{ 'Selected' if selected else 'Select' }}
-                        </button>
                     </div>
                     {% endif %}
                     {% endfor %}
@@ -623,6 +624,12 @@
                         <span class="font-bold" id="plan-credits">{{ plan_credits }} / 15 CR</span>
                     </div>
                 </div>
+
+                <!-- Pre-Advising Selected Courses Cart List -->
+                <div id="pre-advising-cart-list" class="space-y-2 py-2 border-t border-b border-[#e2e8f0] dark:border-[#1e293b] max-h-48 overflow-y-auto">
+                    <!-- populated dynamically -->
+                </div>
+
                 <div class="bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 p-3 rounded-xl text-[0.68rem] text-blue-600 dark:text-blue-400 space-y-1">
                     <p class="font-bold">Requirements:</p>
                     <p>• Select minimum 9.0 credits (3 courses).</p>
@@ -631,7 +638,7 @@
                 <form action="{{ url_for('save_plan') }}" method="POST" id="plan-form">
                     <input type="hidden" name="course_ids" id="plan-input" value='{{ plan_course_ids | tojson }}'>
                     <button type="submit" class="w-full btn-primary justify-center py-2 rounded-lg text-xs" {% if not pre_advising_active or plan_course_ids|length > 6 or plan_credits > 15 or plan_course_ids|length < 3 or plan_credits < 9 %}disabled{% endif %}>
-                        Save Pre-Advising Carts
+                        Confirm Pre-Advising Carts
                     </button>
                 </form>
             </div>
@@ -651,17 +658,17 @@
                 <!-- Filter & Search Row -->
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
                     <div class="flex flex-wrap gap-2">
-                        <button onclick="filterAdvisingSections('all')" id="filter-all" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent active-filter">
-                            All Offerings
+                        <button onclick="filterAdvisingSections('recommended')" id="filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all border border-transparent active-filter">
+                            Recommended Courses
                         </button>
-                        <button onclick="filterAdvisingSections('failed')" id="filter-failed" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                            F Grade Courses
+                        <button onclick="filterAdvisingSections('retakeable')" id="filter-retakeable" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                            Retakeable Courses
                         </button>
-                        <button onclick="filterAdvisingSections('recommended')" id="filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                            Recommended
+                        <button onclick="filterAdvisingSections('d_grade')" id="filter-d_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                            D/D+ Courses
                         </button>
-                        <button onclick="filterAdvisingSections('retake')" id="filter-retake" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                            D/D+ Retakes
+                        <button onclick="filterAdvisingSections('f_grade')" id="filter-f_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                            F Courses
                         </button>
                     </div>
                     <div class="relative w-full md:w-64">
@@ -1609,6 +1616,14 @@
 
     const savedTab = "{{ active_tab or 'dashboard' }}";
     switchTab(savedTab);
+    
+    // Initialize pre-advising defaults
+    if (typeof filterPreAdvising === 'function') {
+        filterPreAdvising('recommended');
+    }
+    if (typeof updatePreAdvisingCartList === 'function') {
+        updatePreAdvisingCartList();
+    }
 
     // CGPA Masking Control
     let cgpaVisible = false;
@@ -1653,6 +1668,8 @@
         if (hub) hub.classList.add('hidden');
         if (preWork) preWork.classList.remove('hidden');
         if (finalWork) finalWork.classList.add('hidden');
+        filterPreAdvising('recommended');
+        updatePreAdvisingCartList();
     }
 
     function enterFinalAdvisingPhase() {
@@ -1672,16 +1689,55 @@
         if (hub) hub.classList.add('hidden');
         if (preWork) preWork.classList.add('hidden');
         if (finalWork) finalWork.classList.remove('hidden');
-        loadAdvisingSections();
+        filterAdvisingSections('recommended');
     }
 
     // Pre-advising selections
     let planCourseCodes = {{ plan_course_ids | tojson }};
     const coursesData = {{ courses_json | safe }};
 
+    function updatePreAdvisingCartList() {
+        const listDiv = document.getElementById('pre-advising-cart-list');
+        if (!listDiv) return;
+        listDiv.innerHTML = '';
+        if (planCourseCodes.length === 0) {
+            listDiv.innerHTML = `<p class="text-slate-500 italic text-[0.7rem] text-center py-2">No courses selected.</p>`;
+            return;
+        }
+        planCourseCodes.forEach(code => {
+            const course = coursesData.find(x => x.code === code);
+            const title = course ? course.title : '';
+            const credits = course ? course.credits : 0;
+            
+            // Check if there is a lab course combined
+            const labCode = code + " Lab";
+            const labCourse = coursesData.find(x => x.code === labCode);
+            const displayTitle = labCourse ? `${title} & Lab` : title;
+            const displayCredits = labCourse ? (credits + labCourse.credits) : credits;
+
+            listDiv.innerHTML += `
+                <div class="flex justify-between items-center bg-slate-900/40 p-2 rounded-lg border border-white/5 text-xs">
+                    <div>
+                        <span class="font-bold text-slate-200">${code}</span>
+                        <p class="text-[0.6rem] text-slate-400 mt-0.5 truncate max-w-[120px]">${displayTitle}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[0.65rem] font-bold text-slate-400">${displayCredits} CR</span>
+                        <button onclick="togglePlanCourse('${code}')" class="text-rose-400 hover:text-rose-300 font-bold p-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        lucide.createIcons();
+    }
+
     function togglePlanCourse(code) {
         const idx = planCourseCodes.indexOf(code);
         let selectedNow = false;
+        let originalPlanCodes = [...planCourseCodes];
+
         if (idx > -1) {
             planCourseCodes.splice(idx, 1);
         } else {
@@ -1695,8 +1751,8 @@
                 const course = coursesData.find(x => x.code === c);
                 if (course) currentCredits += course.credits;
             });
-            if (courseToAdd && currentCredits + courseToAdd.credits > 21) {
-                showToast('error', 'Limit exceeded: Maximum of 21.0 credits allowed.');
+            if (courseToAdd && currentCredits + courseToAdd.credits > 15) {
+                showToast('error', 'Limit exceeded: Maximum of 15.0 credits allowed.');
                 return;
             }
             planCourseCodes.push(code);
@@ -1710,40 +1766,74 @@
         });
 
         document.getElementById('plan-count').textContent = `${planCourseCodes.length} / 6`;
-        document.getElementById('plan-credits').textContent = `${credits} / 21 CR`;
+        document.getElementById('plan-credits').textContent = `${credits} / 15 CR`;
         document.getElementById('plan-input').value = JSON.stringify(planCourseCodes);
 
         const btnSave = document.querySelector('#plan-form button');
-        if (planCourseCodes.length < 2 || planCourseCodes.length > 6 || credits < 6 || credits > 21) {
-            btnSave.setAttribute('disabled', 'true');
+        if (planCourseCodes.length < 3 || planCourseCodes.length > 6 || credits < 9 || credits > 15) {
+            if (btnSave) btnSave.setAttribute('disabled', 'true');
         } else {
-            btnSave.removeAttribute('disabled');
+            if (btnSave) btnSave.removeAttribute('disabled');
         }
 
         // Toggling visual elements locally
         const cardEl = document.getElementById(`course-card-${code}`);
-        const btnEl = document.getElementById(`course-btn-${code}`);
-        if (cardEl && btnEl) {
+        if (cardEl) {
             if (selectedNow) {
                 cardEl.classList.remove('border-[#e2e8f0]', 'dark:border-[#1e293b]');
                 cardEl.classList.add('border-blue-500', 'bg-blue-50/10');
-
-                btnEl.classList.remove('border-slate-200', 'dark:border-slate-800', 'hover:bg-slate-100', 'dark:hover:bg-slate-800');
-                btnEl.classList.add('bg-blue-600', 'border-blue-600', 'text-white');
-                btnEl.textContent = 'Selected';
             } else {
                 cardEl.classList.remove('border-blue-500', 'bg-blue-50/10');
                 cardEl.classList.add('border-[#e2e8f0]', 'dark:border-[#1e293b]');
-
-                btnEl.classList.remove('bg-blue-600', 'border-blue-600', 'text-white');
-                btnEl.classList.add('border-slate-200', 'dark:border-slate-800', 'hover:bg-slate-100', 'dark:hover:bg-slate-800');
-                btnEl.textContent = 'Select';
             }
         }
+
+        updatePreAdvisingCartList();
+
+        // AJAX Autosave
+        fetch('/student/save-plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ course_ids: planCourseCodes })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('success', 'Plan auto-saved.');
+            } else {
+                showToast('error', data.message || 'Auto-save failed.');
+                // Revert
+                planCourseCodes = originalPlanCodes;
+                let revertedCredits = 0;
+                planCourseCodes.forEach(c => {
+                    const course = coursesData.find(x => x.code === c);
+                    if (course) revertedCredits += course.credits;
+                });
+                document.getElementById('plan-count').textContent = `${planCourseCodes.length} / 6`;
+                document.getElementById('plan-credits').textContent = `${revertedCredits} / 15 CR`;
+                document.getElementById('plan-input').value = JSON.stringify(planCourseCodes);
+                
+                const cardElRevert = document.getElementById(`course-card-${code}`);
+                if (cardElRevert) {
+                    if (planCourseCodes.includes(code)) {
+                        cardElRevert.classList.remove('border-[#e2e8f0]', 'dark:border-[#1e293b]');
+                        cardElRevert.classList.add('border-blue-500', 'bg-blue-50/10');
+                    } else {
+                        cardElRevert.classList.remove('border-blue-500', 'bg-blue-50/10');
+                        cardElRevert.classList.add('border-[#e2e8f0]', 'dark:border-[#1e293b]');
+                    }
+                }
+                updatePreAdvisingCartList();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('error', 'Network error during auto-save.');
+        });
     }
 
     function filterPreAdvising(category) {
-        const btns = ['all', 'recommended', 'retake', 'd_grade', 'f_grade'];
+        const btns = ['recommended', 'retake', 'd_grade', 'f_grade'];
         btns.forEach(b => {
             const btn = document.getElementById('pre-filter-' + b);
             if (btn) {
@@ -1760,9 +1850,7 @@
         const cards = document.querySelectorAll('.pre-course-card');
         cards.forEach(card => {
             let show = false;
-            if (category === 'all') {
-                show = true;
-            } else if (category === 'recommended') {
+            if (category === 'recommended') {
                 show = card.getAttribute('data-is-recommended') === 'true';
             } else if (category === 'retake') {
                 show = card.getAttribute('data-is-retake') === 'true';
@@ -1786,7 +1874,8 @@
     const failedCodes = {{ f_grades | tojson }};
     const dCodes = {{ d_grades | tojson }};
     const recommendedCodes = {{ recommended_courses | tojson }};
-    let currentAdvisingFilter = 'all';
+    const passedCodes = {{ passed_codes | tojson }};
+    let currentAdvisingFilter = 'recommended';
     let searchAdvisingQuery = '';
 
     function searchAdvisingCourses() {
@@ -1796,9 +1885,15 @@
 
     function filterAdvisingSections(filterType) {
         currentAdvisingFilter = filterType;
-        document.querySelectorAll('[id^="filter-"]').forEach(el => el.classList.remove('active-filter', 'bg-blue-600', 'text-white'));
+        document.querySelectorAll('[id^="filter-"]').forEach(el => {
+            el.classList.remove('active-filter', 'bg-blue-600', 'text-white');
+            el.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+        });
         const activeBtn = document.getElementById(`filter-${filterType}`);
-        activeBtn.classList.add('active-filter', 'bg-blue-600', 'text-white');
+        if (activeBtn) {
+            activeBtn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+            activeBtn.classList.add('active-filter', 'bg-blue-600', 'text-white');
+        }
         loadAdvisingSections();
     }
 
@@ -1846,12 +1941,14 @@
         let filteredSections = sectionsData;
         
         // Filter based on advising sub-branch filter
-        if (currentAdvisingFilter === 'failed') {
+        if (currentAdvisingFilter === 'f_grade') {
             filteredSections = sectionsData.filter(sec => failedCodes.includes(sec.course_code.replace(' Lab', '')));
         } else if (currentAdvisingFilter === 'recommended') {
             filteredSections = sectionsData.filter(sec => recommendedCodes.includes(sec.course_code.replace(' Lab', '')));
-        } else if (currentAdvisingFilter === 'retake') {
+        } else if (currentAdvisingFilter === 'd_grade') {
             filteredSections = sectionsData.filter(sec => dCodes.includes(sec.course_code.replace(' Lab', '')));
+        } else if (currentAdvisingFilter === 'retakeable') {
+            filteredSections = sectionsData.filter(sec => passedCodes.includes(sec.course_code.replace(' Lab', '')));
         }
 
         // Apply search query filter if present

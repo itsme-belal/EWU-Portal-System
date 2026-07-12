@@ -737,9 +737,25 @@ def render_student_portal(active_tab):
     total_required = MAJOR_CREDITS.get(student.department_id, 140.0)
     remaining_credits = max(0.0, total_required - student.completed_credits)
     
-    # Pre-advising data (filtered by eligibility)
+    # Final advising courses sorting — resolve course codes from grade section_ids
+    grades = Grade.query.filter_by(student_id=student.id).all()
+    def _grade_course_code(g):
+        sec = SectionOffering.query.get(g.section_id)
+        return sec.course_code if sec else g.section_id
+
+    passed_codes = [_grade_course_code(g) for g in grades if g.grade_letter not in ('F', None, '')]
+    f_grades     = [_grade_course_code(g) for g in grades if g.grade_letter == 'F']
+    d_grades     = [_grade_course_code(g) for g in grades if g.grade_letter in ['D', 'D+']]
+
+    # Class Schedules
+    current_sem_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    current_schedule_sections = [SectionOffering.query.get(r.section_id) for r in current_sem_regs if SectionOffering.query.get(r.section_id)]
+    current_course_codes = [sec.course_code for sec in current_schedule_sections if sec]
+    all_completed_or_ongoing = set(passed_codes) | set(current_course_codes)
+
+    # Pre-advising data (filtered by eligibility and hiding ongoing courses)
     eligible_course_codes = get_eligible_courses_for_student(student)
-    raw_courses = [c for c in PreAdvisingCourse.query.all() if c.code in eligible_course_codes]
+    raw_courses = [c for c in PreAdvisingCourse.query.all() if c.code in eligible_course_codes and c.code not in current_course_codes]
     all_catalog_map = {c.code: c for c in PreAdvisingCourse.query.all()}
     
     courses = []
@@ -800,12 +816,12 @@ def render_student_portal(active_tab):
     plan_course_ids = plan.course_ids if plan else []
     plan_credits = sum([all_courses_dict[code].credits for code in plan_course_ids if code in all_courses_dict])
     
-    # Offering sections
+    # Offering sections (hiding current ongoing courses)
     registrations = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
     selected_section_ids = [r.section_id for r in registrations]
     
     sections = [s for s in SectionOffering.query.filter_by(semester_id=get_next_semester()).all()
-                if s.course_code in eligible_course_codes or s.id in selected_section_ids]
+                if (s.course_code in eligible_course_codes or s.id in selected_section_ids) and s.course_code not in current_course_codes]
                 
     sections_json = json.dumps([{
         'id': s.id,
@@ -824,7 +840,6 @@ def render_student_portal(active_tab):
         'faculty_id': s.faculty_id
     } for s in sections])
     
-    # System Advising States (Toggle switches controlled by admin settings)
     # System Advising States (pre and final determined dynamically by window timings & credit requirements)
     now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
     
@@ -858,26 +873,10 @@ def render_student_portal(active_tab):
         
     request_phase_active = is_setting_true('request_phase_active')
 
-    # Final advising courses sorting — resolve course codes from grade section_ids
-    grades = Grade.query.filter_by(student_id=student.id).all()
-    def _grade_course_code(g):
-        sec = SectionOffering.query.get(g.section_id)
-        return sec.course_code if sec else g.section_id
-
-    passed_codes = [_grade_course_code(g) for g in grades if g.grade_letter not in ('F', None, '')]
-    f_grades     = [_grade_course_code(g) for g in grades if g.grade_letter == 'F']
-    d_grades     = [_grade_course_code(g) for g in grades if g.grade_letter in ['D', 'D+']]
-
-    # Class Schedules
-    current_sem_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
-    current_schedule_sections = [SectionOffering.query.get(r.section_id) for r in current_sem_regs if SectionOffering.query.get(r.section_id)]
-    current_course_codes = [sec.course_code for sec in current_schedule_sections if sec]
-    all_completed_or_ongoing = set(passed_codes) | set(current_course_codes)
-
-    # Recommended courses (prerequisites met, not yet passed or ongoing, and completed credit requirement is met)
+    # Recommended courses (excluding completed/passed, ongoing, F failed, and D/D+ courses)
     recommended_courses = []
     for c in courses:
-        if c.code not in all_completed_or_ongoing:
+        if c.code not in passed_codes and c.code not in current_course_codes and c.code not in f_grades and c.code not in d_grades:
             prereqs_met = all(pre in all_completed_or_ongoing for pre in c.prerequisites)
             credits_met = student.completed_credits >= c.completed_credit_requirement
             if prereqs_met and credits_met:
@@ -969,6 +968,7 @@ def render_student_portal(active_tab):
         request_phase_active=request_phase_active,
         f_grades=f_grades,
         d_grades=d_grades,
+        passed_codes=passed_codes,
         recommended_courses=recommended_courses,
         current_schedule_sections=current_schedule_sections,
         next_schedule_sections=next_schedule_sections,
@@ -1121,6 +1121,12 @@ def toggle_section():
     sec = SectionOffering.query.get(sec_id)
     if not sec:
         return jsonify({'status': 'error', 'message': 'Section offering not found.'})
+        
+    current_sem_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    current_schedule_sections = [SectionOffering.query.get(r.section_id) for r in current_sem_regs if SectionOffering.query.get(r.section_id)]
+    current_course_codes = [s.course_code for s in current_schedule_sections if s]
+    if sec.course_code in current_course_codes:
+        return jsonify({'status': 'error', 'message': f"Course {sec.course_code} is an ongoing course and cannot be registered or dropped."})
         
     existing_reg = Registration.query.filter_by(student_id=student.id, section_id=sec.id, semester_id=get_next_semester()).first()
     if not existing_reg:
