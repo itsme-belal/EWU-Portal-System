@@ -1904,10 +1904,10 @@
                 rowClass = "bg-emerald-500/10 dark:bg-emerald-500/5 border-l-4 border-emerald-500 text-emerald-700 dark:text-emerald-400 font-semibold";
                 statusText = ' (Enrolled)';
             } else if (isFull) {
-                rowClass = "bg-sky-500/10 dark:bg-sky-500/5 border-l-4 border-sky-500 text-sky-700 dark:text-sky-400";
+                rowClass = "bg-amber-500/10 dark:bg-amber-500/5 border-l-4 border-amber-500 text-amber-700 dark:text-amber-400";
                 statusText = ' (Full)';
             } else if (hasConflict) {
-                rowClass = "bg-rose-500/10 dark:bg-rose-500/5 border-l-4 border-rose-500 text-rose-700 dark:text-rose-400";
+                rowClass = "bg-red-500/10 dark:bg-red-500/5 border-l-4 border-red-500 text-red-700 dark:text-red-400";
                 statusText = ' (Conflict)';
             }
 
@@ -1923,11 +1923,10 @@
                 btnHtml = `<span class="text-[0.62rem] text-red-500 font-bold">Restricted</span>`;
             } else if (isFinalActive) {
                 if (isFull || hasConflict) {
-                    const reqType = isFull ? 'section_full' : 'schedule_conflict';
                     btnHtml = `
-                        <button onclick="openRequestModal('${sec.id}', '${sec.course_code}', '${reqType}')" 
-                                class="px-2 py-1 text-[0.62rem] font-bold uppercase tracking-wider bg-amber-500 hover:bg-amber-600 text-white rounded transition-all">
-                            Waiver
+                        <button disabled 
+                                class="px-2 py-1 text-[0.62rem] font-bold uppercase tracking-wider bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded cursor-not-allowed opacity-50">
+                            Add
                         </button>
                     `;
                 } else {
@@ -1982,7 +1981,7 @@
         // Toggling already selected sections is always allowed (to drop)
         const isSelected = registrationsList.includes(secId);
         if (!isSelected && (isFull || hasConflict)) {
-            showToast('error', isFull ? 'Section is full. Please submit a waiver request.' : 'Schedule conflict detected.');
+            showToast('error', isFull ? 'Section is full.' : 'Schedule conflict detected.');
             return;
         }
 

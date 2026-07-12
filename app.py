@@ -60,9 +60,16 @@ def ensure_runtime_schema():
             'current_courses': 'TEXT',
             'current_course_credit': 'FLOAT DEFAULT 0.0',
             'next_semester_courses': 'TEXT',
-            'next_semester_course_credit': 'FLOAT DEFAULT 0.0'
+            'next_semester_course_credit': 'FLOAT DEFAULT 0.0',
+            'unassigned_courses': 'TEXT'
         },
-        'faculty': {'profile_pic': 'VARCHAR(255)', 'about': 'VARCHAR(500)'},
+        'faculty': {
+            'profile_pic': 'VARCHAR(255)',
+            'about': 'VARCHAR(500)',
+            'post': 'VARCHAR(100)',
+            'present_address': 'VARCHAR(255)',
+            'permanent_address': 'VARCHAR(255)'
+        },
         'pre_advising_courses': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
         'section_offerings': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
     }
@@ -1144,6 +1151,11 @@ def toggle_section():
     regs = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
     current_sections = [SectionOffering.query.get(r.section_id) for r in regs if SectionOffering.query.get(r.section_id)]
     
+    # Enforce single section limit per course
+    for cs in current_sections:
+        if cs.course_code == sec.course_code:
+            return jsonify({'status': 'error', 'message': f"You are already registered for section {cs.section_number} of {cs.course_code}. You can only register for one section per course."})
+    
     # Enforce maximum constraints: 15.0 credits & 6 courses
     courses_count = len(current_sections) + 1
     total_credits = sum([s.credits for s in current_sections]) + sec.credits
@@ -1771,6 +1783,7 @@ def register_advisee_override():
         
     # Register new selections
     registered_ids = set()
+    registered_courses = set()
     for sid in sec_ids:
         if sid in registered_ids:
             continue
@@ -1778,10 +1791,14 @@ def register_advisee_override():
         if not sec:
             continue
             
+        if sec.course_code in registered_courses:
+            continue
+            
         reg = Registration(id=f"REG-{student.id}-{sec.id}", student_id=student.id, section_id=sec.id, semester_id=get_next_semester())
         db.session.add(reg)
         sec.enrolled_count += 1
         registered_ids.add(sec.id)
+        registered_courses.add(sec.course_code)
         
         # Auto add linked lab/theory
         if sec.linked_section_id and sec.linked_section_id not in registered_ids:
@@ -1830,6 +1847,14 @@ def resolve_request(req_id):
                 return redirect(url_for('faculty_dashboard'))
             
             if req.type == 'add_course' and sec:
+                # Enforce single section limit per course
+                regs = Registration.query.filter_by(student_id=student.id, semester_id=req.semester_id).all()
+                existing_sections = [SectionOffering.query.get(r.section_id) for r in regs if SectionOffering.query.get(r.section_id)]
+                for es in existing_sections:
+                    if es.course_code == sec.course_code:
+                        flash(f"Cannot approve: student is already registered for section {es.section_number} of {es.course_code}.", "error")
+                        return redirect(url_for('faculty_dashboard'))
+                
                 existing_reg = Registration.query.filter_by(
                     student_id=student.id,
                     section_id=sec.id,
@@ -1998,6 +2023,12 @@ def admin_dashboard():
     for s in students_0cr:
         regs = Registration.query.filter_by(student_id=s.id, semester_id=get_next_semester()).all()
         s.registered_credits = sum([SectionOffering.query.get(r.section_id).credits for r in regs if SectionOffering.query.get(r.section_id)])
+        s.parsed_unassigned_courses = []
+        if s.unassigned_courses:
+            try:
+                s.parsed_unassigned_courses = json.loads(s.unassigned_courses)
+            except Exception:
+                s.parsed_unassigned_courses = []
 
     return render_template(
         'admin.html',
@@ -2188,8 +2219,8 @@ def get_student_semester_level(student_id, current_semester_str):
     return max(1, elapsed)
 
 def execute_default_advising(student):
-    curr_sem = get_current_semester()
-    # 1. Clear any existing registrations for this student in the current semester
+    curr_sem = get_next_semester()
+    # 1. Clear any existing registrations for this student in the next semester
     old_regs = Registration.query.filter_by(student_id=student.id, semester_id=curr_sem).all()
     for reg in old_regs:
         sec = SectionOffering.query.get(reg.section_id)
@@ -2203,12 +2234,12 @@ def execute_default_advising(student):
     dept_code = parts[2] if len(parts) >= 3 else ''
     sem_level = get_student_semester_level(student.id, curr_sem)
     
-    # Department codes mapping: 60 = CSE, 80 = EEE, 50 = ICE, 40 = ENG
-    if dept_code == '60' and sem_level == 1:
+    # Department defaults mapping
+    if dept_code == '60' and (sem_level == 1 or student.completed_credits == 0.0):
         target_courses = ['CSE106', 'ENG101', 'MAT101']
-    elif dept_code == '80' and sem_level == 1:
+    elif dept_code == '80' and (sem_level == 1 or student.completed_credits == 0.0):
         target_courses = ['PHY109', 'CHE109', 'MAT101']
-    elif dept_code == '50' and sem_level == 2:
+    elif dept_code == '50' and (sem_level == 2 or student.completed_credits == 0.0):
         target_courses = ['ICE101', 'ENG101', 'MAT101']
     else:
         # Fallback default courses
@@ -2221,6 +2252,8 @@ def execute_default_advising(student):
         else:
             target_courses = ['ENG101', 'MAT101', 'GEN226']
             
+    unassigned = []
+    
     for course_code in target_courses:
         # Check if already registered (e.g. from linked labs)
         already_reg = False
@@ -2234,16 +2267,26 @@ def execute_default_advising(student):
             
         sections = SectionOffering.query.filter_by(course_code=course_code, semester_id=curr_sem).all()
         if not sections:
+            unassigned.append({
+                "course_code": course_code,
+                "reason": "No sections offered this semester"
+            })
             continue
             
         import random
-        random.shuffle(sections)
+        shuffled_sections = list(sections)
+        random.shuffle(shuffled_sections)
         
         assigned = False
-        for sec in sections:
+        failure_reasons = []
+        for sec in shuffled_sections:
             if sec.enrolled_count >= sec.capacity:
+                failure_reasons.append(f"Section {sec.section_number} is full")
                 continue
-            if student_has_schedule_conflict(student.id, sec):
+                
+            conflict_sec = student_has_schedule_conflict(student.id, sec)
+            if conflict_sec:
+                failure_reasons.append(f"Section {sec.section_number} conflicts with {conflict_sec.course_code}")
                 continue
                 
             # If it has a linked lab, check capacity & conflicts too
@@ -2252,8 +2295,11 @@ def execute_default_advising(student):
                 linked_lab = SectionOffering.query.get(sec.linked_section_id)
                 if linked_lab:
                     if linked_lab.enrolled_count >= linked_lab.capacity:
+                        failure_reasons.append(f"Linked lab {linked_lab.section_number} is full")
                         continue
-                    if student_has_schedule_conflict(student.id, linked_lab):
+                    conflict_lab = student_has_schedule_conflict(student.id, linked_lab)
+                    if conflict_lab:
+                        failure_reasons.append(f"Linked lab {linked_lab.section_number} conflicts with {conflict_lab.course_code}")
                         continue
             
             # Found a free, non-conflicting section!
@@ -2282,8 +2328,13 @@ def execute_default_advising(student):
             break
             
         if not assigned:
-            raise ValueError(f"Could not find a conflict-free section with available seats for {course_code}.")
+            reason_str = "; ".join(list(set(failure_reasons))) if failure_reasons else "Unknown validation error"
+            unassigned.append({
+                "course_code": course_code,
+                "reason": reason_str
+            })
             
+    student.unassigned_courses = json.dumps(unassigned)
     student.advising_status = 'approved'
     db.session.commit()
 
@@ -2300,7 +2351,11 @@ def run_default_advising(student_id):
         
     try:
         execute_default_advising(student)
-        flash(f"Default advising completed successfully for {student.name} ({student.id}).", 'success')
+        unassigned_list = json.loads(student.unassigned_courses or '[]')
+        if unassigned_list:
+            flash(f"Default advising completed, but some courses remained unassigned for {student.name} ({student.id}).", 'warning')
+        else:
+            flash(f"Default advising completed successfully for {student.name} ({student.id}).", 'success')
     except Exception as e:
         db.session.rollback()
         flash(f"Error advising {student.name}: {str(e)}", 'error')
@@ -2323,7 +2378,11 @@ def run_all_default_advising():
     for s in students_0cr:
         try:
             execute_default_advising(s)
-            success_count += 1
+            unassigned_list = json.loads(s.unassigned_courses or '[]')
+            if unassigned_list:
+                fail_count += 1
+            else:
+                success_count += 1
         except Exception as e:
             db.session.rollback()
             fail_count += 1
@@ -2332,7 +2391,7 @@ def run_all_default_advising():
     if fail_count == 0:
         flash(f"Default advising successfully completed for all {success_count} freshman students.", 'success')
     else:
-        flash(f"Default advising completed with errors. Success: {success_count}, Failed: {fail_count}. Errors: {'; '.join(errors[:3])}", 'warning')
+        flash(f"Default advising complete. Successfully advised: {success_count}. Advised with unassigned courses/errors: {fail_count}.", 'warning')
         
     return redirect(url_for('admin_dashboard') + '?tab=default-advising')
 
@@ -2390,6 +2449,26 @@ def create_student():
     
     if not std_id or not name or not email:
         flash('All fields are required.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=students')
+        
+    # Department validation based on Student ID segments
+    dept_code_map = {
+        '60': 'CSE',
+        '50': 'ICE',
+        '80': 'EEE',
+        '40': 'ENG'
+    }
+    id_parts = std_id.split('-')
+    if len(id_parts) != 4:
+        flash("Student ID must be in the format 'YYYY-Semester-DeptCode-Number' (e.g., '2023-2-60-010').", 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=students')
+    dept_code = id_parts[2]
+    expected_dept = dept_code_map.get(dept_code)
+    if not expected_dept:
+        flash(f"Invalid department code '{dept_code}' in Student ID.", 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=students')
+    if expected_dept != dept:
+        flash(f"Department mismatch: Student ID '{std_id}' contains department code '{dept_code}' ({expected_dept}), but you selected '{dept}'.", 'error')
         return redirect(url_for('admin_dashboard') + '?tab=students')
         
     if User.query.filter_by(email=email).first():
@@ -2506,27 +2585,31 @@ def create_faculty():
     email = request.form.get('email', '').strip()
     dept = request.form.get('department_id')
     about = request.form.get('about', '').strip()
+    post = request.form.get('post', '').strip()
+    present_address = request.form.get('present_address', '').strip()
+    permanent_address = request.form.get('permanent_address', '').strip()
+    
     if len(about) > 500:
         flash('About section must be 500 characters or fewer.', 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
     
     if not fac_id or not name or not email:
         flash('All fields are required.', 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
         
     if User.query.filter_by(email=email).first():
         flash('Email already registered.', 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
         
     if Faculty.query.get(fac_id):
         flash('Faculty ID already exists.', 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
         
     try:
         profile_pic_filename = save_profile_pic_upload(request.files.get('profile_pic'), f"faculty_{fac_id}")
     except ValueError as exc:
         flash(str(exc), 'error')
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
 
     user = User(
         id='usr-' + fac_id,
@@ -2544,13 +2627,16 @@ def create_faculty():
         name=name,
         department_id=dept,
         profile_pic=profile_pic_filename,
-        about=about
+        about=about,
+        post=post,
+        present_address=present_address,
+        permanent_address=permanent_address
     )
     db.session.add(faculty)
     db.session.commit()
     
     flash('Faculty account created successfully! Advise faculty to activate using their email.', 'success')
-    return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('admin_dashboard') + '?tab=faculty')
 
 @app.route('/admin/edit-capacity/<sec_id>', methods=['POST'])
 @login_required
@@ -3046,6 +3132,23 @@ def import_excel_students(file_source):
         phone = str(row[col_map['Phone Number']]).strip() if ('Phone Number' in col_map and row[col_map['Phone Number']] is not None) else None
         dept = str(row[col_map['Department']]).strip() if ('Department' in col_map and row[col_map['Department']] is not None) else 'CSE'
         
+        # Validate department based on student ID
+        dept_code_map = {
+            '60': 'CSE',
+            '50': 'ICE',
+            '80': 'EEE',
+            '40': 'ENG'
+        }
+        id_parts = std_id.split('-')
+        if len(id_parts) != 4:
+            raise ValueError(f"Student ID '{std_id}' must be in the format 'YYYY-Semester-DeptCode-Number' (e.g., '2023-2-60-010').")
+        dept_code = id_parts[2]
+        expected_dept = dept_code_map.get(dept_code)
+        if not expected_dept:
+            raise ValueError(f"Invalid department code '{dept_code}' in Student ID '{std_id}'.")
+        if expected_dept != dept:
+            raise ValueError(f"Department mismatch: Student ID '{std_id}' contains department code '{dept_code}' ({expected_dept}), but Excel specified '{dept}'.")
+        
         try:
             credits = float(row[col_map['Completed Credit']]) if ('Completed Credit' in col_map and row[col_map['Completed Credit']] is not None) else 0.0
         except ValueError:
@@ -3194,6 +3297,98 @@ def import_excel_students(file_source):
     db.session.commit()
     return imported_count
 
+def import_excel_faculty(file_source):
+    import openpyxl
+    wb = openpyxl.load_workbook(file_source)
+    sheet = wb.active
+    header_row = next(sheet.iter_rows(max_row=1), None)
+    if not header_row:
+        raise ValueError("The excel file is empty or has no header row.")
+        
+    headers = [str(cell.value).strip() for cell in header_row]
+    
+    required_cols = [
+        'Faculty Initial', 'Name', 'Email', 'Department', 'Post',
+        'Present Address', 'Permanent Address', 'Profile Pic'
+    ]
+    
+    col_map = {}
+    for name in required_cols:
+        if name in headers:
+            col_map[name] = headers.index(name)
+        else:
+            for idx, h in enumerate(headers):
+                if h.lower().replace(' ', '').replace('_', '').replace('-', '') == name.lower().replace(' ', '').replace('_', '').replace('-', ''):
+                    col_map[name] = idx
+                    break
+                    
+    if 'Faculty Initial' not in col_map or 'Name' not in col_map or 'Email' not in col_map:
+        raise ValueError("Headers must contain at least 'Faculty Initial', 'Name', and 'Email'.")
+        
+    rows = list(sheet.iter_rows(min_row=2, values_only=True))
+    imported_count = 0
+    
+    for row in rows:
+        if not row or all(v is None for v in row):
+            continue
+            
+        fac_id = str(row[col_map['Faculty Initial']]).strip()
+        name = str(row[col_map['Name']]).strip()
+        email = str(row[col_map['Email']]).strip()
+        
+        if not fac_id or not name or not email:
+            continue
+            
+        dept = str(row[col_map['Department']]).strip() if ('Department' in col_map and row[col_map['Department']] is not None) else 'CSE'
+        post = str(row[col_map['Post']]).strip() if ('Post' in col_map and row[col_map['Post']] is not None) else None
+        present_address = str(row[col_map['Present Address']]).strip() if ('Present Address' in col_map and row[col_map['Present Address']] is not None) else None
+        permanent_address = str(row[col_map['Permanent Address']]).strip() if ('Permanent Address' in col_map and row[col_map['Permanent Address']] is not None) else None
+        
+        prof_pic = str(row[col_map['Profile Pic']]).strip() if ('Profile Pic' in col_map and row[col_map['Profile Pic']] is not None) else None
+        if prof_pic and prof_pic.lower() == 'none':
+            prof_pic = None
+            
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            user = User(
+                id='usr-' + fac_id,
+                email=email,
+                password_hash=generate_password_hash('password123'),
+                role='faculty',
+                is_active=True,
+                is_activated=False
+            )
+            db.session.add(user)
+            db.session.flush()
+            
+        faculty = Faculty.query.get(fac_id)
+        if not faculty:
+            faculty = Faculty(
+                id=fac_id,
+                user_id=user.id,
+                name=name,
+                department_id=dept,
+                post=post,
+                present_address=present_address,
+                permanent_address=permanent_address,
+                profile_pic=prof_pic,
+                about=''
+            )
+            db.session.add(faculty)
+        else:
+            faculty.name = name
+            faculty.department_id = dept
+            faculty.post = post
+            faculty.present_address = present_address
+            faculty.permanent_address = permanent_address
+            if prof_pic:
+                faculty.profile_pic = prof_pic
+                
+        imported_count += 1
+        
+    db.session.commit()
+    return imported_count
+
 @app.route('/admin/upload-students', methods=['POST'])
 @login_required
 def upload_students():
@@ -3216,6 +3411,29 @@ def upload_students():
         flash(f'Error importing students: {str(e)}', 'error')
         
     return redirect(url_for('admin_dashboard') + '?tab=students')
+
+@app.route('/admin/upload-faculty', methods=['POST'])
+@login_required
+def upload_faculty():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    file = request.files.get('faculty_file')
+    if not file or file.filename == '':
+        flash('No file selected.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
+        
+    if not file.filename.endswith('.xlsx'):
+        flash('Invalid file format. Only Excel files (.xlsx) are allowed.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
+        
+    try:
+        count = import_excel_faculty(file)
+        flash(f'{count} faculty imported/updated successfully!', 'success')
+    except Exception as e:
+        flash(f'Error importing faculty: {str(e)}', 'error')
+        
+    return redirect(url_for('admin_dashboard') + '?tab=faculty')
 
 @app.route('/admin/upload-schedule', methods=['POST'])
 @login_required
@@ -3683,6 +3901,9 @@ def admin_faculty_details(fac_id):
         'department_id': faculty.department_id,
         'about': faculty.about or '',
         'profile_pic': faculty.profile_pic or '',
+        'post': faculty.post or '',
+        'present_address': faculty.present_address or '',
+        'permanent_address': faculty.permanent_address or '',
         'sections': sections_list,
         'advisees': advisees_list
     })

@@ -33,6 +33,9 @@ class Faculty(db.Model):
     department_id = db.Column(db.String(20), db.ForeignKey('departments.id'), nullable=False)
     profile_pic = db.Column(db.String(255), nullable=True)
     about = db.Column(db.String(500), nullable=True)
+    post = db.Column(db.String(100), nullable=True)
+    present_address = db.Column(db.String(255), nullable=True)
+    permanent_address = db.Column(db.String(255), nullable=True)
 
 class Student(db.Model):
     __tablename__ = 'students'
@@ -60,6 +63,7 @@ class Student(db.Model):
     current_course_credit = db.Column(db.Float, default=0.0)
     next_semester_courses = db.Column(db.Text, nullable=True)
     next_semester_course_credit = db.Column(db.Float, default=0.0)
+    unassigned_courses = db.Column(db.Text, nullable=True)
 
 class Admin(db.Model):
     __tablename__ = 'admins'
