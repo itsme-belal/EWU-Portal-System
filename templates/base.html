@@ -1,11 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || localStorage.getItem('ewu_theme') || 'light';
+            if (theme === 'dark' || theme === 'cosmic' || theme === 'image') {
+                document.documentElement.classList.add('dark');
+                document.documentElement.style.backgroundColor = '#0e1929';
+                document.documentElement.style.color = '#e8edf5';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.style.backgroundColor = '#ffffff';
+                document.documentElement.style.color = '#0f172a';
+            }
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}EWU Portal System{% endblock %}</title>
     <!-- Tailwind CSS (via Play CDN for rapid styling) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=portal-ui-20260628">
     <!-- Plus Jakarta Sans Font -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -46,6 +65,61 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="sidebar-closed">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || localStorage.getItem('ewu_theme') || 'light';
+            document.body.classList.remove('theme-cosmic','theme-image');
+            if (theme === 'cosmic') {
+                document.body.classList.add('theme-cosmic');
+                document.body.style.backgroundImage = 'radial-gradient(ellipse at top left,#0d1b3e 0%,#020617 40%,#080814 100%)';
+                document.body.style.backgroundAttachment = 'fixed';
+            } else if (theme === 'image') {
+                document.body.classList.add('theme-image');
+                document.body.style.backgroundImage = "linear-gradient(rgba(5,9,20,.9), rgba(5,9,20,.94)), url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=1400')";
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundAttachment = 'fixed';
+            }
+
+            if (window.innerWidth >= 1024) {
+                const sidebarClosed = localStorage.getItem('sidebar_closed') !== 'false';
+                if (sidebarClosed) {
+                    document.body.classList.add('sidebar-closed');
+                } else {
+                    document.body.classList.remove('sidebar-closed');
+                }
+            }
+
+            // Fast Tab Persistence State Resolver
+            const role = "{{ current_user.role if (current_user and current_user.is_authenticated) else '' }}";
+            let savedTab = 'dashboard';
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            if (tabParam) {
+                savedTab = tabParam;
+            } else if (role === 'admin') {
+                savedTab = localStorage.getItem('admin_active_tab') || 'dashboard';
+            } else if (role === 'faculty') {
+                savedTab = localStorage.getItem('faculty_active_tab') || 'dashboard';
+            } else if (role === 'student') {
+                const serverTab = "{{ active_tab or '' }}";
+                if (serverTab === 'advising') {
+                    savedTab = 'advising';
+                } else {
+                    savedTab = localStorage.getItem('student_active_tab') || 'dashboard';
+                    if (savedTab === 'advising') savedTab = 'dashboard';
+                }
+            }
+
+            const style = document.createElement('style');
+            style.id = 'fast-tab-styling';
+            style.innerHTML = `
+                .tab-content:not(#tab-${savedTab}) { display: none !important; }
+                #tab-${savedTab} { display: block !important; }
+            `;
+            document.head.appendChild(style);
+        })();
+    </script>
     <div class="flex min-h-screen">
         <!-- Sidebar -->
         <aside class="w-[var(--sidebar-w)] flex flex-col h-screen fixed top-0 left-0 z-50 overflow-y-auto">
@@ -92,8 +166,8 @@
                         <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
                     <!-- Breadcrumb -->
-                    <span class="text-xs text-slate-400 font-medium hidden sm:block">
-                        Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Dashboard</span>
+                    <span class="text-xs text-slate-400 font-medium hidden sm:block" id="portal-breadcrumb">
+                        Home
                     </span>
                 </div>
                 <div class="flex items-center gap-3">

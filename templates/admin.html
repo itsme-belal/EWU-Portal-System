@@ -125,13 +125,13 @@
 
 {% block sidebar_nav %}
 <!-- 1. Dashboard -->
-<button onclick="switchTab('dashboard')" id="nav-dashboard" class="adm-nav-item active">
+<button onclick="switchTab('dashboard')" id="nav-dashboard" class="adm-nav-item">
   <i data-lucide="layout-dashboard" class="w-4 h-4 flex-shrink-0"></i>
   <span>Dashboard</span>
 </button>
 
 <!-- 2. User Management -->
-<button onclick="toggleMenu('submenu-users')" class="adm-nav-item justify-between w-full">
+<button onclick="toggleMenu('submenu-users')" id="nav-users-parent" class="adm-nav-item justify-between w-full">
   <div class="flex items-center gap-2.5">
     <i data-lucide="users-round" class="w-4 h-4 flex-shrink-0"></i>
     <span>User Management</span>
@@ -151,7 +151,7 @@
 </div>
 
 <!-- 3. Curriculum & Timeline -->
-<button onclick="toggleMenu('submenu-curriculum')" class="adm-nav-item justify-between w-full">
+<button onclick="toggleMenu('submenu-curriculum')" id="nav-curriculum-parent" class="adm-nav-item justify-between w-full">
   <div class="flex items-center gap-2.5">
     <i data-lucide="book-open" class="w-4 h-4 flex-shrink-0"></i>
     <span>Curriculum &amp; Timeline</span>
@@ -168,7 +168,7 @@
 </div>
 
 <!-- 4. Advising -->
-<button onclick="toggleMenu('submenu-advising')" class="adm-nav-item justify-between w-full">
+<button onclick="toggleMenu('submenu-advising')" id="nav-advising-parent" class="adm-nav-item justify-between w-full">
   <div class="flex items-center gap-2.5">
     <i data-lucide="calendar-check" class="w-4 h-4 flex-shrink-0"></i>
     <span>Advising</span>
@@ -221,7 +221,7 @@
 <!-- ═══════════════════════════════════════════════════════════
      DASHBOARD TAB
 ═══════════════════════════════════════════════════════════ -->
-<div id="tab-dashboard" class="tab-content space-y-6">
+<div id="tab-dashboard" class="tab-content hidden space-y-6">
 
   <!-- ── DASHBOARD HERO HEADER ─────────────────────────── -->
   <div class="flex flex-wrap justify-between items-center gap-4 pb-2">
@@ -1144,6 +1144,43 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Course Schedule &amp; Routine</label>
+                        <input type="text" name="current_course_schedule_routine" placeholder="e.g. CSE105 [Sec 1, MW 11:50-1:20], PHY102 [Sec 2, TR 8:30-10:00]" class="input text-xs w-full">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Faculty Initial</label>
+                        <input type="text" name="faculty_initial" placeholder="e.g. SHR" class="input text-xs w-full">
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Faculty Email</label>
+                        <input type="email" name="faculty_email" placeholder="e.g. faculty@ewubd.edu" class="input text-xs w-full">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Semester Drop</label>
+                        <select name="current_semester_drop" class="input text-xs w-full">
+                            <option value="None">None</option>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Next Semester Drop</label>
+                        <select name="next_semester_drop" class="input text-xs w-full">
+                            <option value="None">None</option>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Course Credit</label>
@@ -1668,12 +1705,12 @@
                     
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date</label>
-                            <input type="date" name="current_semester_start" value="{{ current_semester_start_date }}" class="input text-xs">
+                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date &amp; Time</label>
+                            <input type="datetime-local" name="current_semester_start" value="{{ current_semester_start_date }}" class="input text-xs">
                         </div>
                         <div>
-                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">End Date</label>
-                            <input type="date" name="current_semester_end" value="{{ current_semester_end_date }}" class="input text-xs">
+                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">End Date &amp; Time</label>
+                            <input type="datetime-local" name="current_semester_end" value="{{ current_semester_end_date }}" class="input text-xs">
                         </div>
                     </div>
 
@@ -1703,12 +1740,12 @@
                     
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date</label>
-                            <input type="date" name="next_semester_start" value="{{ next_semester_start_date }}" class="input text-xs">
+                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date &amp; Time</label>
+                            <input type="datetime-local" name="next_semester_start" value="{{ next_semester_start_date }}" class="input text-xs">
                         </div>
                         <div>
-                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">End Date</label>
-                            <input type="date" name="next_semester_end" value="{{ next_semester_end_date }}" class="input text-xs">
+                            <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">End Date &amp; Time</label>
+                            <input type="datetime-local" name="next_semester_end" value="{{ next_semester_end_date }}" class="input text-xs">
                         </div>
                     </div>
 
@@ -2628,6 +2665,26 @@
 
 
     // ── TAB SWITCHER ──────────────────────────────────────────
+    function updateBreadcrumbs(tabId) {
+        const breadcrumbEl = document.getElementById('portal-breadcrumb');
+        if (!breadcrumbEl) return;
+        const mapping = {
+            'dashboard': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Dashboard</span>',
+            'students': 'Home / User Management / <span class="text-slate-700 dark:text-slate-300 font-semibold">Student Management</span>',
+            'faculty': 'Home / User Management / <span class="text-slate-700 dark:text-slate-300 font-semibold">Faculty Management</span>',
+            'advisor-assign': 'Home / User Management / <span class="text-slate-700 dark:text-slate-300 font-semibold">Advisor Assignment</span>',
+            'course-management': 'Home / Curriculum & Timeline / <span class="text-slate-700 dark:text-slate-300 font-semibold">Course Management</span>',
+            'settings': 'Home / Curriculum & Timeline / <span class="text-slate-700 dark:text-slate-300 font-semibold">System Settings</span>',
+            'pre-advising': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">Pre-Advising Setup</span>',
+            'final-advising': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">Final Advising Setup</span>',
+            'default-advising': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">Default Advising</span>',
+            'requests': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">Course Requests</span>',
+            'academic-records': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Academic Records</span>',
+            'reports': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Reports</span>'
+        };
+        breadcrumbEl.innerHTML = mapping[tabId] || `Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">${tabId}</span>`;
+    }
+
     function switchTab(tabId) {
         const tabEl = document.getElementById(`tab-${tabId}`);
         if (!tabEl) return; 
@@ -2650,12 +2707,20 @@
             if (onclickAttr.includes(`switchTab('${tabId}')`)) {
                 subBtn.classList.add('active');
                 const submenu = subBtn.closest('.submenu');
-                if (submenu && typeof toggleMenu === 'function') {
-                    toggleMenu(submenu.id, true);
+                if (submenu) {
+                    if (typeof toggleMenu === 'function') {
+                        toggleMenu(submenu.id, true);
+                    }
+                    const parentId = submenu.id.replace('submenu-', 'nav-') + '-parent';
+                    const parentEl = document.getElementById(parentId);
+                    if (parentEl) {
+                        parentEl.classList.add('active');
+                    }
                 }
             }
         });
 
+        updateBreadcrumbs(tabId);
         localStorage.setItem('admin_active_tab', tabId);
     }
 

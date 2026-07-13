@@ -120,7 +120,68 @@ def check_deactivated_user():
 # Helper: Get current system semester
 def get_current_semester():
     sem_setting = SystemSetting.query.filter_by(key='current_semester').first()
-    return sem_setting.value if sem_setting else 'Spring2026'
+    curr_val = sem_setting.value if sem_setting else 'Spring2026'
+    
+    # Auto rollover check
+    c_end = SystemSetting.query.filter_by(key='current_semester_end').first()
+    if c_end and c_end.value:
+        try:
+            val = c_end.value.strip()
+            if ' ' in val:
+                end_dt = datetime.strptime(val, '%Y-%m-%d %H:%M')
+            elif 'T' in val:
+                end_dt = datetime.strptime(val, '%Y-%m-%dT%H:%M')
+            else:
+                end_dt = datetime.strptime(val, '%Y-%m-%d')
+                end_dt = end_dt.replace(hour=23, minute=59, second=59)
+                
+            if datetime.now() > end_dt:
+                next_setting = SystemSetting.query.filter_by(key='next_semester').first()
+                next_sem = next_setting.value if next_setting else 'Summer2026'
+                
+                sem_sequence = ['Spring2026', 'Summer2026', 'Fall2026', 'Spring2027']
+                try:
+                    idx = sem_sequence.index(next_sem)
+                    new_next_sem = sem_sequence[idx + 1] if idx + 1 < len(sem_sequence) else 'Spring2027'
+                except ValueError:
+                    new_next_sem = 'Spring2027'
+                
+                if sem_setting:
+                    sem_setting.value = next_sem
+                else:
+                    db.session.add(SystemSetting(key='current_semester', value=next_sem))
+                    
+                next_start = SystemSetting.query.filter_by(key='next_semester_start').first()
+                next_end = SystemSetting.query.filter_by(key='next_semester_end').first()
+                
+                c_start = SystemSetting.query.filter_by(key='current_semester_start').first()
+                if c_start:
+                    c_start.value = next_start.value if next_start else ''
+                else:
+                    db.session.add(SystemSetting(key='current_semester_start', value=next_start.value if next_start else ''))
+                    
+                c_end.value = next_end.value if next_end else ''
+                
+                if next_setting:
+                    next_setting.value = new_next_sem
+                else:
+                    db.session.add(SystemSetting(key='next_semester', value=new_next_sem))
+                    
+                if next_start:
+                    next_start.value = ''
+                if next_end:
+                    next_end.value = ''
+                    
+                next_regs = Registration.query.filter_by(semester_id=next_sem).all()
+                for reg in next_regs:
+                    reg.semester_id = next_sem
+
+                db.session.commit()
+                return next_sem
+        except Exception:
+            pass
+            
+    return curr_val
 
 # Helper: Get next system semester for advising registration
 def get_next_semester():
@@ -133,11 +194,20 @@ def get_calendar_dates():
     c_end = SystemSetting.query.filter_by(key='current_semester_end').first()
     n_start = SystemSetting.query.filter_by(key='next_semester_start').first()
     n_end = SystemSetting.query.filter_by(key='next_semester_end').first()
+    
+    def format_val(val, default_val, default_time):
+        v = val.value if (val and val.value) else default_val
+        if not v: return ""
+        v = v.strip()
+        if 'T' in v: return v
+        if ' ' in v: return v.replace(' ', 'T')
+        return f"{v}T{default_time}"
+
     return {
-        'current_semester_start_date': c_start.value if c_start else '2026-01-05',
-        'current_semester_end_date': c_end.value if c_end else '2026-04-20',
-        'next_semester_start_date': n_start.value if n_start else '2026-05-10',
-        'next_semester_end_date': n_end.value if n_end else '2026-08-25',
+        'current_semester_start_date': format_val(c_start, '2026-01-05', '00:00'),
+        'current_semester_end_date': format_val(c_end, '2026-04-20', '23:59'),
+        'next_semester_start_date': format_val(n_start, '2026-05-10', '00:00'),
+        'next_semester_end_date': format_val(n_end, '2026-08-25', '23:59'),
     }
 
 # Helper: Get prev semester for schedules comparison
@@ -405,6 +475,61 @@ def get_active_window(student_credits, win_type):
             if w.start_date_time <= now_str <= w.end_date_time:
                 return w
     return None
+
+def assign_advisor_for_student(student):
+    advisor_pools = {
+        'CSE': [
+            {'initial': 'MMAH', 'email': 'ahmedbhr2001@gmail.com', 'name': 'M. M. A. Hashem'},
+            {'initial': 'SHR', 'email': 'kakarot.09072003@gmail.com', 'name': 'S. H. Rahman'},
+            {'initial': 'NYA', 'email': 'belal.60466046.3@gmail.com', 'name': 'N. Y. Ahmed'}
+        ],
+        'EEE': [
+            {'initial': 'AH', 'email': 'rootmass77@gmail.com', 'name': 'A. Hasan'}
+        ]
+    }
+    dept_key = (student.department_id or 'CSE').upper()
+    pool = advisor_pools.get(dept_key)
+    if not pool:
+        pool = advisor_pools['CSE']
+        
+    try:
+        digits = ''.join(filter(str.isdigit, student.id))
+        num = int(digits) if digits else 0
+    except Exception:
+        num = 0
+        
+    selected = pool[num % len(pool)]
+    fac_initial = selected['initial']
+    fac_email = selected['email']
+    fac_name = selected['name']
+    
+    fac_user = User.query.filter_by(email=fac_email).first()
+    if not fac_user:
+        fac_user = User(
+            id='usr-' + fac_initial,
+            email=fac_email,
+            password_hash=generate_password_hash('password123'),
+            role='faculty',
+            is_active=True,
+            is_activated=False
+        )
+        db.session.add(fac_user)
+        db.session.flush()
+        
+    fac_rec = Faculty.query.get(fac_initial)
+    if not fac_rec:
+        fac_rec = Faculty(
+            id=fac_initial,
+            user_id=fac_user.id,
+            name=fac_name,
+            department_id=dept_key if dept_key in advisor_pools else 'CSE',
+            post='Senior Lecturer',
+            about=''
+        )
+        db.session.add(fac_rec)
+        db.session.flush()
+        
+    student.advisor_id = fac_initial
 
 # Context Processor
 @app.context_processor
@@ -840,36 +965,42 @@ def render_student_portal(active_tab):
         'faculty_id': s.faculty_id
     } for s in sections])
     
+    def is_setting_true(key):
+        s = SystemSetting.query.filter_by(key=key).first()
+        return s.value == 'true' if s else False
+
     # System Advising States (pre and final determined dynamically by window timings & credit requirements)
     now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
     
     pre_advising_active = False
-    student_pre_window = AdvisingWindow.query.filter(
-        AdvisingWindow.type == 'pre',
-        AdvisingWindow.semester_id == get_current_semester(),
-        AdvisingWindow.credit_min <= student.completed_credits,
-        AdvisingWindow.credit_max >= student.completed_credits,
-        AdvisingWindow.start_date_time <= now_str,
-        AdvisingWindow.end_date_time >= now_str
-    ).first()
-    if student_pre_window:
+    if is_setting_true('pre_advising_active'):
         pre_advising_active = True
+    else:
+        student_pre_window = AdvisingWindow.query.filter(
+            AdvisingWindow.type == 'pre',
+            AdvisingWindow.semester_id == get_current_semester(),
+            AdvisingWindow.credit_min <= student.completed_credits,
+            AdvisingWindow.credit_max >= student.completed_credits,
+            AdvisingWindow.start_date_time <= now_str,
+            AdvisingWindow.end_date_time >= now_str
+        ).first()
+        if student_pre_window:
+            pre_advising_active = True
         
     final_advising_active = False
-    student_final_window = AdvisingWindow.query.filter(
-        AdvisingWindow.type == 'final',
-        AdvisingWindow.semester_id == get_current_semester(),
-        AdvisingWindow.credit_min <= student.completed_credits,
-        AdvisingWindow.credit_max >= student.completed_credits,
-        AdvisingWindow.start_date_time <= now_str,
-        AdvisingWindow.end_date_time >= now_str
-    ).first()
-    if student_final_window:
+    if is_setting_true('final_advising_active'):
         final_advising_active = True
-        
-    def is_setting_true(key):
-        s = SystemSetting.query.filter_by(key=key).first()
-        return s.value == 'true' if s else False
+    else:
+        student_final_window = AdvisingWindow.query.filter(
+            AdvisingWindow.type == 'final',
+            AdvisingWindow.semester_id == get_current_semester(),
+            AdvisingWindow.credit_min <= student.completed_credits,
+            AdvisingWindow.credit_max >= student.completed_credits,
+            AdvisingWindow.start_date_time <= now_str,
+            AdvisingWindow.end_date_time >= now_str
+        ).first()
+        if student_final_window:
+            final_advising_active = True
         
     request_phase_active = is_setting_true('request_phase_active')
 
@@ -882,6 +1013,66 @@ def render_student_portal(active_tab):
             if prereqs_met and credits_met:
                 recommended_courses.append(c.code)
                 
+    # Format semester ID helper (e.g., "Summer2026" -> "Summer 2026")
+    def format_semester_name(sem_id):
+        if not sem_id: return ""
+        import re
+        match = re.match(r'([A-Za-z]+)(\d+)', sem_id)
+        if match:
+            return f"{match.group(1)} {match.group(2)}"
+        return sem_id.replace('-', ' ').title()
+
+    all_regs = Registration.query.filter_by(student_id=student.id).all()
+    available_sem_ids = set([r.semester_id for r in all_regs if r.semester_id])
+    
+    curr_s = get_current_semester()
+    next_s = get_next_semester()
+    available_sem_ids.add(curr_s)
+    available_sem_ids.add(next_s)
+    
+    sem_sequence = ['Spring2026', 'Summer2026', 'Fall2026', 'Spring2027']
+    sorted_sem_ids = sorted(list(available_sem_ids), key=lambda x: sem_sequence.index(x) if x in sem_sequence else 999)
+    
+    available_semesters = [{'id': sid, 'name': format_semester_name(sid)} for sid in sorted_sem_ids]
+    
+    selected_sched_sem = request.args.get('schedule_semester', curr_s)
+    if selected_sched_sem not in sorted_sem_ids:
+        selected_sched_sem = curr_s
+        
+    formatted_selected_sched_sem = format_semester_name(selected_sched_sem)
+    
+    sched_regs = Registration.query.filter_by(student_id=student.id, semester_id=selected_sched_sem, status='registered').all()
+    
+    schedule_details = []
+    for idx, r in enumerate(sched_regs, 1):
+        sec = SectionOffering.query.get(r.section_id)
+        if sec:
+            fac_initial = 'TBA'
+            fac_name = 'TBA'
+            fac_email = 'TBA'
+            if sec.faculty_id and str(sec.faculty_id).strip().lower() != 'none':
+                fac = Faculty.query.get(sec.faculty_id)
+                if fac:
+                    fac_initial = fac.id if (fac.id and str(fac.id).strip().lower() != 'none') else 'TBA'
+                    fac_name = fac.name if (fac.name and str(fac.name).strip().lower() != 'none') else 'TBA'
+                    fac_user = User.query.get(fac.user_id) if fac.user_id else None
+                    if fac_user:
+                        fac_email = fac_user.email if (fac_user.email and str(fac_user.email).strip().lower() != 'none') else 'TBA'
+            
+            schedule_details.append({
+                'serial': idx,
+                'course_code': sec.course_code,
+                'section_number': sec.section_number,
+                'credits': sec.credits,
+                'schedule': sec.schedule,
+                'room': sec.room,
+                'withdraw_status': 'Yes' if r.status == 'withdrawn' else 'No',
+                'drop_status': 'Yes' if r.status == 'dropped' else 'No',
+                'fac_initial': fac_initial,
+                'fac_name': fac_name,
+                'fac_email': fac_email
+            })
+
     next_schedule_sections = [SectionOffering.query.get(r.section_id) for r in registrations if SectionOffering.query.get(r.section_id)]
 
     # Ledger
@@ -989,7 +1180,11 @@ def render_student_portal(active_tab):
         student_final_end=student_final_end,
         request_status_label=request_status_label,
         request_status_class=request_status_class,
-        datetime=datetime.now().strftime('%d-%b-%Y %I:%M %p')
+        datetime=datetime.now().strftime('%d-%b-%Y %I:%M %p'),
+        available_semesters=available_semesters,
+        selected_sched_sem=selected_sched_sem,
+        formatted_selected_sched_sem=formatted_selected_sched_sem,
+        schedule_details=schedule_details
     )
 
 # Student saves pre-advising plan
@@ -1008,23 +1203,8 @@ def save_plan():
         flash("Student profile not found.", "error")
         return redirect(url_for('login_page'))
         
-    # Gating checks - time window check
-    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
-    semester = get_current_semester()
-    window = AdvisingWindow.query.filter(
-        AdvisingWindow.type == 'pre',
-        AdvisingWindow.semester_id == semester,
-        AdvisingWindow.credit_min <= student.completed_credits,
-        AdvisingWindow.credit_max >= student.completed_credits,
-        AdvisingWindow.start_date_time <= now_str,
-        AdvisingWindow.end_date_time >= now_str
-    ).first()
-    if not window:
-        msg = 'Pre-advising is currently closed or not active for your completed credits range.'
-        if request.is_json:
-            return jsonify({'status': 'error', 'message': msg})
-        flash(msg, 'error')
-        return redirect('/advising')
+    # Gating checks - bypassed for pre-advising cart saving to keep the UI interactive and auto-saved
+    pass
         
     if request.is_json:
         submitted_course_ids = request.json.get('course_ids', [])
@@ -1098,18 +1278,23 @@ def toggle_section():
         return jsonify({'status': 'error', 'message': 'Student profile not found.'}), 404
     
     # Gating checks - time window check
-    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
-    semester = get_current_semester()
-    window = AdvisingWindow.query.filter(
-        AdvisingWindow.type == 'final',
-        AdvisingWindow.semester_id == semester,
-        AdvisingWindow.credit_min <= student.completed_credits,
-        AdvisingWindow.credit_max >= student.completed_credits,
-        AdvisingWindow.start_date_time <= now_str,
-        AdvisingWindow.end_date_time >= now_str
-    ).first()
-    if not window:
-        return jsonify({'status': 'error', 'message': 'Final advising is currently closed or not active for your completed credits range.'})
+    def is_setting_true(key):
+        s = SystemSetting.query.filter_by(key=key).first()
+        return s.value == 'true' if s else False
+
+    if not is_setting_true('final_advising_active'):
+        now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
+        semester = get_current_semester()
+        window = AdvisingWindow.query.filter(
+            AdvisingWindow.type == 'final',
+            AdvisingWindow.semester_id == semester,
+            AdvisingWindow.credit_min <= student.completed_credits,
+            AdvisingWindow.credit_max >= student.completed_credits,
+            AdvisingWindow.start_date_time <= now_str,
+            AdvisingWindow.end_date_time >= now_str
+        ).first()
+        if not window:
+            return jsonify({'status': 'error', 'message': 'Final advising is currently closed or not active for your completed credits range.'})
         
     # Financial hold check
     if not student.financial_cleared or student.outstanding_balance > 0:
@@ -2428,33 +2613,64 @@ def create_student():
     if current_user.role != 'admin':
         return redirect(url_for('home'))
         
-    std_id = request.form.get('student_id', '').strip()
-    name = request.form.get('name', '').strip()
-    email = request.form.get('email', '').strip()
-    dept = request.form.get('department_id')
-    credits = float(request.form.get('completed_credits', 0.0))
-    cgpa = float(request.form.get('cgpa', 0.0))
-    balance = int(request.form.get('outstanding_balance', 0))
+    def clean_form_val(val):
+        if val is None:
+            return None
+        s = str(val).strip()
+        if s.lower() == 'none' or s == '':
+            return None
+        return s
+
+    def clean_float(val, default=0.0):
+        s = clean_form_val(val)
+        if not s:
+            return default
+        try:
+            return float(s)
+        except ValueError:
+            return default
+
+    def clean_int(val, default=0):
+        s = clean_form_val(val)
+        if not s:
+            return default
+        try:
+            return int(s)
+        except ValueError:
+            return default
+
+    std_id = clean_form_val(request.form.get('student_id'))
+    name = clean_form_val(request.form.get('name'))
+    email = clean_form_val(request.form.get('email'))
+    dept = clean_form_val(request.form.get('department_id'))
+    credits = clean_float(request.form.get('completed_credits'))
+    cgpa = clean_float(request.form.get('cgpa'))
+    balance = clean_int(request.form.get('outstanding_balance'))
     cleared = 'financial_cleared' in request.form
-    about = request.form.get('about', '').strip()
+    about = clean_form_val(request.form.get('about'))
     
-    # New fields
-    phone_number = request.form.get('phone_number', '').strip()
-    remaining_credits = float(request.form.get('remaining_credits', 0.0))
-    present_address = request.form.get('present_address', '').strip()
-    permanent_address = request.form.get('permanent_address', '').strip()
-    completed_courses_and_grades = request.form.get('completed_courses_and_grades', '').strip()
-    current_courses = request.form.get('current_courses', '').strip()
-    current_course_credit = float(request.form.get('current_course_credit', 0.0))
-    next_semester_courses = request.form.get('next_semester_courses', '').strip()
-    next_semester_course_credit = float(request.form.get('next_semester_course_credit', 0.0))
+    phone_number = clean_form_val(request.form.get('phone_number'))
+    remaining_credits = clean_float(request.form.get('remaining_credits'), 140.0)
+    present_address = clean_form_val(request.form.get('present_address'))
+    permanent_address = clean_form_val(request.form.get('permanent_address'))
+    completed_courses_and_grades = clean_form_val(request.form.get('completed_courses_and_grades'))
+    current_courses = clean_form_val(request.form.get('current_courses'))
+    current_course_credit = clean_float(request.form.get('current_course_credit'))
+    next_semester_courses = clean_form_val(request.form.get('next_semester_courses'))
+    next_semester_course_credit = clean_float(request.form.get('next_semester_course_credit'))
+    current_course_schedule_routine = clean_form_val(request.form.get('current_course_schedule_routine') or request.form.get('current_course_schedule_reading'))
     
-    if len(about) > 500:
+    faculty_initial = clean_form_val(request.form.get('faculty_initial'))
+    faculty_email = clean_form_val(request.form.get('faculty_email'))
+    current_semester_drop = clean_form_val(request.form.get('current_semester_drop'))
+    next_semester_drop = clean_form_val(request.form.get('next_semester_drop'))
+
+    if about and len(about) > 500:
         flash('About section must be 500 characters or fewer.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=students')
     
-    if not std_id or not name or not email:
-        flash('All fields are required.', 'error')
+    if not std_id or not name or not email or not dept:
+        flash('Student ID, Name, Email, and Department are required.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=students')
         
     # Department validation based on Student ID segments
@@ -2512,24 +2728,25 @@ def create_student():
         outstanding_balance=balance,
         financial_cleared=cleared,
         profile_pic=profile_pic_filename,
-        about=about,
+        about=about or '',
         
         # Save new fields
-        phone_number=phone_number if phone_number else None,
+        phone_number=phone_number,
         remaining_credits=remaining_credits,
-        present_address=present_address if present_address else None,
-        permanent_address=permanent_address if permanent_address else None,
-        completed_courses_and_grades=completed_courses_and_grades if completed_courses_and_grades else None,
-        current_courses=current_courses if current_courses else None,
+        present_address=present_address,
+        permanent_address=permanent_address,
+        completed_courses_and_grades=completed_courses_and_grades,
+        current_courses=current_courses,
         current_course_credit=current_course_credit,
-        next_semester_courses=next_semester_courses if next_semester_courses else None,
+        next_semester_courses=next_semester_courses,
         next_semester_course_credit=next_semester_course_credit
     )
     db.session.add(student)
+    assign_advisor_for_student(student)
     
     # Sync grades and registrations
     import re
-    if completed_courses_and_grades and completed_courses_and_grades.lower() != 'none':
+    if completed_courses_and_grades:
         parts = re.split(r'[,;\n\r]+', completed_courses_and_grades)
         for part in parts:
             part = part.strip()
@@ -2556,7 +2773,7 @@ def create_student():
                 )
                 db.session.add(new_grade)
                 
-    if current_courses and current_courses.lower() != 'none':
+    if current_courses:
         ccodes = [c.strip() for c in re.split(r'[,;\s]+', current_courses) if c.strip()]
         for cc in ccodes:
             if not cc: continue
@@ -2575,6 +2792,42 @@ def create_student():
                     db.session.add(new_reg)
                     sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
                     
+    curr_drop = (current_semester_drop is not None and current_semester_drop.lower() == 'yes')
+    if current_course_schedule_routine:
+        parse_and_apply_schedule(std_id, current_course_schedule_routine, fac_initial=faculty_initial, fac_email=faculty_email, curr_sem_drop=curr_drop, student_dept=dept)
+                    
+    next_drop = (next_semester_drop is not None and next_semester_drop.lower() == 'yes')
+    if next_semester_courses:
+        next_sem = get_next_semester()
+        ccodes_next = [c.strip() for c in re.split(r'[,;\s]+', next_semester_courses) if c.strip()]
+        for cc in ccodes_next:
+            if not cc: continue
+            sec = SectionOffering.query.filter_by(course_code=cc, semester_id=next_sem).first()
+            if not sec:
+                sec = SectionOffering.query.filter_by(course_code=cc).first()
+            if sec:
+                reg_id = f"REG-{std_id}-{sec.id}"
+                existing_reg = Registration.query.get(reg_id)
+                status_next = 'dropped' if next_drop else 'registered'
+                if not existing_reg:
+                    new_reg = Registration(
+                        id=reg_id,
+                        student_id=std_id,
+                        section_id=sec.id,
+                        semester_id=next_sem,
+                        status=status_next
+                    )
+                    db.session.add(new_reg)
+                    if status_next == 'registered':
+                        sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                else:
+                    if existing_reg.status != status_next:
+                        if existing_reg.status == 'registered' and status_next == 'dropped':
+                            sec.enrolled_count = max(0, sec.enrolled_count - 1)
+                        elif existing_reg.status == 'dropped' and status_next == 'registered':
+                            sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                        existing_reg.status = status_next
+
     db.session.commit()
     
     flash('Student account created successfully! Advise student to activate using their email.', 'success')
@@ -3089,6 +3342,112 @@ def import_excel_schedule(file_source):
                         sec.linked_section_id = linked_sec_id
             db.session.commit()
 
+def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_email=None, curr_sem_drop=False, student_dept='CSE'):
+    import re
+    if not schedule_str or str(schedule_str).strip().lower() in ('none', ''):
+        return
+    current_sem = get_current_semester()
+    items = re.findall(r'[^,\[]+(?:\[[^\]]*\])?', schedule_str)
+    for item in items:
+        item = item.strip()
+        if not item: continue
+        match = re.search(r'([A-Za-z0-9\s]+)\s*\[\s*Sec\s*([^,\]]+)\s*,\s*([^\]]+)\]', item)
+        if match:
+            ccode = match.group(1).strip().replace(' ', '')
+            sec_num_raw = match.group(2).strip()
+            timing = match.group(3).strip()
+            
+            try:
+                sec_num = f"{int(sec_num_raw):02d}"
+            except ValueError:
+                sec_num = sec_num_raw
+                
+            sec_id = f"{ccode}-{sec_num}-{current_sem}"
+            sec = SectionOffering.query.get(sec_id)
+            if not sec:
+                c_title = ccode
+                c_credits = 3.0
+                pac = PreAdvisingCourse.query.filter_by(code=ccode).first()
+                if pac:
+                    c_title = pac.title
+                    c_credits = pac.credits
+                
+                sec = SectionOffering(
+                    id=sec_id,
+                    course_code=ccode,
+                    course_title=c_title,
+                    section_number=sec_num,
+                    credits=c_credits,
+                    schedule=timing,
+                    room='AB1-101',
+                    semester_id=current_sem,
+                    capacity=35,
+                    enrolled_count=0
+                )
+                db.session.add(sec)
+                db.session.flush()
+
+            # Dynamic Faculty Assignment
+            if fac_initial and fac_email:
+                s_dept = (student_dept or 'CSE').upper()
+                if ccode.upper().startswith(s_dept):
+                    fac_user = User.query.filter_by(email=fac_email).first()
+                    if not fac_user:
+                        fac_user = User(
+                            id='usr-' + fac_initial,
+                            email=fac_email,
+                            password_hash=generate_password_hash('password123'),
+                            role='faculty',
+                            is_active=True,
+                            is_activated=False
+                        )
+                        db.session.add(fac_user)
+                        db.session.flush()
+                        
+                    fac_rec = Faculty.query.get(fac_initial)
+                    if not fac_rec:
+                        names_map = {
+                            'MMAH': 'M. M. A. Hashem',
+                            'SHR': 'S. H. Rahman',
+                            'NYA': 'N. Y. Ahmed',
+                            'AH': 'A. Hasan'
+                        }
+                        fname = names_map.get(fac_initial, fac_initial)
+                        fac_rec = Faculty(
+                            id=fac_initial,
+                            user_id=fac_user.id,
+                            name=fname,
+                            department_id=s_dept,
+                            post='Senior Lecturer',
+                            about=''
+                        )
+                        db.session.add(fac_rec)
+                        db.session.flush()
+                    
+                    sec.faculty_id = fac_initial
+                
+            reg_id = f"REG-{student_id}-{sec.id}"
+            existing_reg = Registration.query.get(reg_id)
+            status_val = 'dropped' if curr_sem_drop else 'registered'
+            if not existing_reg:
+                new_reg = Registration(
+                    id=reg_id,
+                    student_id=student_id,
+                    section_id=sec.id,
+                    semester_id=current_sem,
+                    status=status_val
+                )
+                db.session.add(new_reg)
+                if status_val == 'registered':
+                    sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+            else:
+                if existing_reg.status != status_val:
+                    if existing_reg.status == 'registered' and status_val == 'dropped':
+                        sec.enrolled_count = max(0, sec.enrolled_count - 1)
+                    elif existing_reg.status == 'dropped' and status_val == 'registered':
+                        sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                    existing_reg.status = status_val
+
 def import_excel_students(file_source):
     import openpyxl
     import re
@@ -3105,7 +3464,8 @@ def import_excel_students(file_source):
         'Completed Credit', 'Remaining Credit', 'CGPA', 'Present Address',
         'Permanent Address', 'Completed Courses and Grades', 'Current Courses',
         'Current Course Credit', 'Next Semester Courses', 'Next Semester Course Credit',
-        'Profile Picture'
+        'Profile Picture', 'Current Course Schedule & Reading', 'Current Course Schedule & Routine',
+        'Faculty Initial', 'faculty Email', 'Current Semester Drop', 'Next Semester Drop'
     ]
     
     col_map = {}
@@ -3123,20 +3483,37 @@ def import_excel_students(file_source):
         
     rows = list(sheet.iter_rows(min_row=2, values_only=True))
     imported_count = 0
+
+    def clean_excel_val(val):
+        if val is None:
+            return None
+        s = str(val).strip()
+        if s.lower() == 'none' or s == '':
+            return None
+        return s
+
+    def clean_float_excel(val, default=0.0):
+        cleaned = clean_excel_val(val)
+        if cleaned is None:
+            return default
+        try:
+            return float(cleaned)
+        except ValueError:
+            return default
     
     for row in rows:
         if not row or all(v is None for v in row):
             continue
             
-        std_id = str(row[col_map['Student ID']]).strip()
-        name = str(row[col_map['Name']]).strip()
-        email = str(row[col_map['Student Email']]).strip()
+        std_id = clean_excel_val(row[col_map['Student ID']])
+        name = clean_excel_val(row[col_map['Name']])
+        email = clean_excel_val(row[col_map['Student Email']])
         
         if not std_id or not name or not email:
             continue
             
-        phone = str(row[col_map['Phone Number']]).strip() if ('Phone Number' in col_map and row[col_map['Phone Number']] is not None) else None
-        dept = str(row[col_map['Department']]).strip() if ('Department' in col_map and row[col_map['Department']] is not None) else 'CSE'
+        phone = clean_excel_val(row[col_map['Phone Number']]) if 'Phone Number' in col_map else None
+        dept = clean_excel_val(row[col_map['Department']]) or 'CSE'
         
         # Validate department based on student ID
         dept_code_map = {
@@ -3155,42 +3532,19 @@ def import_excel_students(file_source):
         if expected_dept != dept:
             raise ValueError(f"Department mismatch: Student ID '{std_id}' contains department code '{dept_code}' ({expected_dept}), but Excel specified '{dept}'.")
         
-        try:
-            credits = float(row[col_map['Completed Credit']]) if ('Completed Credit' in col_map and row[col_map['Completed Credit']] is not None) else 0.0
-        except ValueError:
-            credits = 0.0
+        credits = clean_float_excel(row[col_map['Completed Credit']]) if 'Completed Credit' in col_map else 0.0
+        rem_credits = clean_float_excel(row[col_map['Remaining Credit']], 140.0) if 'Remaining Credit' in col_map else 140.0
+        cgpa = clean_float_excel(row[col_map['CGPA']]) if 'CGPA' in col_map else 0.0
             
-        try:
-            rem_credits = float(row[col_map['Remaining Credit']]) if ('Remaining Credit' in col_map and row[col_map['Remaining Credit']] is not None) else 140.0
-        except ValueError:
-            rem_credits = 140.0
-            
-        try:
-            cgpa = float(row[col_map['CGPA']]) if ('CGPA' in col_map and row[col_map['CGPA']] is not None) else 0.0
-        except ValueError:
-            cgpa = 0.0
-            
-        present_address = str(row[col_map['Present Address']]).strip() if ('Present Address' in col_map and row[col_map['Present Address']] is not None) else None
-        permanent_address = str(row[col_map['Permanent Address']]).strip() if ('Permanent Address' in col_map and row[col_map['Permanent Address']] is not None) else None
+        present_address = clean_excel_val(row[col_map['Present Address']]) if 'Present Address' in col_map else None
+        permanent_address = clean_excel_val(row[col_map['Permanent Address']]) if 'Permanent Address' in col_map else None
         
-        comp_courses_grades = str(row[col_map['Completed Courses and Grades']]).strip() if ('Completed Courses and Grades' in col_map and row[col_map['Completed Courses and Grades']] is not None) else None
-        curr_courses = str(row[col_map['Current Courses']]).strip() if ('Current Courses' in col_map and row[col_map['Current Courses']] is not None) else None
-        
-        try:
-            curr_credit = float(row[col_map['Current Course Credit']]) if ('Current Course Credit' in col_map and row[col_map['Current Course Credit']] is not None) else 0.0
-        except ValueError:
-            curr_credit = 0.0
-            
-        next_courses = str(row[col_map['Next Semester Courses']]).strip() if ('Next Semester Courses' in col_map and row[col_map['Next Semester Courses']] is not None) else None
-        
-        try:
-            next_credit = float(row[col_map['Next Semester Course Credit']]) if ('Next Semester Course Credit' in col_map and row[col_map['Next Semester Course Credit']] is not None) else 0.0
-        except ValueError:
-            next_credit = 0.0
-            
-        prof_pic = str(row[col_map['Profile Picture']]).strip() if ('Profile Picture' in col_map and row[col_map['Profile Picture']] is not None) else None
-        if prof_pic and prof_pic.lower() == 'none':
-            prof_pic = None
+        comp_courses_grades = clean_excel_val(row[col_map['Completed Courses and Grades']]) if 'Completed Courses and Grades' in col_map else None
+        curr_courses = clean_excel_val(row[col_map['Current Courses']]) if 'Current Courses' in col_map else None
+        curr_credit = clean_float_excel(row[col_map['Current Course Credit']]) if 'Current Course Credit' in col_map else 0.0
+        next_courses = clean_excel_val(row[col_map['Next Semester Courses']]) if 'Next Semester Courses' in col_map else None
+        next_credit = clean_float_excel(row[col_map['Next Semester Course Credit']]) if 'Next Semester Course Credit' in col_map else 0.0
+        prof_pic = clean_excel_val(row[col_map['Profile Picture']]) if 'Profile Picture' in col_map else None
             
         user = User.query.filter_by(email=email).first()
         if not user:
@@ -3246,6 +3600,8 @@ def import_excel_students(file_source):
             if prof_pic:
                 student.profile_pic = prof_pic
                 
+        assign_advisor_for_student(student)
+                
         if comp_courses_grades and comp_courses_grades.lower() != 'none':
             parts = re.split(r'[,;\n\r]+', comp_courses_grades)
             for part in parts:
@@ -3297,6 +3653,56 @@ def import_excel_students(file_source):
                         )
                         db.session.add(new_reg)
                         sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+
+        # Current Semester Schedule & Reading Ingestion
+        sched_str = None
+        if 'Current Course Schedule & Routine' in col_map:
+            sched_str = clean_excel_val(row[col_map['Current Course Schedule & Routine']])
+        elif 'Current Course Schedule & Reading' in col_map:
+            sched_str = clean_excel_val(row[col_map['Current Course Schedule & Reading']])
+            
+        fac_initial = clean_excel_val(row[col_map['Faculty Initial']]) if 'Faculty Initial' in col_map else None
+        fac_email = clean_excel_val(row[col_map['faculty Email']]) if 'faculty Email' in col_map else None
+        
+        curr_drop_val = clean_excel_val(row[col_map['Current Semester Drop']]) or ''
+        curr_drop = (curr_drop_val.lower() == 'yes')
+        
+        if sched_str:
+            parse_and_apply_schedule(std_id, sched_str, fac_initial=fac_initial, fac_email=fac_email, curr_sem_drop=curr_drop, student_dept=dept)
+
+        # Next Semester Courses & Drop Ingestion
+        next_drop_val = clean_excel_val(row[col_map['Next Semester Drop']]) or ''
+        next_drop = (next_drop_val.lower() == 'yes')
+        if next_courses and next_courses.lower() != 'none':
+            next_sem = get_next_semester()
+            ccodes_next = [c.strip() for c in re.split(r'[,;\s]+', next_courses) if c.strip()]
+            for cc in ccodes_next:
+                if not cc: continue
+                sec = SectionOffering.query.filter_by(course_code=cc, semester_id=next_sem).first()
+                if not sec:
+                    sec = SectionOffering.query.filter_by(course_code=cc).first()
+                if sec:
+                    reg_id = f"REG-{std_id}-{sec.id}"
+                    existing_reg = Registration.query.get(reg_id)
+                    status_next = 'dropped' if next_drop else 'registered'
+                    if not existing_reg:
+                        new_reg = Registration(
+                            id=reg_id,
+                            student_id=std_id,
+                            section_id=sec.id,
+                            semester_id=next_sem,
+                            status=status_next
+                        )
+                        db.session.add(new_reg)
+                        if status_next == 'registered':
+                            sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                    else:
+                        if existing_reg.status != status_next:
+                            if existing_reg.status == 'registered' and status_next == 'dropped':
+                                sec.enrolled_count = max(0, sec.enrolled_count - 1)
+                            elif existing_reg.status == 'dropped' and status_next == 'registered':
+                                sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                            existing_reg.status = status_next
                         
         imported_count += 1
         

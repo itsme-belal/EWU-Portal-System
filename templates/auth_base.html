@@ -1,11 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        (function() {
+            const activeTheme = localStorage.getItem('theme') || localStorage.getItem('ewu_theme') || 'light';
+            if (activeTheme === 'dark' || activeTheme === 'cosmic' || activeTheme === 'image') {
+                document.documentElement.classList.add('dark');
+                document.documentElement.style.backgroundColor = '#0e1929';
+                document.documentElement.style.color = '#e8edf5';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.style.backgroundColor = '#ffffff';
+                document.documentElement.style.color = '#0f172a';
+            }
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EWU Portal - {% block title %}{% endblock %}</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -51,11 +70,6 @@
         localStorage.removeItem('admin_active_tab');
         localStorage.removeItem('faculty_active_tab');
         localStorage.removeItem('student_active_tab');
-
-        const activeTheme = localStorage.getItem('ewu_theme') || 'light';
-        if (activeTheme === 'cosmic' || activeTheme === 'image') {
-            document.documentElement.classList.add('dark');
-        }
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}

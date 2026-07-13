@@ -3,14 +3,14 @@
 {% block title %}EWU Student Portal{% endblock %}
 
 {% block sidebar_nav %}
-<a href="/student" id="nav-dashboard" class="nav-item {% if active_tab == 'dashboard' %}active{% endif %}">
+<a href="/student" id="nav-dashboard" class="nav-item">
     <i data-lucide="layout-dashboard" class="w-4.5 h-4.5"></i>
     <span>Dashboard</span>
 </a>
 
 <!-- Advising Group -->
 <div class="mt-1">
-    <a href="/advising" id="nav-advising" class="nav-item {% if active_tab == 'advising' %}active{% endif %}">
+    <a href="/advising" id="nav-advising" class="nav-item">
         <i data-lucide="calendar-days" class="w-4.5 h-4.5"></i>
         <span>Advising</span>
     </a>
@@ -61,7 +61,7 @@
 
 {% block content %}
 <!-- DASHBOARD TAB -->
-<div id="tab-dashboard" class="tab-content space-y-6">
+<div id="tab-dashboard" class="tab-content hidden space-y-6">
     <!-- Welcome Header & Profile Card -->
     <div class="stitch-card p-8 bg-gradient-to-br from-white to-slate-100 dark:from-slate-900 dark:to-indigo-950 text-slate-800 dark:text-white rounded-2xl relative overflow-hidden border border-slate-200 dark:border-white/5 shadow-md dark:shadow-2xl">
         <div class="absolute right-0 top-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl -z-10"></div>
@@ -87,38 +87,38 @@
             </div>
 
             <!-- Left, Center, Right Information Row -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-center items-center pt-4 border-t border-white/10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-center items-center pt-4 border-t border-slate-200 dark:border-white/10">
                 <!-- Left: Name & Department -->
                 <div class="space-y-1">
-                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Student Name & Major</span>
-                    <h2 class="text-lg font-black tracking-tight text-white">{{ student.name }}</h2>
-                    <p class="text-xs text-blue-300 font-bold tracking-wide uppercase">{{ dept.name }}</p>
-                    <p class="text-[0.68rem] text-slate-400 font-mono">ID: {{ student.id }}</p>
+                    <span class="text-[0.62rem] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Student Name & Major</span>
+                    <h2 class="text-lg font-black tracking-tight text-slate-800 dark:text-white">{{ student.name }}</h2>
+                    <p class="text-xs text-blue-600 dark:text-blue-300 font-bold tracking-wide uppercase">{{ dept.name }}</p>
+                    <p class="text-[0.68rem] text-slate-500 dark:text-slate-400 font-mono">ID: {{ student.id }}</p>
                 </div>
 
                 <!-- Center: CGPA -->
-                <div class="space-y-1 bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-md">
-                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Cumulative GPA</span>
+                <div class="space-y-1 bg-slate-100 dark:bg-white/5 p-4 rounded-xl border border-slate-200 dark:border-white/10 backdrop-blur-md">
+                    <span class="text-[0.62rem] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Cumulative GPA</span>
                     <div class="flex items-center justify-center gap-2 mt-1">
-                        <span id="cgpa-value" class="text-2xl font-black text-blue-400 tracking-wider">***</span>
-                        <button onclick="toggleCGPA()" class="p-1 rounded bg-slate-800/50 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors" title="Toggle visibility">
+                        <span id="cgpa-value" class="text-2xl font-black text-blue-600 dark:text-blue-400 tracking-wider">***</span>
+                        <button onclick="toggleCGPA()" class="p-1 rounded bg-slate-200 dark:bg-slate-800/50 hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white transition-colors" title="Toggle visibility">
                             <i data-lucide="eye" id="cgpa-eye-icon" class="w-4 h-4"></i>
                         </button>
                     </div>
-                    <span class="text-[0.6rem] text-slate-400 block font-mono">Hidden by Default</span>
+                    <span class="text-[0.6rem] text-slate-500 dark:text-slate-400 block font-mono">Hidden by Default</span>
                 </div>
 
                 <!-- Right: Completed & Remaining Credits -->
                 <div class="space-y-2">
-                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Credit Progress</span>
+                    <span class="text-[0.62rem] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Credit Progress</span>
                     <div class="flex flex-col space-y-1">
                         <div class="flex justify-between text-xs px-2">
-                            <span class="text-slate-400">Completed:</span>
-                            <span class="font-bold text-violet-400">{{ student.completed_credits }} CR</span>
+                            <span class="text-slate-600 dark:text-slate-400">Completed:</span>
+                            <span class="font-bold text-violet-600 dark:text-violet-400">{{ student.completed_credits }} CR</span>
                         </div>
                         <div class="flex justify-between text-xs px-2">
-                            <span class="text-slate-400">Remaining:</span>
-                            <span class="font-bold text-green-400">{{ remaining_credits }} CR</span>
+                            <span class="text-slate-600 dark:text-slate-400">Remaining:</span>
+                            <span class="font-bold text-green-600 dark:text-green-400">{{ remaining_credits }} CR</span>
                         </div>
                         <div class="flex justify-between text-[0.65rem] px-2 text-slate-500 font-mono">
                             <span>Requirement:</span>
@@ -129,17 +129,17 @@
             </div>
 
             <!-- Center Bottom: Advisor Name & Details -->
-            <div class="w-full max-w-md mx-auto bg-gradient-to-r from-blue-950/40 via-indigo-950/40 to-blue-950/40 border border-blue-500/20 rounded-xl p-4 text-center space-y-2">
-                <span class="text-[0.62rem] font-bold text-blue-300 uppercase tracking-widest block font-mono">Academic Advisor Info</span>
+            <div class="w-full max-w-md mx-auto bg-blue-50/50 dark:bg-gradient-to-r dark:from-blue-950/40 dark:via-indigo-950/40 dark:to-blue-950/40 border border-blue-100 dark:border-blue-500/20 rounded-xl p-4 text-center space-y-2">
+                <span class="text-[0.62rem] font-bold text-blue-600 dark:text-blue-300 uppercase tracking-widest block font-mono">Academic Advisor Info</span>
                 {% if advisor %}
-                <h3 class="font-black text-sm text-white">{{ advisor.name }}</h3>
-                <p class="text-xs text-slate-300">{{ advisor.department_id }} Faculty Member</p>
-                <div class="text-[0.7rem] text-slate-400 font-mono mt-1 flex justify-center items-center gap-1.5">
-                    <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-400"></i> {{ advisor_email if advisor_email else 'No Email Available' }}
+                <h3 class="font-black text-sm text-slate-800 dark:text-white">{{ advisor.name }}</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-300">{{ advisor.department_id }} Faculty Member</p>
+                <div class="text-[0.7rem] text-slate-600 dark:text-slate-400 font-mono mt-1 flex justify-center items-center gap-1.5">
+                    <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i> {{ advisor_email if advisor_email else 'No Email Available' }}
                 </div>
                 {% else %}
-                <h3 class="font-bold text-sm text-amber-400">Not Assigned Yet</h3>
-                <p class="text-xs text-slate-400">Please contact university admin to assign an academic advisor.</p>
+                <h3 class="font-bold text-sm text-amber-500">Not Assigned Yet</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Please contact university admin to assign an academic advisor.</p>
                 {% endif %}
             </div>
         </div>
@@ -560,14 +560,11 @@
 
                 <!-- Pre-advising filter row -->
                 <div class="flex flex-wrap gap-2 py-2">
-                    <button onclick="filterPreAdvising('all')" id="pre-filter-all" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all border border-transparent">
-                        All Courses
-                    </button>
-                    <button onclick="filterPreAdvising('recommended')" id="pre-filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                    <button onclick="filterPreAdvising('recommended')" id="pre-filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all border border-transparent">
                         Recommended Courses
                     </button>
                     <button onclick="filterPreAdvising('retake')" id="pre-filter-retake" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
-                        Retake Courses
+                        Retakeable Courses
                     </button>
                     <button onclick="filterPreAdvising('d_grade')" id="pre-filter-d_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
                         D/D+ Courses
@@ -575,6 +572,13 @@
                     <button onclick="filterPreAdvising('f_grade')" id="pre-filter-f_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
                         F Courses
                     </button>
+                </div>
+
+                <!-- Catalog Header Row -->
+                <div class="grid grid-cols-3 gap-4 px-4 py-2 text-[0.65rem] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-[#e2e8f0]/60 dark:border-[#1e293b]/60">
+                    <div>Course Code</div>
+                    <div>Credit</div>
+                    <div>Pre Requsite</div>
                 </div>
 
                 <div class="space-y-2 max-h-[600px] overflow-y-auto pr-1">
@@ -592,18 +596,22 @@
                          data-is-f-grade="{{ 'true' if is_f else 'false' }}"
                          data-is-d-grade="{{ 'true' if is_d else 'false' }}"
                          data-is-retake="{{ 'true' if is_retake else 'false' }}"
-                         {% if pre_advising_active %}
                          onclick="togglePlanCourse('{{ course.code }}')"
                          style="cursor: pointer;"
-                         {% endif %}
-                         class="pre-course-card stitch-card flex justify-between items-center py-3 px-4 border transition-all duration-150 hover:bg-slate-50 dark:hover:bg-slate-900/10 {{ 'border-blue-500 bg-blue-50/10' if selected else 'border-[#e2e8f0] dark:border-[#1e293b]' }}">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600">
-                                <i data-lucide="book-open" class="w-4 h-4"></i>
+                         class="pre-course-card stitch-card py-3 px-4 border transition-all duration-150 hover:bg-slate-50 dark:hover:bg-slate-900/10 {{ 'border-blue-500 bg-blue-50/10' if selected else 'border-[#e2e8f0] dark:border-[#1e293b]' }}">
+                        <div class="grid grid-cols-3 gap-4 items-center w-full text-xs">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 flex-shrink-0">
+                                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                                </div>
+                                <span class="font-bold text-[#0f172a] dark:text-[#f1f5f9]">{{ course.code }}</span>
                             </div>
-                            <div>
-                                <p class="font-bold text-xs">{{ course.code }}: {{ course.title }}</p>
-                                <p class="text-[0.65rem] text-[#94a3b8]">Credits: {{ combined_credits }} CR {% if course.prerequisites %}• Prereq: {{ course.prerequisites | join(', ') }}{% endif %}</p>
+                            <div class="font-semibold text-slate-700 dark:text-slate-300">
+                                {{ "%.1f"|format(combined_credits) if combined_credits is float else combined_credits }}
+                            </div>
+                            <div class="font-semibold text-slate-700 dark:text-slate-300">
+                                {% set valid_prereqs = course.prerequisites | reject('equalto', 'None') | reject('equalto', '') | list %}
+                                {% if valid_prereqs %}{{ valid_prereqs | join(', ') }}{% else %}<span class="text-slate-400 italic">N/A</span>{% endif %}
                             </div>
                         </div>
                     </div>
@@ -637,7 +645,7 @@
                 </div>
                 <form action="{{ url_for('save_plan') }}" method="POST" id="plan-form">
                     <input type="hidden" name="course_ids" id="plan-input" value='{{ plan_course_ids | tojson }}'>
-                    <button type="submit" class="w-full btn-primary justify-center py-2 rounded-lg text-xs" {% if not pre_advising_active or plan_course_ids|length > 6 or plan_credits > 15 or plan_course_ids|length < 3 or plan_credits < 9 %}disabled{% endif %}>
+                    <button type="submit" class="w-full btn-primary justify-center py-2 rounded-lg text-xs" {% if plan_course_ids|length > 6 or plan_credits > 15 or plan_course_ids|length < 3 or plan_credits < 9 %}disabled{% endif %}>
                         Confirm Pre-Advising Carts
                     </button>
                 </form>
@@ -742,80 +750,74 @@
 
 <!-- CLASS SCHEDULE TAB -->
 <div id="tab-schedule" class="tab-content hidden space-y-6">
-    <div class="flex justify-between items-center border-b border-[#e2e8f0] dark:border-[#1e293b] pb-4">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-[#e2e8f0] dark:border-[#1e293b] pb-4 gap-4">
         <div>
             <h1 class="text-2xl font-extrabold tracking-tight">Class Schedules</h1>
             <p class="text-sm text-[#475569] dark:text-[#94a3b8]">View detailed routine and print schedule routines</p>
         </div>
-        <button onclick="downloadScheduleAsImage()" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center gap-1.5 shadow-lg shadow-blue-500/10">
-            <i data-lucide="download" class="w-4 h-4"></i> Save Routine Image
-        </button>
+        
+        <!-- Semester Selection Option -->
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Set Semester:</span>
+            <select id="schedule-semester-select" class="input py-1.5 px-3 text-xs w-48 bg-white dark:bg-[#0a0f1e] border-slate-200 dark:border-slate-800 rounded-lg">
+                {% for sem in available_semesters %}
+                <option value="{{ sem.id }}" {% if sem.id == selected_sched_sem %}selected{% endif %}>{{ sem.name }}</option>
+                {% endfor %}
+            </select>
+            <button onclick="changeScheduleSemester()" class="text-xs font-bold py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-all border-0 shadow-md shadow-emerald-500/10 uppercase tracking-wider cursor-pointer">
+                Show Courses
+            </button>
+            <button onclick="downloadScheduleAsImage()" class="text-xs font-bold py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-all border-0 shadow-md shadow-blue-500/10 uppercase tracking-wider flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Slip
+            </button>
+        </div>
     </div>
 
     <div id="schedule-print-container" class="space-y-6 bg-white dark:bg-[#0a0f1e] p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-        <!-- Current Schedule -->
+        <!-- Selected Semester Schedule -->
         <div class="space-y-3">
-            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <i data-lucide="calendar" class="w-4.5 h-4.5 text-blue-500"></i> Previous Semester Schedule (Spring 2026)
+            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
+                <i data-lucide="calendar" class="w-4.5 h-4.5 text-blue-500"></i> Schedule Routine for {{ formatted_selected_sched_sem }}
             </h3>
-            <div class="table-container">
-                <table class="stitch-table">
+            <div class="table-container overflow-x-auto">
+                <table class="stitch-table w-full text-left text-xs">
                     <thead>
-                        <tr>
-                            <th>Course</th>
-                            <th>Sec</th>
-                            <th>Credits</th>
-                            <th>Schedule</th>
-                            <th>Room</th>
+                        <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Serial</th>
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Course</th>
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Section</th>
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Credits</th>
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Timing</th>
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Room No.</th>
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Drop Status</th>
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Faculty Initial</th>
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Faculty Name</th>
+                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Faculty Email</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for s in current_schedule_sections %}
-                        <tr>
-                            <td class="font-bold">{{ s.course_code }}</td>
-                            <td>{{ s.section_number }}</td>
-                            <td>{{ s.credits }} CR</td>
-                            <td>{{ s.schedule }}</td>
-                            <td>{{ s.room }}</td>
+                        {% for item in schedule_details %}
+                        <tr class="border-b border-slate-100 dark:border-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-900/20">
+                            <td class="py-3 px-3">{{ item.serial }}</td>
+                            <td class="py-3 px-3 font-bold text-blue-600 dark:text-blue-400">{{ item.course_code }}</td>
+                            <td class="py-3 px-3">{{ item.section_number }}</td>
+                            <td class="py-3 px-3 font-medium">{{ item.credits }} CR</td>
+                            <td class="py-3 px-3">{{ item.schedule }}</td>
+                            <td class="py-3 px-3">{{ item.room }}</td>
+                            <td class="py-3 px-3">
+                                {% if item.drop_status == 'Yes' %}
+                                <span class="px-2 py-0.5 text-[0.62rem] font-bold rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">Yes</span>
+                                {% else %}
+                                <span class="text-slate-400 dark:text-slate-600">No</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-3 font-bold text-violet-500 dark:text-violet-400">{{ item.fac_initial }}</td>
+                            <td class="py-3 px-3">{{ item.fac_name }}</td>
+                            <td class="py-3 px-3 text-slate-400 dark:text-slate-500 text-[0.7rem]">{{ item.fac_email }}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center text-[#94a3b8] py-4">No registered courses found for Spring 2026.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Next Schedule -->
-        <div class="space-y-3 pt-4 border-t border-[#e2e8f0]/40 dark:border-[#1e293b]/40">
-            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <i data-lucide="zap" class="w-4.5 h-4.5 text-violet-500"></i> Next Semester Schedule (Summer 2026)
-            </h3>
-            <div class="table-container">
-                <table class="stitch-table">
-                    <thead>
-                        <tr>
-                            <th>Course</th>
-                            <th>Sec</th>
-                            <th>Credits</th>
-                            <th>Schedule</th>
-                            <th>Room</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for s in next_schedule_sections %}
-                        <tr>
-                            <td class="font-bold text-violet-600 dark:text-violet-400">{{ s.course_code }}</td>
-                            <td>{{ s.section_number }}</td>
-                            <td>{{ s.credits }} CR</td>
-                            <td>{{ s.schedule }}</td>
-                            <td>{{ s.room }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center text-[#94a3b8] py-4">No advised sections registered for Summer 2026 yet.</td>
+                            <td colspan="11" class="text-center text-[#94a3b8] py-8">No registered courses found for {{ formatted_selected_sched_sem }}.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -1076,7 +1078,7 @@
                             <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Course</label>
                             <select name="course_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
                                 {% for c in courses %}
-                                <option value="{{ c.code }}">{{ c.code }}: {{ c.title }}</option>
+                                <option value="{{ c.code }}">{{ c.code }}{% if c.title and c.title.lower() != c.code.lower() %}: {{ c.title }}{% endif %}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -1139,7 +1141,7 @@
                             <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Course Code</label>
                             <select name="course_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
                                 {% for c in courses %}
-                                <option value="{{ c.code }}">{{ c.code }}: {{ c.title }}</option>
+                                <option value="{{ c.code }}">{{ c.code }}{% if c.title and c.title.lower() != c.code.lower() %}: {{ c.title }}{% endif %}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -1324,7 +1326,7 @@
 <div id="tab-semester-drop" class="tab-content hidden space-y-6">
     <div>
         <h1 class="text-2xl font-extrabold tracking-tight">Semester Drop Request</h1>
-        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Apply to officially drop/withdraw from the ongoing Summer 2026 semester</p>
+        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Apply to officially drop from the ongoing Summer 2026 semester</p>
     </div>
 
     <div class="stitch-card max-w-2xl space-y-4 border-red-500/20 bg-red-50/5">
@@ -1339,7 +1341,7 @@
 
         <form action="{{ url_for('submit_semester_drop') }}" method="POST" class="space-y-4 pt-4 border-t border-[#e2e8f0] dark:border-[#1e293b]">
             <div>
-                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Reason for Withdrawal</label>
+                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Reason for Semester Drop</label>
                 <textarea name="reason" required minlength="20" maxlength="1000" rows="4" placeholder="Detail the reason for dropping the semester (e.g. medical, personal emergencies)..." class="w-full p-3 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10"></textarea>
                 <p class="text-[0.7rem] text-[#94a3b8] mt-1">Minimum 20 characters. Maximum 1000 characters.</p>
             </div>
@@ -1531,6 +1533,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
+    function updateBreadcrumbs(tabId) {
+        const breadcrumbEl = document.getElementById('portal-breadcrumb');
+        if (!breadcrumbEl) return;
+        const mapping = {
+            'dashboard': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Dashboard</span>',
+            'advising': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Advising</span>',
+            'schedule': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Class Schedule</span>',
+            'grade-report': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Grade Report</span>',
+            'financial': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Financial Account</span>',
+            'semester-drop': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Semester Drop</span>',
+            'settings': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">My Profile</span>'
+        };
+        breadcrumbEl.innerHTML = mapping[tabId] || `Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">${tabId}</span>`;
+    }
+
     // Tab switching
     function switchTab(tabId) {
         if (tabId === 'profile') {
@@ -1557,6 +1574,7 @@
             showAdvisingHub();
         }
 
+        updateBreadcrumbs(tabId);
         localStorage.setItem('student_active_tab', tabId);
     }
 
@@ -1614,17 +1632,6 @@
         }, 100);
     }
 
-    const savedTab = "{{ active_tab or 'dashboard' }}";
-    switchTab(savedTab);
-    
-    // Initialize pre-advising defaults
-    if (typeof filterPreAdvising === 'function') {
-        filterPreAdvising('recommended');
-    }
-    if (typeof updatePreAdvisingCartList === 'function') {
-        updatePreAdvisingCartList();
-    }
-
     // CGPA Masking Control
     let cgpaVisible = false;
     const cgpaRaw = "{{ '%.2f'|format(student.cgpa or 0.0) }}";
@@ -1657,10 +1664,6 @@
     }
 
     function enterPreAdvisingPhase() {
-        if (!isPreActive && !prePlanSubmitted) {
-            showToast('error', 'Pre-Advising phase is not currently started by Admin.');
-            return;
-        }
         switchTab('advising');
         const hub = document.getElementById('advising-hub');
         const preWork = document.getElementById('pre-advising-workspace');
@@ -1670,18 +1673,10 @@
         if (finalWork) finalWork.classList.add('hidden');
         filterPreAdvising('recommended');
         updatePreAdvisingCartList();
+
     }
 
     function enterFinalAdvisingPhase() {
-        const hasRegistered = registrationsList.length > 0;
-        if (!isFinalActive && !hasRegistered) {
-            showToast('error', 'Final Advising phase is not currently started by Admin.');
-            return;
-        }
-        if (!prePlanSubmitted) {
-            showToast('error', 'Access Denied: You must complete Pre-Advising first to participate in self-registration. Please contact your academic advisor.');
-            return;
-        }
         switchTab('advising');
         const hub = document.getElementById('advising-hub');
         const preWork = document.getElementById('pre-advising-workspace');
@@ -1690,6 +1685,11 @@
         if (preWork) preWork.classList.add('hidden');
         if (finalWork) finalWork.classList.remove('hidden');
         filterAdvisingSections('recommended');
+
+        const hasRegistered = registrationsList.length > 0;
+        if (!isFinalActive && !hasRegistered) {
+            showToast('info', 'Final Advising phase is not active (View-Only mode).');
+        }
     }
 
     // Pre-advising selections
@@ -1712,14 +1712,15 @@
             // Check if there is a lab course combined
             const labCode = code + " Lab";
             const labCourse = coursesData.find(x => x.code === labCode);
-            const displayTitle = labCourse ? `${title} & Lab` : title;
+            const cleanTitle = (title && title.toUpperCase() !== code.toUpperCase()) ? title : '';
+            const displayTitle = labCourse ? (cleanTitle ? `${cleanTitle} & Lab` : 'Theory & Lab') : cleanTitle;
             const displayCredits = labCourse ? (credits + labCourse.credits) : credits;
 
             listDiv.innerHTML += `
                 <div class="flex justify-between items-center bg-slate-900/40 p-2 rounded-lg border border-white/5 text-xs">
                     <div>
                         <span class="font-bold text-slate-200">${code}</span>
-                        <p class="text-[0.6rem] text-slate-400 mt-0.5 truncate max-w-[120px]">${displayTitle}</p>
+                        ${displayTitle ? `<p class="text-[0.6rem] text-slate-400 mt-0.5 truncate max-w-[120px]">${displayTitle}</p>` : ''}
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="text-[0.65rem] font-bold text-slate-400">${displayCredits} CR</span>
@@ -1831,6 +1832,32 @@
             showToast('error', 'Network error during auto-save.');
         });
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const planForm = document.getElementById('plan-form');
+        if (planForm) {
+            planForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const courseIds = JSON.parse(document.getElementById('plan-input').value || '[]');
+                fetch('/student/save-plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ course_ids: courseIds })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast('success', 'Pre-Advising choices successfully confirmed and saved.');
+                    } else {
+                        showToast('error', data.message || 'Confirmation failed.');
+                    }
+                })
+                .catch(err => {
+                    showToast('error', 'Network error during confirmation.');
+                });
+            });
+        }
+    });
 
     function filterPreAdvising(category) {
         const btns = ['recommended', 'retake', 'd_grade', 'f_grade'];
@@ -2271,5 +2298,43 @@
             link.click();
         });
     }
+
+    function changeScheduleSemester() {
+        const select = document.getElementById('schedule-semester-select');
+        const sem = select.value;
+        window.location.href = `/student?schedule_semester=${sem}&tab=schedule`;
+    }
+
+    // Initialize Active Tab and Pre-advising defaults after all script definitions
+    const serverTab = "{{ active_tab or '' }}";
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    let savedTab;
+    if (tabParam) {
+        savedTab = tabParam;
+    } else if (serverTab === 'advising') {
+        savedTab = 'advising';
+    } else {
+        savedTab = localStorage.getItem('student_active_tab') || 'dashboard';
+        if (savedTab === 'advising') savedTab = 'dashboard';
+    }
+    switchTab(savedTab);
+    
+    // Initialize pre-advising defaults
+    if (typeof filterPreAdvising === 'function') {
+        filterPreAdvising('recommended');
+    }
+    if (typeof updatePreAdvisingCartList === 'function') {
+        updatePreAdvisingCartList();
+    }
+
+    // Auto-highlight already-planned courses on page load
+    planCourseCodes.forEach(code => {
+        const cardEl = document.getElementById(`course-card-${code}`);
+        if (cardEl) {
+            cardEl.classList.remove('border-[#e2e8f0]', 'dark:border-[#1e293b]');
+            cardEl.classList.add('border-blue-500', 'bg-blue-50/10');
+        }
+    });
 </script>
 {% endblock %}
