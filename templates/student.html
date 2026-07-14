@@ -207,24 +207,47 @@
             </div>
         </div>
 
-        <div class="stitch-card space-y-4">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Financial Status</h3>
-            <div class="space-y-3 text-xs">
-                <div class="flex justify-between border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
-                    <span>Account Balance:</span>
-                    <span class="font-bold text-red-500">TAKA {{ student.outstanding_balance }}</span>
+        <div class="space-y-6">
+            <div class="stitch-card space-y-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Financial Status</h3>
+                <div class="space-y-3 text-xs">
+                    <div class="flex justify-between border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
+                        <span>Account Balance:</span>
+                        <span class="font-bold text-red-500">TAKA {{ student.outstanding_balance }}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
+                        <span>Advising Status:</span>
+                        <span class="font-bold uppercase text-amber-500">{{ student.advising_status.replace('_', ' ') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Financial Clearance:</span>
+                        {% if student.financial_cleared %}
+                        <span class="font-bold text-green-500 flex items-center gap-1">CLEARED <i data-lucide="check-circle" class="w-3.5 h-3.5"></i></span>
+                        {% else %}
+                        <span class="font-bold text-red-500 flex items-center gap-1">HOLD ACTIVE <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i></span>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="flex justify-between border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
-                    <span>Advising Status:</span>
-                    <span class="font-bold uppercase text-amber-500">{{ student.advising_status.replace('_', ' ') }}</span>
+            </div>
+
+            <!-- Notifications Card -->
+            <div class="stitch-card space-y-4">
+                <div class="flex justify-between items-center border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#94a3b8]">Recent Notifications</h3>
+                    <span class="text-[0.62rem] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold">{{ notifications | length }}</span>
                 </div>
-                <div class="flex justify-between">
-                    <span>Financial Clearance:</span>
-                    {% if student.financial_cleared %}
-                    <span class="font-bold text-green-500 flex items-center gap-1">CLEARED <i data-lucide="check-circle" class="w-3.5 h-3.5"></i></span>
+                <div class="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                    {% for notif in notifications %}
+                    <div class="p-3 bg-[#f8fafc] dark:bg-[#1e293b]/30 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl space-y-1">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-xs text-blue-600 dark:text-blue-400">{{ notif.title }}</span>
+                            <span class="text-[0.65rem] text-[#94a3b8] font-mono">{{ notif.created_at.strftime('%d-%b %I:%M %p') if notif.created_at else '' }}</span>
+                        </div>
+                        <p class="text-[0.7rem] text-slate-600 dark:text-slate-300 leading-relaxed">{{ notif.message }}</p>
+                    </div>
                     {% else %}
-                    <span class="font-bold text-red-500 flex items-center gap-1">HOLD ACTIVE <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i></span>
-                    {% endif %}
+                    <p class="text-xs text-[#94a3b8] text-center py-4">No recent notifications.</p>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -505,39 +528,19 @@
                         </p>
                     </div>
                     
-                    <!-- Inner options -->
-                    <div class="pt-4 border-t border-slate-200 dark:border-slate-800/60 space-y-2">
+                    <!-- Action Button -->
+                    <div class="pt-4 border-t border-slate-200 dark:border-slate-800/60">
                         {% if not request_card_active %}
                         <p class="text-[0.68rem] text-slate-500 italic text-center py-2">
                             LOCKED: Requires Pre-Advising complete, official advising over, and Admin Option ON.
                         </p>
-                        <!-- Disabled Buttons visual state -->
-                        <div class="grid grid-cols-2 gap-2 opacity-50 pointer-events-none">
-                            <button class="py-1.5 bg-slate-100 dark:bg-slate-900 text-[0.68rem] font-bold text-slate-400 rounded-lg text-center" disabled>Add Course</button>
-                            <button class="py-1.5 bg-slate-100 dark:bg-slate-900 text-[0.68rem] font-bold text-slate-400 rounded-lg text-center" disabled>Drop Course</button>
-                            <button class="py-1.5 bg-slate-100 dark:bg-slate-900 text-[0.68rem] font-bold text-slate-400 rounded-lg text-center" disabled>Section Change</button>
-                            <button class="py-1.5 bg-slate-100 dark:bg-slate-900 text-[0.68rem] font-bold text-slate-400 rounded-lg text-center" disabled>Seat Request</button>
-                        </div>
-                        {% if requests | length > 0 %}
-                        <button onclick="switchTab('requests')" class="w-full py-1.5 mt-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-[0.68rem] font-bold text-slate-500 rounded-lg text-center transition-all flex items-center justify-center gap-1.5 border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
-                            <i data-lucide="history" class="w-3.5 h-3.5"></i> View Request History
+                        <button disabled class="w-full py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 text-xs font-black cursor-not-allowed">
+                            LOCKED: REQUEST PORTAL
                         </button>
-                        {% endif %}
                         {% else %}
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="switchTab('requests'); showRequestTab('add-course')" class="py-1.5 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-[0.68rem] font-bold text-indigo-400 rounded-lg text-center transition-all">
-                                Add Course
-                            </button>
-                            <button onclick="switchTab('requests'); showRequestTab('drop-course')" class="py-1.5 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-[0.68rem] font-bold text-indigo-400 rounded-lg text-center transition-all">
-                                Drop Course
-                            </button>
-                            <button onclick="switchTab('requests'); showRequestTab('change-section')" class="py-1.5 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-[0.68rem] font-bold text-indigo-400 rounded-lg text-center transition-all">
-                                Section Change
-                            </button>
-                            <button onclick="switchTab('requests'); showRequestTab('seat-request')" class="py-1.5 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-[0.68rem] font-bold text-indigo-400 rounded-lg text-center transition-all">
-                                Seat Request
-                            </button>
-                        </div>
+                        <button onclick="switchTab('requests')" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all shadow-lg shadow-indigo-500/20">
+                            ENTER REQUEST PORTAL
+                        </button>
                         {% endif %}
                     </div>
                 </div>
@@ -1041,7 +1044,8 @@
         <!-- Forms Panel (Left 2 cols) -->
         <div class="lg:col-span-2 space-y-6">
             <!-- Form selector buttons -->
-            <div class="flex gap-2 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+            <div class="flex flex-wrap gap-2 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+                {% if request_phase_active %}
                 <button onclick="toggleRequestForm('add-course')" id="btn-form-add-course" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white border border-blue-600 transition-all">
                     Course Add Request
                 </button>
@@ -1051,69 +1055,138 @@
                 <button onclick="toggleRequestForm('seat-increase')" id="btn-form-seat-increase" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-transparent transition-all">
                     Seat Increase
                 </button>
+                {% else %}
+                <button class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-600 border border-transparent cursor-not-allowed" disabled title="Phase Closed by Admin">
+                    Course Add (Closed)
+                </button>
+                <button class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-600 border border-transparent cursor-not-allowed" disabled title="Phase Closed by Admin">
+                    Section Change (Closed)
+                </button>
+                <button class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-600 border border-transparent cursor-not-allowed" disabled title="Phase Closed by Admin">
+                    Seat Increase (Closed)
+                </button>
+                {% endif %}
+                
+                {% if drop_withdraw_active %}
                 <button onclick="toggleRequestForm('drop-course')" id="btn-form-drop-course" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-transparent transition-all">
                     Drop Course
                 </button>
+                <button onclick="toggleRequestForm('withdraw-course')" id="btn-form-withdraw-course" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-transparent transition-all">
+                    Withdraw Course
+                </button>
+                {% else %}
+                <button class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-600 border border-transparent cursor-not-allowed" disabled title="Phase Closed by Admin">
+                    Drop Course (Closed)
+                </button>
+                <button class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-600 border border-transparent cursor-not-allowed" disabled title="Phase Closed by Admin">
+                    Withdraw Course (Closed)
+                </button>
+                {% endif %}
             </div>
 
             <!-- 1. Course Add Request Form -->
             <div id="form-add-course" class="stitch-card space-y-4">
                 <h3 class="font-bold text-sm text-blue-600 dark:text-blue-400">Submit Course Add Override Request</h3>
-                <form action="{{ url_for('submit_override_request') }}" method="POST" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Course</label>
-                            <select name="course_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
-                                {% for c in courses %}
-                                <option value="{{ c.code }}">{{ c.code }}{% if c.title and c.title.lower() != c.code.lower() %}: {{ c.title }}{% endif %}</option>
-                                {% endfor %}
-                            </select>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: Course Search & List -->
+                    <div class="lg:col-span-2 space-y-3">
+                        <div class="relative w-full">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-[#94a3b8] pointer-events-none">
+                                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                            </span>
+                            <input type="text" id="req-add-search" oninput="filterAddRequestCourses()" placeholder="Search catalog by course code or title..." 
+                                   class="w-full pl-9 pr-3 py-2 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 text-[#0f172a] dark:text-[#f1f5f9] placeholder-slate-400">
                         </div>
-                        <div>
-                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Target Section (Optional)</label>
-                            <input type="text" name="section_id" placeholder="e.g. 01" class="stitch-input text-xs">
+                        
+                        <div class="max-h-[350px] overflow-y-auto space-y-2 pr-1" id="req-add-course-list">
+                            {% for c in courses %}
+                            {% if not c.code.endswith(' Lab') %}
+                            <div class="req-add-card p-3 rounded-lg border border-[#e2e8f0] dark:border-[#1e293b] flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-900/15 transition-all" data-code="{{ c.code | lower }}" data-title="{{ c.title | lower }}">
+                                <div>
+                                    <div class="font-bold text-xs text-blue-600 dark:text-blue-400">{{ c.code }}</div>
+                                    <div class="text-[0.7rem] text-slate-500 mt-0.5">{{ c.title }}</div>
+                                    <div class="text-[0.62rem] text-slate-400 mt-0.5">Credits: {{ c.credits }} | Prereqs: {{ c.prerequisites | join(', ') if c.prerequisites else 'None' }}</div>
+                                </div>
+                                <button type="button" onclick="addToRequestCart('{{ c.code }}')" class="px-2.5 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[0.68rem] font-bold hover:bg-blue-200 transition-all">
+                                    + Add to Request Cart
+                                </button>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Justification Notes (Mandatory)</label>
-                        <textarea name="comments" required rows="3" placeholder="Why do you need this course? E.g., prerequisite or graduation requirement..." class="w-full p-3 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"></textarea>
+                    
+                    <!-- Right: Request Cart & Submission -->
+                    <div class="space-y-4 bg-slate-950/20 p-4 rounded-xl border border-slate-800">
+                        <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Request Cart</h4>
+                        
+                        <!-- Selected Courses List -->
+                        <div id="add-request-cart-container" class="space-y-2 max-h-48 overflow-y-auto">
+                            <p class="text-[0.68rem] text-slate-500 italic" id="add-cart-empty-msg">No courses selected for request.</p>
+                        </div>
+                        
+                        <form action="{{ url_for('submit_add_request_multi') }}" method="POST" id="submit-add-request-form" class="space-y-3 pt-2">
+                            <input type="hidden" name="course_ids" id="add-request-cart-input" value="[]">
+                            <div>
+                                <label class="block text-[0.68rem] font-bold text-slate-300 uppercase tracking-wider mb-1.5">Mandatory Message / Reason:</label>
+                                <textarea name="comments" required rows="3" placeholder="Explain the academic reason why you need to register these courses..." 
+                                          class="w-full p-2.5 bg-white dark:bg-[#0c101d] border border-slate-700/60 rounded-lg text-xs outline-none focus:border-blue-500 text-slate-200"></textarea>
+                            </div>
+                            <button type="submit" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-black shadow-lg shadow-blue-500/25 transition-all">
+                                Submit Add Course Request
+                            </button>
+                        </form>
                     </div>
-                    <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4">
-                        Submit Add Request
-                    </button>
-                </form>
+                </div>
             </div>
 
             <!-- 2. Section Change Request Form -->
             <div id="form-change-section" class="stitch-card space-y-4 hidden">
                 <h3 class="font-bold text-sm text-amber-500">Submit Section Change Request</h3>
-                <form action="{{ url_for('submit_change_request') }}" method="POST" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Your Registered Section</label>
-                            <select name="current_section_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
+                <form action="{{ url_for('submit_change_request_multi') }}" method="POST" id="section-swap-form" class="space-y-4">
+                    <input type="hidden" name="swaps" id="swaps-hidden-input" value="[]">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Left side: Student's Registered Courses selection -->
+                        <div class="space-y-3">
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">
+                                Select Registered Course(s) (Maximum 2)
+                            </label>
+                            <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                                 {% for s in next_schedule_sections %}
-                                <option value="{{ s.id }}">Sec {{ s.section_number }} - {{ s.course_code }} ({{ s.schedule }})</option>
+                                {% if not s.is_lab %}
+                                <label class="flex items-center gap-3 p-3 rounded-xl border border-[#e2e8f0] dark:border-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-900/10 cursor-pointer transition-all">
+                                    <input type="checkbox" name="selected_swap_courses" value="{{ s.id }}" data-course="{{ s.course_code }}" onchange="handleSwapSelectionChange(this)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ s.course_code }} Sec {{ s.section_number }}</div>
+                                        <div class="text-[0.62rem] text-slate-400 font-mono mt-0.5">{{ s.schedule }}</div>
+                                    </div>
+                                </label>
+                                {% endif %}
                                 {% else %}
-                                <option value="">No registered sections in your cart</option>
+                                <p class="text-xs text-slate-500 italic">No registered courses found for next semester.</p>
                                 {% endfor %}
-                            </select>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Target Section</label>
-                            <select name="new_section_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
-                                {% for s in sections %}
-                                <option value="{{ s.id }}">{{ s.course_code }} Sec {{ s.section_number }} ({{ s.schedule }}) - Seats: {{ s.enrolled_count }}/{{ s.capacity }}</option>
-                                {% endfor %}
-                            </select>
+                        
+                        <!-- Right side: Dynamic alternative section options list -->
+                        <div class="space-y-3">
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">
+                                Available Alternative Sections
+                            </label>
+                            <div id="section-swap-workspace" class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                                <p class="text-xs text-slate-400 italic">Select one or two registered courses on the left to show alternative sections.</p>
+                            </div>
                         </div>
                     </div>
+                    
                     <div>
                         <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Justification Notes (Mandatory)</label>
-                        <textarea name="comments" required rows="3" placeholder="Why do you need to change your section?" class="w-full p-3 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"></textarea>
+                        <textarea name="comments" required rows="3" placeholder="Explain the reason why you need to swap sections..." class="w-full p-3 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-800 dark:text-slate-100"></textarea>
                     </div>
-                    <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-amber-500 hover:bg-amber-600 border-amber-500 hover:border-amber-600">
-                        Submit Change Request
+                    
+                    <button type="submit" onclick="submitSwapRequestForm(event)" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-amber-500 hover:bg-amber-600 border-amber-500 hover:border-amber-600">
+                        Submit Section Change Request
                     </button>
                 </form>
             </div>
@@ -1174,6 +1247,33 @@
                     </div>
                     <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-red-500 hover:bg-red-600 border-red-500 hover:border-red-600">
                         Submit Drop Request
+                    </button>
+                </form>
+            </div>
+
+            <!-- 5. Withdraw Course Request Form -->
+            <div id="form-withdraw-course" class="stitch-card space-y-4 hidden">
+                <h3 class="font-bold text-sm text-rose-500">Submit Withdraw Course Request</h3>
+                <form action="{{ url_for('submit_override_request') }}" method="POST" class="space-y-4">
+                    <input type="hidden" name="request_type" value="withdraw_course">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Course to Withdraw</label>
+                            <select name="course_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
+                                {% for s in next_schedule_sections %}
+                                <option value="{{ s.course_code }}">{{ s.course_code }} - Sec {{ s.section_number }}</option>
+                                {% else %}
+                                <option value="">No registered courses in your cart</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Justification / Reason (Mandatory)</label>
+                        <textarea name="comments" required rows="3" placeholder="Why do you need to withdraw from this course? E.g., class performance, excessive stress..." class="w-full p-3 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"></textarea>
+                    </div>
+                    <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-rose-500 hover:bg-rose-600 border-rose-500 hover:border-rose-600">
+                        Submit Withdraw Request
                     </button>
                 </form>
             </div>
@@ -1576,6 +1676,14 @@
 
         if (tabId === 'advising') {
             showAdvisingHub();
+        } else if (tabId === 'requests') {
+            const reqActive = {{ 'true' if request_phase_active else 'false' }};
+            const dropActive = {{ 'true' if drop_withdraw_active else 'false' }};
+            if (reqActive) {
+                toggleRequestForm('add-course');
+            } else if (dropActive) {
+                toggleRequestForm('drop-course');
+            }
         }
 
         updateBreadcrumbs(tabId);
@@ -1583,7 +1691,7 @@
     }
 
     function toggleRequestForm(formId) {
-        ['add-course', 'change-section', 'seat-increase', 'drop-course'].forEach(f => {
+        ['add-course', 'change-section', 'seat-increase', 'drop-course', 'withdraw-course'].forEach(f => {
             const formEl = document.getElementById(`form-${f}`);
             if (formEl) formEl.classList.add('hidden');
             const btnEl = document.getElementById(`btn-form-${f}`);
@@ -1608,13 +1716,14 @@
         else if (formId === 'change-section') subNavId = 'nav-section-change';
         else if (formId === 'seat-increase') subNavId = 'nav-seat-request';
         else if (formId === 'drop-course') subNavId = 'nav-drop-request';
+        else if (formId === 'withdraw-course') subNavId = 'nav-withdraw-request';
         
         const subNavEl = document.getElementById(subNavId);
         if (subNavEl) subNavEl.classList.add('active');
     }
 
     function showRequestTab(formId) {
-        const mappedForm = formId === 'seat-request' ? 'seat-increase' : (formId === 'drop-request' ? 'drop-course' : formId);
+        const mappedForm = formId === 'seat-request' ? 'seat-increase' : (formId === 'drop-request' ? 'drop-course' : (formId === 'withdraw-request' ? 'withdraw-course' : formId));
         toggleRequestForm(mappedForm);
         showForm(mappedForm);
     }
@@ -1977,6 +2086,211 @@
         return false;
     }
 
+    // ADD COURSE REQUEST CART LOGIC
+    let addRequestCart = [];
+
+    function filterAddRequestCourses() {
+        const query = document.getElementById('req-add-search').value.trim().toLowerCase();
+        const cards = document.querySelectorAll('#req-add-course-list .req-add-card');
+        cards.forEach(card => {
+            const code = card.getAttribute('data-code') || '';
+            const title = card.getAttribute('data-title') || '';
+            if (code.includes(query) || title.includes(query)) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
+
+    function addToRequestCart(code) {
+        if (addRequestCart.includes(code)) {
+            alert('This course is already in your request cart.');
+            return;
+        }
+        addRequestCart.push(code);
+        updateAddRequestCartUI();
+    }
+
+    function removeFromRequestCart(code) {
+        addRequestCart = addRequestCart.filter(c => c !== code);
+        updateAddRequestCartUI();
+    }
+
+    function updateAddRequestCartUI() {
+        const container = document.getElementById('add-request-cart-container');
+        const hiddenInput = document.getElementById('add-request-cart-input');
+        if (!container || !hiddenInput) return;
+
+        hiddenInput.value = JSON.stringify(addRequestCart);
+
+        if (addRequestCart.length === 0) {
+            container.innerHTML = '<p class="text-[0.68rem] text-slate-500 italic" id="add-cart-empty-msg">No courses selected for request.</p>';
+            return;
+        }
+
+        let html = '';
+        addRequestCart.forEach(code => {
+            html += `
+                <div class="flex items-center justify-between p-2 bg-slate-900/40 rounded-lg border border-slate-800 text-xs">
+                    <span class="font-bold text-blue-400">${code}</span>
+                    <button type="button" onclick="removeFromRequestCart('${code}')" class="text-red-500 hover:text-red-400 transition-colors">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+
+    // SECTION CHANGE SWAP LOGIC
+    function handleSwapSelectionChange(checkbox) {
+        const checked = Array.from(document.querySelectorAll('input[name="selected_swap_courses"]:checked'));
+        
+        // Enforce max 2 selection
+        if (checked.length > 2) {
+            checkbox.checked = false;
+            alert('You can select a maximum of two (2) courses for section change.');
+            return;
+        }
+
+        // Disable other checkboxes if 2 selected
+        const allCheckboxes = document.querySelectorAll('input[name="selected_swap_courses"]');
+        allCheckboxes.forEach(cb => {
+            if (!cb.checked) {
+                cb.disabled = (checked.length >= 2);
+                cb.parentElement.style.opacity = (checked.length >= 2) ? '0.5' : '1';
+            }
+        });
+
+        // Load swap options
+        loadSectionSwapOptions(checked);
+    }
+
+    function loadSectionSwapOptions(checked) {
+        const workspace = document.getElementById('section-swap-workspace');
+        if (!workspace) return;
+
+        if (checked.length === 0) {
+            workspace.innerHTML = '<p class="text-xs text-slate-400 italic">Select one or two registered courses on the left to show alternative sections.</p>';
+            return;
+        }
+
+        let html = '';
+        checked.forEach(cb => {
+            const currentSecId = cb.value;
+            const currentSec = sectionsData.find(s => s.id === currentSecId);
+            if (!currentSec) return;
+
+            // Find alternatives of same course code (excluding labs, backend registers labs automatically)
+            const alternatives = sectionsData.filter(s => s.course_code === currentSec.course_code && s.id !== currentSec.id && !s.is_lab);
+
+            let optionsHtml = '';
+            if (alternatives.length === 0) {
+                optionsHtml = '<p class="text-[0.68rem] text-slate-500 italic">No alternative sections offered for this course.</p>';
+            } else {
+                alternatives.forEach(targetSec => {
+                    const isFull = targetSec.enrolled_count >= targetSec.capacity;
+                    
+                    // Conflict check against student's registrations
+                    let isConflicted = false;
+                    let conflictCourse = '';
+                    
+                    for (let regId of registrationsList) {
+                        const regSec = sectionsData.find(s => s.id === regId);
+                        if (regSec) {
+                            if (regSec.course_code === currentSec.course_code || regSec.course_code === currentSec.course_code + ' Lab') {
+                                continue;
+                            }
+                            if (checkOverlap(regSec.schedule, targetSec.schedule)) {
+                                isConflicted = true;
+                                conflictCourse = regSec.course_code;
+                                break;
+                            }
+                        }
+                    }
+
+                    let badgeHtml = '';
+                    if (isFull) {
+                        badgeHtml += `<span class="px-1.5 py-0.5 rounded text-[0.6rem] font-bold bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400">Full</span> `;
+                    }
+                    if (isConflicted) {
+                        badgeHtml += `<span class="px-1.5 py-0.5 rounded text-[0.6rem] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">Conflicted (${conflictCourse})</span> `;
+                    }
+                    if (!isFull && !isConflicted) {
+                        badgeHtml += `<span class="px-1.5 py-0.5 rounded text-[0.6rem] font-bold bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400">Available</span>`;
+                    }
+
+                    optionsHtml += `
+                        <label class="flex items-center justify-between p-2.5 rounded-lg border border-[#e2e8f0] dark:border-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-900/10 cursor-pointer">
+                            <div class="flex items-center gap-2">
+                                <input type="radio" name="target_section_${currentSec.id}" value="${targetSec.id}" class="w-3.5 h-3.5 text-blue-600 border-slate-300">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Sec ${targetSec.section_number}</span>
+                                    <span class="text-[0.65rem] text-slate-500 font-mono ml-1">${targetSec.schedule}</span>
+                                    <span class="text-[0.65rem] text-slate-400 ml-1">Room: ${targetSec.room}</span>
+                                    <span class="text-[0.65rem] text-slate-400 ml-1">Seats: ${targetSec.enrolled_count}/${targetSec.capacity}</span>
+                                </div>
+                            </div>
+                            <div>
+                                ${badgeHtml}
+                            </div>
+                        </label>
+                    `;
+                });
+            }
+
+            html += `
+                <div class="p-3.5 rounded-xl border border-[#e2e8f0] dark:border-[#1e293b] bg-white dark:bg-[#0c101d] space-y-2.5" data-current-sec-id="${currentSec.id}">
+                    <div class="flex justify-between items-center border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
+                        <span class="text-xs font-black text-slate-800 dark:text-slate-200">${currentSec.course_code}</span>
+                        <span class="text-[0.65rem] text-slate-400">Current: Sec ${currentSec.section_number} (${currentSec.schedule})</span>
+                    </div>
+                    <div class="space-y-2">
+                        ${optionsHtml}
+                    </div>
+                </div>
+            `;
+        });
+        workspace.innerHTML = html;
+    }
+
+    function submitSwapRequestForm(event) {
+        event.preventDefault();
+        const checked = Array.from(document.querySelectorAll('input[name="selected_swap_courses"]:checked'));
+        if (checked.length === 0) {
+            alert('Please select at least one registered course to swap.');
+            return;
+        }
+
+        const swaps = [];
+        for (let cb of checked) {
+            const currentSecId = cb.value;
+            const radio = document.querySelector(`input[name="target_section_${currentSecId}"]:checked`);
+            if (!radio) {
+                const currentSec = sectionsData.find(s => s.id === currentSecId);
+                alert(`Please select a target section for ${currentSec.course_code}.`);
+                return;
+            }
+            swaps.push({
+                current_section_id: currentSecId,
+                new_section_id: radio.value
+            });
+        }
+
+        const comments = document.querySelector('#section-swap-form textarea[name="comments"]').value.trim();
+        if (!comments) {
+            alert('Justification comments are mandatory.');
+            return;
+        }
+
+        document.getElementById('swaps-hidden-input').value = JSON.stringify(swaps);
+        document.getElementById('section-swap-form').submit();
+    }
+
     function loadAdvisingSections() {
         const cardsContainer = document.getElementById('advising-cards-container');
         if (!cardsContainer) return;
@@ -2202,9 +2516,6 @@
                             actionHtml = `<span class="text-blue-500 dark:text-blue-400 text-[0.65rem] font-medium italic">Linked Lab</span>`;
                         } else {
                             actionHtml = `
-                                <button onclick="openChangeModal('${sec.id}', '${sec.course_code}')" class="px-2 py-1 bg-violet-500/10 border border-violet-500/20 text-violet-600 rounded text-[0.62rem] font-bold hover:bg-violet-600 hover:text-white transition-all mr-1">
-                                    Swap
-                                </button>
                                 <button onclick="toggleSectionAJAX('${sec.id}', false, false, false, 'remove')" class="text-red-500 hover:text-red-700">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>

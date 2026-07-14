@@ -1716,12 +1716,12 @@ input[type="file"] {
     <!-- Advising Phase Switches -->
     <div class="glass-card p-6 space-y-4">
         <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Academic Portal Control Switches</h3>
-        <div class="max-w-md">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Requests Phase Toggle -->
             <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-4">
                 <div>
-                    <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">Advisor Swap & Add Requests</h4>
-                    <p class="text-[0.7rem] text-slate-500 mt-1">Enables post-advising request features (waivers, section swaps, overrides).</p>
+                    <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">Course Add, Swap & Seat Increase Phase</h4>
+                    <p class="text-[0.7rem] text-slate-500 mt-1">Enables students to request course additions, section swaps, or seat increases.</p>
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold uppercase {{ 'text-green-600' if request_phase_active else 'text-red-500' }}">
@@ -1730,6 +1730,24 @@ input[type="file"] {
                     <form action="/admin/toggle-setting/request_phase_active" method="POST">
                         <button type="submit" class="text-xs px-3 py-1.5 font-bold rounded-lg transition-colors {{ 'bg-red-100 hover:bg-red-200 text-red-700' if request_phase_active else 'bg-green-100 hover:bg-green-200 text-green-700' }}">
                             {{ 'Close Phase' if request_phase_active else 'Start Phase' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Drop & Withdraw Phase Toggle -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-4">
+                <div>
+                    <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">Course Drop & Withdraw Phase</h4>
+                    <p class="text-[0.7rem] text-slate-500 mt-1">Enables students to request course drops or semester/course withdrawals.</p>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold uppercase {{ 'text-green-600' if drop_withdraw_active else 'text-red-500' }}">
+                        {{ 'ON / ACTIVE' if drop_withdraw_active else 'OFF / SHUT' }}
+                    </span>
+                    <form action="/admin/toggle-setting/drop_withdraw_active" method="POST">
+                        <button type="submit" class="text-xs px-3 py-1.5 font-bold rounded-lg transition-colors {{ 'bg-red-100 hover:bg-red-200 text-red-700' if drop_withdraw_active else 'bg-green-100 hover:bg-green-200 text-green-700' }}">
+                            {{ 'Close Phase' if drop_withdraw_active else 'Start Phase' }}
                         </button>
                     </form>
                 </div>
@@ -2011,13 +2029,16 @@ input[type="file"] {
                         <option value="add_course" class="bg-[#0f172a]">Add Course</option>
                         <option value="change_section" class="bg-[#0f172a]">Section Swap</option>
                         <option value="seat_increase" class="bg-[#0f172a]">Seat Increase</option>
+                        <option value="drop_course" class="bg-[#0f172a]">Drop Course</option>
+                        <option value="withdraw_course" class="bg-[#0f172a]">Withdraw Course</option>
                     </select>
                 </div>
                 <div class="flex items-center gap-2">
                     <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Status:</label>
                     <select id="request-status-filter" onchange="filterCourseRequests()" class="px-2.5 py-1.5 bg-white/5 border border-white/8 rounded-xl text-[0.7rem] text-slate-200 outline-none focus:border-emerald-500/50 transition-all">
                         <option value="all" class="bg-[#0f172a]">All Statuses</option>
-                        <option value="pending_advisor" class="bg-[#0f172a]">Pending</option>
+                        <option value="pending_advisor" class="bg-[#0f172a]">Pending Advisor</option>
+                        <option value="pending_admin" class="bg-[#0f172a]">Pending Admin</option>
                         <option value="approved" class="bg-[#0f172a]">Approved</option>
                         <option value="rejected" class="bg-[#0f172a]">Rejected</option>
                     </select>
@@ -2035,6 +2056,7 @@ input[type="file"] {
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Status</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Student Justification</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Advisor Note</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Admin Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2060,6 +2082,10 @@ input[type="file"] {
                             <span class="badge badge-info text-[0.6rem] font-bold uppercase">Add Course</span>
                             {% elif req.type == 'change_section' %}
                             <span class="badge badge-warning text-[0.6rem] font-bold uppercase font-mono">Section Swap</span>
+                            {% elif req.type == 'drop_course' %}
+                            <span class="badge badge-danger text-[0.6rem] font-bold uppercase font-mono">Drop Course</span>
+                            {% elif req.type == 'withdraw_course' %}
+                            <span class="badge badge-danger text-[0.6rem] font-bold uppercase font-mono">Withdraw Course</span>
                             {% else %}
                             <span class="badge badge-neutral text-[0.6rem] font-bold uppercase">Seat Increase</span>
                             {% endif %}
@@ -2069,6 +2095,8 @@ input[type="file"] {
                             <span class="badge badge-success text-[0.6rem] font-bold uppercase">Approved</span>
                             {% elif req.status == 'rejected' %}
                             <span class="badge badge-danger text-[0.6rem] font-bold uppercase font-mono">Rejected</span>
+                            {% elif req.status == 'pending_admin' %}
+                            <span class="badge badge-info text-[0.6rem] font-bold uppercase font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">Pending Admin</span>
                             {% else %}
                             <span class="badge badge-warning text-[0.6rem] font-bold uppercase font-mono">Pending Advisor</span>
                             {% endif %}
@@ -2079,10 +2107,36 @@ input[type="file"] {
                         <td class="px-4 py-3 text-xs text-slate-400">
                             {{ req.advisor_note or '—' }}
                         </td>
+                        <td class="px-4 py-3 text-xs">
+                            {% if req.type == 'seat_increase' and req.status == 'pending_admin' %}
+                            <div class="flex flex-wrap gap-1.5">
+                                <form action="/admin/resolve-seat-request/{{ req.id }}" method="POST" class="inline">
+                                    <input type="hidden" name="action" value="increase_enroll">
+                                    <button type="submit" class="px-2 py-1 bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500 hover:text-white rounded text-[0.65rem] font-bold transition-all">
+                                        Yes (Enroll)
+                                    </button>
+                                </form>
+                                <form action="/admin/resolve-seat-request/{{ req.id }}" method="POST" class="inline">
+                                    <input type="hidden" name="action" value="just_increase">
+                                    <button type="submit" class="px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500 hover:text-white rounded text-[0.65rem] font-bold transition-all">
+                                        Just Seat +1
+                                    </button>
+                                </form>
+                                <form action="/admin/resolve-seat-request/{{ req.id }}" method="POST" class="inline">
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="submit" class="px-2 py-1 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white rounded text-[0.65rem] font-bold transition-all">
+                                        Cancel
+                                    </button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <span class="text-slate-500 font-mono">—</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-slate-500 py-8">
+                        <td colspan="7" class="text-center text-slate-500 py-8">
                             <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-600"></i>
                             <p class="text-xs">No active advising override requests logged.</p>
                         </td>

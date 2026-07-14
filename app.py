@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from models import (
     db, User, Department, Faculty, Student, Admin,
     PreAdvisingCourse, SectionOffering, AdvisingWindow, AdvisingPlan, Registration,
-    SemesterDropRequest, AttendanceRecord, AdvisingRequest, Grade, LedgerEntry, Installment, Announcement, SystemSetting
+    SemesterDropRequest, AttendanceRecord, AdvisingRequest, Grade, LedgerEntry, Installment, Announcement, SystemSetting, Notification
 )
 
 @event.listens_for(Engine, "connect")
@@ -973,36 +973,36 @@ def render_student_portal(active_tab):
     now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
     
     pre_advising_active = False
-    if is_setting_true('pre_advising_active'):
-        pre_advising_active = True
+    student_pre_window = AdvisingWindow.query.filter(
+        AdvisingWindow.type == 'pre',
+        AdvisingWindow.semester_id == get_current_semester(),
+        AdvisingWindow.credit_min <= student.completed_credits,
+        AdvisingWindow.credit_max >= student.completed_credits
+    ).first()
+    if student_pre_window:
+        if is_setting_true('pre_advising_active') and (student_pre_window.start_date_time <= now_str <= student_pre_window.end_date_time):
+            pre_advising_active = True
     else:
-        student_pre_window = AdvisingWindow.query.filter(
-            AdvisingWindow.type == 'pre',
-            AdvisingWindow.semester_id == get_current_semester(),
-            AdvisingWindow.credit_min <= student.completed_credits,
-            AdvisingWindow.credit_max >= student.completed_credits,
-            AdvisingWindow.start_date_time <= now_str,
-            AdvisingWindow.end_date_time >= now_str
-        ).first()
-        if student_pre_window:
+        if is_setting_true('pre_advising_active'):
             pre_advising_active = True
         
     final_advising_active = False
-    if is_setting_true('final_advising_active'):
-        final_advising_active = True
+    student_final_window = AdvisingWindow.query.filter(
+        AdvisingWindow.type == 'final',
+        AdvisingWindow.semester_id == get_current_semester(),
+        AdvisingWindow.credit_min <= student.completed_credits,
+        AdvisingWindow.credit_max >= student.completed_credits
+    ).first()
+    if student_final_window:
+        if is_setting_true('final_advising_active') and (student_final_window.start_date_time <= now_str <= student_final_window.end_date_time):
+            final_advising_active = True
     else:
-        student_final_window = AdvisingWindow.query.filter(
-            AdvisingWindow.type == 'final',
-            AdvisingWindow.semester_id == get_current_semester(),
-            AdvisingWindow.credit_min <= student.completed_credits,
-            AdvisingWindow.credit_max >= student.completed_credits,
-            AdvisingWindow.start_date_time <= now_str,
-            AdvisingWindow.end_date_time >= now_str
-        ).first()
-        if student_final_window:
+        if is_setting_true('final_advising_active'):
             final_advising_active = True
         
     request_phase_active = is_setting_true('request_phase_active')
+    drop_withdraw_active = is_setting_true('drop_withdraw_active')
+    notifications = Notification.query.filter_by(student_id=student.id).order_by(Notification.created_at.desc()).all()
 
     # Recommended courses (excluding completed/passed, ongoing, F failed, and D/D+ courses)
     recommended_courses = []
@@ -1126,15 +1126,15 @@ def render_student_portal(active_tab):
 
     request_status_label = 'Closed'
     request_status_class = 'text-rose-500 bg-rose-500/10 font-bold border border-rose-500/20'
-    if request_phase_active:
-        if (len(plan_course_ids) > 0) and (not pre_advising_active) and (not final_advising_active):
+    if request_phase_active or drop_withdraw_active:
+        if (len(plan_course_ids) > 0) and (not pre_advising_active):
             request_status_label = 'OPEN NOW'
             request_status_class = 'text-indigo-500 bg-indigo-500/10 animate-pulse font-extrabold border border-indigo-500/20'
         else:
             request_status_label = 'Locked (Pre-requisites pending)'
             request_status_class = 'text-amber-500 bg-amber-500/10 font-bold border border-amber-500/20'
 
-    request_card_active = (len(plan_course_ids) > 0) and (not pre_advising_active) and (not final_advising_active) and request_phase_active
+    request_card_active = (len(plan_course_ids) > 0) and (not pre_advising_active) and (request_phase_active or drop_withdraw_active)
     
     return render_template(
         'student.html',
@@ -1184,7 +1184,9 @@ def render_student_portal(active_tab):
         available_semesters=available_semesters,
         selected_sched_sem=selected_sched_sem,
         formatted_selected_sched_sem=formatted_selected_sched_sem,
-        schedule_details=schedule_details
+        schedule_details=schedule_details,
+        drop_withdraw_active=drop_withdraw_active,
+        notifications=notifications
     )
 
 # Student saves pre-advising plan
@@ -1282,19 +1284,23 @@ def toggle_section():
         s = SystemSetting.query.filter_by(key=key).first()
         return s.value == 'true' if s else False
 
-    if not is_setting_true('final_advising_active'):
+    final_advising_active = False
+    student_final_window = AdvisingWindow.query.filter(
+        AdvisingWindow.type == 'final',
+        AdvisingWindow.semester_id == get_current_semester(),
+        AdvisingWindow.credit_min <= student.completed_credits,
+        AdvisingWindow.credit_max >= student.completed_credits
+    ).first()
+    if student_final_window:
         now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
-        semester = get_current_semester()
-        window = AdvisingWindow.query.filter(
-            AdvisingWindow.type == 'final',
-            AdvisingWindow.semester_id == semester,
-            AdvisingWindow.credit_min <= student.completed_credits,
-            AdvisingWindow.credit_max >= student.completed_credits,
-            AdvisingWindow.start_date_time <= now_str,
-            AdvisingWindow.end_date_time >= now_str
-        ).first()
-        if not window:
-            return jsonify({'status': 'error', 'message': 'Final advising is currently closed or not active for your completed credits range.'})
+        if is_setting_true('final_advising_active') and (student_final_window.start_date_time <= now_str <= student_final_window.end_date_time):
+            final_advising_active = True
+    else:
+        if is_setting_true('final_advising_active'):
+            final_advising_active = True
+
+    if not final_advising_active:
+        return jsonify({'status': 'error', 'message': 'Final advising is currently closed or not active for your completed credits range.'})
         
     # Financial hold check
     if not student.financial_cleared or student.outstanding_balance > 0:
@@ -1341,6 +1347,8 @@ def toggle_section():
     # Find active cart items
     regs = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
     current_sections = [SectionOffering.query.get(r.section_id) for r in regs if SectionOffering.query.get(r.section_id)]
+    # Filter out ongoing courses (courses the student is currently registered for in the current semester)
+    current_sections = [s for s in current_sections if s.course_code not in current_course_codes]
     
     # Enforce single section limit per course
     for cs in current_sections:
@@ -1476,12 +1484,18 @@ def submit_override_request():
     comments = (request.form.get('comments') or '').strip()
     request_type = (request.form.get('request_type') or 'add_course').strip()
 
-    if request_type not in ['add_course', 'seat_increase', 'drop_course']:
+    if request_type not in ['add_course', 'seat_increase', 'drop_course', 'withdraw_course']:
         request_type = 'add_course'
 
-    active_setting = SystemSetting.query.filter_by(key='request_phase_active').first()
+    if request_type in ['add_course', 'seat_increase']:
+        active_setting = SystemSetting.query.filter_by(key='request_phase_active').first()
+        phase_name = "Course Add & Seat Increase"
+    else:
+        active_setting = SystemSetting.query.filter_by(key='drop_withdraw_active').first()
+        phase_name = "Course Drop & Withdraw"
+        
     if not active_setting or active_setting.value != 'true':
-        flash('Course request phase is currently closed by the Administrator.', 'error')
+        flash(f"{phase_name} request phase is currently closed by the Administrator.", 'error')
         return redirect('/advising')
 
     if not comments:
@@ -1508,6 +1522,7 @@ def submit_override_request():
         flash('No advisor assigned to route request.', 'error')
         return redirect('/advising')
         
+    req_status = 'pending_admin' if request_type == 'seat_increase' else 'pending_advisor'
     req = AdvisingRequest(
         id=f"REQ-{student.id}-{int(datetime.utcnow().timestamp())}-{random.randint(1000, 9999)}",
         student_id=student.id,
@@ -1515,14 +1530,18 @@ def submit_override_request():
         course_id=course_id,
         type=request_type,
         comments=comments,
+        status=req_status,
         semester_id=get_next_semester(),
         advisor_id=student.advisor_id
     )
     db.session.add(req)
     db.session.commit()
     
-    flash('Request submitted to your advisor successfully.', 'success')
-    return redirect('/advising')
+    if request_type == 'seat_increase':
+        flash('Request submitted to the Administrator successfully.', 'success')
+    else:
+        flash('Request submitted to your advisor successfully.', 'success')
+    return redirect('/advising?tab=requests')
 
 # Submit Change Section Request
 @app.route('/student/submit-change-request', methods=['POST'])
@@ -1592,7 +1611,7 @@ def submit_change_request():
     db.session.commit()
     
     flash('Section change swap request sent to academic advisor.', 'success')
-    return redirect('/advising')
+    return redirect('/advising?tab=requests')
 
 @app.route('/student/semester-drop', methods=['POST'])
 @login_required
@@ -1633,7 +1652,7 @@ def submit_semester_drop():
     db.session.commit()
 
     flash('Semester drop application submitted successfully and marked as pending.', 'success')
-    return redirect('/advising')
+    return redirect('/advising?tab=requests')
 
 # FACULTY VIEWS
 @app.route('/faculty')
@@ -1661,11 +1680,11 @@ def faculty_dashboard():
         AdvisingRequest.comments, AdvisingRequest.advisor_note, AdvisingRequest.created_at,
         Student.name.label('student_name'), Student.id.label('student_id')
     ).join(Student, Student.id == AdvisingRequest.student_id)\
-     .filter(AdvisingRequest.advisor_id == faculty.id, AdvisingRequest.semester_id == get_current_semester())\
+     .filter(AdvisingRequest.advisor_id == faculty.id, AdvisingRequest.semester_id == get_next_semester())\
      .order_by(AdvisingRequest.created_at.asc()).all()
      
     all_sections = SectionOffering.query.filter_by(
-        semester_id=get_current_semester()
+        semester_id=get_next_semester()
     ).order_by(SectionOffering.course_code.asc(), SectionOffering.section_number.asc()).all()
     dept_students = Student.query.filter_by(department_id=faculty.department_id).all()
      
@@ -2068,165 +2087,518 @@ def register_advisee_override():
     return redirect(url_for('faculty_dashboard'))
 
 # Advisor action on student course requests
+# Helper to automatically find a valid, available section for a course
+def find_available_section_for_course(student_id, course_code, semester_id):
+    sections = SectionOffering.query.filter_by(
+        course_code=course_code,
+        semester_id=semester_id,
+        is_lab=False
+    ).all()
+    for sec in sections:
+        if sec.enrolled_count >= sec.capacity:
+            continue
+        if student_has_schedule_conflict(student_id, sec):
+            continue
+        if sec.linked_section_id:
+            lab_sec = SectionOffering.query.get(sec.linked_section_id)
+            if not lab_sec or lab_sec.enrolled_count >= lab_sec.capacity:
+                continue
+            if student_has_schedule_conflict(student_id, lab_sec):
+                continue
+        return sec
+    return None
+
+def execute_request_resolution(req, status, advisor_note, faculty_id):
+    if req.advisor_id != faculty_id:
+        return False, "Request not assigned to you."
+    if req.status != 'pending_advisor':
+        return False, f"Request is already {req.status}."
+    student = Student.query.get(req.student_id)
+    if not student:
+        return False, "Student profile not found."
+    if status == 'rejected':
+        req.status = 'rejected'
+        req.advisor_note = advisor_note
+        return True, "Request rejected."
+
+    if req.type == 'add_course':
+        regs = Registration.query.filter_by(student_id=student.id, semester_id=req.semester_id).all()
+        existing_sections = [SectionOffering.query.get(r.section_id) for r in regs if SectionOffering.query.get(r.section_id)]
+        if any(es.course_code == req.course_id for es in existing_sections):
+            return False, "Already registered for this course."
+        eligible_courses = get_eligible_courses_for_student(student)
+        if req.course_id not in eligible_courses:
+            return False, "Student does not meet prerequisite or credit requirements."
+        current_credits = sum(es.credits for es in existing_sections)
+        course_obj = PreAdvisingCourse.query.filter_by(code=req.course_id).first()
+        course_credits = course_obj.credits if course_obj else 3.0
+        lab_course = PreAdvisingCourse.query.filter_by(code=req.course_id + ' Lab').first()
+        if lab_course:
+            course_credits += lab_course.credits
+        if current_credits + course_credits > student.credit_limit:
+            return False, f"Exceeds student credit limit of {student.credit_limit} CR."
+        theory_count = sum(1 for es in existing_sections if not es.is_lab)
+        if theory_count >= 5:
+            return False, "Exceeds maximum course limit of 5 theory courses."
+        sec = find_available_section_for_course(student.id, req.course_id, req.semester_id)
+        if not sec:
+            return False, "No available sections with open seats or without schedule conflict."
+
+        db.session.add(Registration(
+            id=f"REG-{student.id}-{sec.id}",
+            student_id=student.id,
+            section_id=sec.id,
+            semester_id=req.semester_id
+        ))
+        sec.enrolled_count += 1
+        linked_lab = None
+        if sec.linked_section_id:
+            linked_lab = SectionOffering.query.get(sec.linked_section_id)
+        if linked_lab:
+            db.session.add(Registration(
+                id=f"REG-{student.id}-{linked_lab.id}",
+                student_id=student.id,
+                section_id=linked_lab.id,
+                semester_id=req.semester_id
+            ))
+            linked_lab.enrolled_count += 1
+        req.status = 'approved'
+        req.advisor_note = advisor_note
+        return True, f"Successfully registered for section {sec.section_number}."
+
+    elif req.type == 'change_section':
+        sec = SectionOffering.query.get(req.section_id)
+        old_sec = SectionOffering.query.get(req.current_section_id)
+        if not sec or not old_sec:
+            return False, "Target or current section not found."
+        if sec.enrolled_count >= sec.capacity:
+            return False, "No available seats in the requested section."
+        old_lab_id = old_sec.linked_section_id if old_sec else None
+        conflict_section = student_has_schedule_conflict(student.id, sec, exclude_section_id=[req.current_section_id, old_lab_id])
+        if conflict_section:
+            return False, f"Schedule conflict with {conflict_section.course_code}."
+        new_lab = None
+        if sec.linked_section_id:
+            new_lab = SectionOffering.query.get(sec.linked_section_id)
+            if new_lab:
+                if new_lab.enrolled_count >= new_lab.capacity:
+                    return False, "No available seats in the requested section's linked lab."
+                lab_conflict = student_has_schedule_conflict(student.id, new_lab, exclude_section_id=[req.current_section_id, old_lab_id])
+                if lab_conflict:
+                    return False, f"Linked lab schedule conflict with {lab_conflict.course_code}."
+
+        old_reg = Registration.query.filter_by(student_id=student.id, section_id=req.current_section_id, semester_id=req.semester_id).first()
+        if old_reg:
+            db.session.delete(old_reg)
+            if old_sec:
+                old_sec.enrolled_count = max(0, old_sec.enrolled_count - 1)
+        if old_sec and old_sec.linked_section_id:
+            old_lab_reg = Registration.query.filter_by(student_id=student.id, section_id=old_sec.linked_section_id, semester_id=req.semester_id).first()
+            if old_lab_reg:
+                db.session.delete(old_lab_reg)
+                old_lab_sec = SectionOffering.query.get(old_sec.linked_section_id)
+                if old_lab_sec:
+                    old_lab_sec.enrolled_count = max(0, old_lab_sec.enrolled_count - 1)
+
+        db.session.add(Registration(
+            id=f"REG-{student.id}-{sec.id}",
+            student_id=student.id,
+            section_id=sec.id,
+            semester_id=req.semester_id
+        ))
+        sec.enrolled_count += 1
+        if new_lab:
+            db.session.add(Registration(
+                id=f"REG-{student.id}-{new_lab.id}",
+                student_id=student.id,
+                section_id=new_lab.id,
+                semester_id=req.semester_id
+            ))
+            new_lab.enrolled_count += 1
+        req.status = 'approved'
+        req.advisor_note = advisor_note
+        return True, f"Section changed to {sec.section_number}."
+
+    elif req.type == 'seat_increase':
+        sec = SectionOffering.query.get(req.section_id)
+        if not sec:
+            return False, "Requested section not found."
+        sec.capacity += 1
+        if sec.linked_section_id:
+            linked_sec = SectionOffering.query.get(sec.linked_section_id)
+            if linked_sec:
+                linked_sec.capacity += 1
+        req.status = 'approved'
+        req.advisor_note = advisor_note
+        return True, "Seat capacity increased."
+
+    return False, "Unsupported request type."
+
 @app.route('/faculty/resolve-request/<req_id>', methods=['POST'])
 @login_required
 def resolve_request(req_id):
     if current_user.role != 'faculty':
         return redirect(url_for('home'))
-        
-    status = request.form.get('status') # 'approved' or 'rejected'
-    advisor_note = request.form.get('advisor_note', '')
+    status = request.form.get('status')
+    advisor_note = request.form.get('advisor_note', '').strip()
     req = AdvisingRequest.query.get(req_id)
-    
     faculty = current_faculty_profile()
     if status not in ['approved', 'rejected']:
         flash("Invalid request decision.", "error")
         return redirect(url_for('faculty_dashboard'))
-
-    if req and faculty and req.advisor_id == faculty.id:
-        req.status = status
-        req.advisor_note = advisor_note
-        
-        if status == 'approved':
-            # Execute request actions in database
-            student = Student.query.get(req.student_id)
-            sec = find_requested_section(req)
-
-            if not student or not sec:
-                flash("Could not resolve the requested section. Ask the student to submit a valid section.", "error")
-                return redirect(url_for('faculty_dashboard'))
-
-            if req.type != 'seat_increase' and sec.enrolled_count >= sec.capacity:
-                flash(f"Cannot approve: {sec.course_code} section {sec.section_number} is full.", "error")
-                return redirect(url_for('faculty_dashboard'))
-            
-            if req.type == 'add_course' and sec:
-                # Enforce single section limit per course
-                regs = Registration.query.filter_by(student_id=student.id, semester_id=req.semester_id).all()
-                existing_sections = [SectionOffering.query.get(r.section_id) for r in regs if SectionOffering.query.get(r.section_id)]
-                for es in existing_sections:
-                    if es.course_code == sec.course_code:
-                        flash(f"Cannot approve: student is already registered for section {es.section_number} of {es.course_code}.", "error")
-                        return redirect(url_for('faculty_dashboard'))
-                
-                existing_reg = Registration.query.filter_by(
-                    student_id=student.id,
-                    section_id=sec.id,
-                    semester_id=req.semester_id
-                ).first()
-                conflict_section = student_has_schedule_conflict(student.id, sec)
-                if existing_reg:
-                    flash("Student is already registered in that section.", "error")
-                    return redirect(url_for('faculty_dashboard'))
-                if conflict_section:
-                    flash(f"Cannot approve: schedule conflict with {conflict_section.course_code}.", "error")
-                    return redirect(url_for('faculty_dashboard'))
-
-                linked_lab = None
-                if sec.linked_section_id:
-                    linked_lab = SectionOffering.query.get(sec.linked_section_id)
-
-                if linked_lab:
-                    lab_conflict = student_has_schedule_conflict(student.id, linked_lab)
-                    if lab_conflict:
-                        flash(f"Cannot approve: linked lab conflicts with {lab_conflict.course_code}.", "error")
-                        return redirect(url_for('faculty_dashboard'))
-
-                db.session.add(Registration(
-                    id=f"REG-{student.id}-{sec.id}",
-                    student_id=student.id,
-                    section_id=sec.id,
-                    semester_id=req.semester_id
-                ))
-                sec.enrolled_count += 1
-
-                if linked_lab:
-                    lab_reg = Registration.query.filter_by(student_id=student.id, section_id=linked_lab.id, semester_id=req.semester_id).first()
-                    if not lab_reg:
-                        db.session.add(Registration(
-                            id=f"REG-{student.id}-{linked_lab.id}",
-                            student_id=student.id,
-                            section_id=linked_lab.id,
-                            semester_id=req.semester_id
-                        ))
-                        linked_lab.enrolled_count += 1
-                
-            elif req.type == 'change_section' and sec:
-                old_reg = Registration.query.filter_by(student_id=student.id, section_id=req.current_section_id, semester_id=req.semester_id).first()
-                if not old_reg:
-                    flash("Cannot approve: current registration was not found.", "error")
-                    return redirect(url_for('faculty_dashboard'))
-
-                target_reg = Registration.query.filter_by(
-                    student_id=student.id,
-                    section_id=sec.id,
-                    semester_id=req.semester_id
-                ).first()
-                if target_reg and sec.id != req.current_section_id:
-                    flash("Cannot approve: student is already registered in the target section.", "error")
-                    return redirect(url_for('faculty_dashboard'))
-
-                old_sec = SectionOffering.query.get(req.current_section_id)
-                old_lab_id = old_sec.linked_section_id if old_sec else None
-
-                conflict_section = student_has_schedule_conflict(student.id, sec, exclude_section_id=[req.current_section_id, old_lab_id])
-                if conflict_section:
-                    flash(f"Cannot approve: target section conflicts with {conflict_section.course_code}.", "error")
-                    return redirect(url_for('faculty_dashboard'))
-
-                linked_lab = None
-                if sec.linked_section_id:
-                    linked_lab = SectionOffering.query.get(sec.linked_section_id)
-
-                if linked_lab:
-                    lab_conflict = student_has_schedule_conflict(student.id, linked_lab, exclude_section_id=[req.current_section_id, old_lab_id])
-                    if lab_conflict:
-                        flash(f"Cannot approve: target lab section conflicts with {lab_conflict.course_code}.", "error")
-                        return redirect(url_for('faculty_dashboard'))
-
-                if old_reg:
-                    db.session.delete(old_reg)
-                    if old_sec:
-                        old_sec.enrolled_count = max(0, old_sec.enrolled_count - 1)
-
-                if old_lab_id:
-                    old_lab_reg = Registration.query.filter_by(student_id=student.id, section_id=old_lab_id, semester_id=req.semester_id).first()
-                    if old_lab_reg:
-                        db.session.delete(old_lab_reg)
-                        old_lab_sec = SectionOffering.query.get(old_lab_id)
-                        if old_lab_sec:
-                            old_lab_sec.enrolled_count = max(0, old_lab_sec.enrolled_count - 1)
-
-                db.session.add(Registration(
-                    id=f"REG-{student.id}-{sec.id}",
-                    student_id=student.id,
-                    section_id=sec.id,
-                    semester_id=req.semester_id
-                ))
-                sec.enrolled_count += 1
-
-                if linked_lab:
-                    db.session.add(Registration(
-                        id=f"REG-{student.id}-{linked_lab.id}",
-                        student_id=student.id,
-                        section_id=linked_lab.id,
-                        semester_id=req.semester_id
-                    ))
-                    linked_lab.enrolled_count += 1
-
-            elif req.type == 'seat_increase' and sec:
-                sec.capacity += 1
-                if sec.linked_section_id:
-                    linked_sec = SectionOffering.query.get(sec.linked_section_id)
-                    if linked_sec:
-                        linked_sec.capacity += 1
-                
-        db.session.commit()
-        flash(f"Request resolved as '{status}'.", 'success')
-    else:
+    if not req or not faculty or req.advisor_id != faculty.id:
         flash("Request record not found or not assigned to you.", "error")
+        return redirect(url_for('faculty_dashboard'))
+    if not advisor_note:
+        flash("Advisor Comments / justification is mandatory.", "error")
+        return redirect(url_for('faculty_dashboard'))
+
+    success, msg = execute_request_resolution(req, status, advisor_note, faculty.id)
+    if success:
+        db.session.commit()
+        
+        # Notify student & email student
+        student = Student.query.get(req.student_id)
+        student_user = User.query.get(student.user_id) if student else None
+        student_email = student_user.email if student_user else f"{req.student_id}@ewu.edu"
+        
+        title_str = "Advising Request Status Update"
+        notif_msg = f"Your request for {req.course_id} was {status}. Advisor message: {advisor_note}"
+        if not success:
+            notif_msg = f"Your request for {req.course_id} was rejected. Reason: {msg}. Advisor message: {advisor_note}"
+            
+        notif = Notification(
+            id=f"NTF-{req.student_id}-{int(datetime.utcnow().timestamp())}",
+            student_id=req.student_id,
+            title=title_str,
+            message=notif_msg
+        )
+        db.session.add(notif)
+        db.session.commit()
+        
+        email_body = f"""
+        Dear Student,
+        
+        Your advising request for {req.course_id} has been reviewed and {status.upper()}:
+        Status: {status.upper()}
+        Details: {msg}
+        Advisor Comments: "{advisor_note}"
+        
+        Sincerely,
+        Academic Portal System
+        """
+        print(f"EMAIL SENT TO STUDENT {student_email}: Subject: Advising Request Status Update | Body: {email_body}")
+        
+        flash(f"Request resolved as '{status}': {msg}", 'success')
+    else:
+        # Save as rejected
+        req.status = 'rejected'
+        req.advisor_note = f"System check failed: {msg}. {advisor_note}"
+        db.session.commit()
+        
+        student = Student.query.get(req.student_id)
+        student_user = User.query.get(student.user_id) if student else None
+        student_email = student_user.email if student_user else f"{req.student_id}@ewu.edu"
+        notif_msg = f"Your request for {req.course_id} was rejected. Reason: {msg}. Advisor message: {advisor_note}"
+        
+        notif = Notification(
+            id=f"NTF-{req.student_id}-{int(datetime.utcnow().timestamp())}",
+            student_id=req.student_id,
+            title="Advising Request Rejected",
+            message=notif_msg
+        )
+        db.session.add(notif)
+        db.session.commit()
+        
+        email_body = f"""
+        Dear Student,
+        
+        Your advising request for {req.course_id} has been reviewed and REJECTED:
+        Status: REJECTED
+        Reason: {msg}
+        Advisor Comments: "{advisor_note}"
+        
+        Sincerely,
+        Academic Portal System
+        """
+        print(f"EMAIL SENT TO STUDENT {student_email}: Subject: Advising Request Rejected | Body: {email_body}")
+        
+        flash(f"Request rejected: {msg}", 'error')
         
     return redirect(url_for('faculty_dashboard'))
+
+@app.route('/faculty/resolve-requests-batch', methods=['POST'])
+@login_required
+def resolve_requests_batch():
+    if current_user.role != 'faculty':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+    faculty = current_faculty_profile()
+    if not faculty:
+        return jsonify({'status': 'error', 'message': 'Faculty profile not found.'}), 404
+    data = request.get_json() or {}
+    request_ids = data.get('request_ids', [])
+    status = data.get('status')
+    advisor_note = data.get('advisor_note', '').strip()
+    if status not in ['approved', 'rejected']:
+        return jsonify({'status': 'error', 'message': 'Invalid status decision.'}), 400
+    if not advisor_note:
+        return jsonify({'status': 'error', 'message': 'Advisor comments are mandatory.'}), 400
+
+    results = []
+    student_updates = {}
+    for req_id in request_ids:
+        req = AdvisingRequest.query.get(req_id)
+        if not req or req.advisor_id != faculty.id:
+            results.append({'id': req_id, 'status': 'failed', 'reason': 'Request not found or not assigned to you.'})
+            continue
+        if req.status != 'pending_advisor':
+            results.append({'id': req_id, 'status': 'failed', 'reason': f'Request is already {req.status}.'})
+            continue
+        student = Student.query.get(req.student_id)
+        if not student:
+            results.append({'id': req_id, 'status': 'failed', 'reason': 'Student profile not found.'})
+            continue
+        if student.id not in student_updates:
+            student_updates[student.id] = {
+                'student': student,
+                'approved': [],
+                'rejected': []
+            }
+        
+        success, msg = execute_request_resolution(req, status, advisor_note, faculty.id)
+        if success:
+            student_updates[student.id]['approved'].append({
+                'course_id': req.course_id,
+                'type': req.type,
+                'msg': msg
+            })
+            results.append({'id': req_id, 'status': 'success', 'decision': 'approved', 'msg': msg})
+        else:
+            req.status = 'rejected'
+            req.advisor_note = f"System check failed: {msg}. {advisor_note}"
+            student_updates[student.id]['rejected'].append({
+                'course_id': req.course_id,
+                'type': req.type,
+                'reason': msg
+            })
+            results.append({'id': req_id, 'status': 'failed', 'reason': msg})
+
+    db.session.commit()
+
+    # Process consolidated student notifications & emails
+    for std_id, update in student_updates.items():
+        student = update['student']
+        student_user = User.query.get(student.user_id)
+        student_email = student_user.email if student_user else f"{student.id}@ewu.edu"
+        msg_parts = []
+        email_parts = []
+        if update['approved']:
+            approved_list = []
+            for item in update['approved']:
+                if item['type'] == 'add_course':
+                    approved_list.append(f"{item['course_id']} ({item['msg']})")
+                else:
+                    approved_list.append(f"Section swap for {item['course_id']} ({item['msg']})")
+            msg_parts.append(f"Approved: {', '.join(approved_list)}")
+            email_parts.append(f"The following requests were APPROVED and processed:\n" + "\n".join([f" - {x}" for x in approved_list]))
+        if update['rejected']:
+            rejected_list = []
+            for item in update['rejected']:
+                rejected_list.append(f"{item['course_id']} (Reason: {item['reason']})")
+            msg_parts.append(f"Rejected: {', '.join(rejected_list)}")
+            email_parts.append(f"The following requests were REJECTED:\n" + "\n".join([f" - {x}" for x in rejected_list]))
+
+        consolidated_msg = " | ".join(msg_parts) + f". Advisor message: {advisor_note}"
+        notif = Notification(
+            id=f"NTF-{student.id}-{int(datetime.utcnow().timestamp())}",
+            student_id=student.id,
+            title="Course Advising Request Status Update",
+            message=consolidated_msg
+        )
+        db.session.add(notif)
+        db.session.commit()
+
+        email_body = f"""
+        Dear {student.name},
+        
+        Your academic advisor has reviewed your override requests.
+        
+        {"\n\n".join(email_parts)}
+        
+        Advisor's Message: "{advisor_note}"
+        
+        Sincerely,
+        Academic Portal System
+        """
+        print(f"EMAIL SENT TO STUDENT {student_email}: Subject: Advising Request Status Update | Body: {email_body}")
+
+    return jsonify({'status': 'success', 'results': results})
+
+# Submit Course Add Requests (Batch)
+import random
+@app.route('/student/submit-add-request-multi', methods=['POST'])
+@login_required
+def submit_add_request_multi():
+    if current_user.role != 'student':
+        return redirect(url_for('home'))
+    student = Student.query.filter_by(user_id=current_user.id).first()
+    if not student:
+        flash("Student profile not found.", "error")
+        return redirect(url_for('login_page'))
+    active_setting = SystemSetting.query.filter_by(key='request_phase_active').first()
+    if not active_setting or active_setting.value != 'true':
+        flash('Course request phase is currently closed by the Administrator.', 'error')
+        return redirect('/advising')
+    if not student.advisor_id:
+        flash('No advisor assigned to route request.', 'error')
+        return redirect('/advising')
+    comments = request.form.get('comments', '').strip()
+    if not comments:
+        flash('Justification comments are required.', 'error')
+        return redirect('/advising')
+    course_ids_json = request.form.get('course_ids', '[]')
+    try:
+        course_codes = json.loads(course_ids_json)
+    except Exception:
+        flash('Invalid course selections.', 'error')
+        return redirect('/advising')
+    if not course_codes or not isinstance(course_codes, list):
+        flash('Please select at least one course.', 'error')
+        return redirect('/advising')
+
+    # Create AdvisingRequests
+    for ccode in course_codes:
+        req = AdvisingRequest(
+            id=f"REQ-{student.id}-{int(datetime.utcnow().timestamp())}-{random.randint(1000, 9999)}",
+            student_id=student.id,
+            section_id=None,
+            current_section_id=None,
+            course_id=ccode,
+            type='add_course',
+            comments=comments,
+            semester_id=get_next_semester(),
+            advisor_id=student.advisor_id
+        )
+        db.session.add(req)
+    db.session.commit()
+
+    # Advisor Email Notification
+    advisor = Faculty.query.get(student.advisor_id)
+    advisor_user = User.query.get(advisor.user_id) if advisor else None
+    advisor_email = advisor_user.email if advisor_user else "advisor@ewu.edu"
+    student_info = f"Student ID: {student.id}, Name: {student.name}"
+    requested_courses = ", ".join(course_codes)
+    action_link = f"http://localhost:3001/faculty/view-student-requests/{student.id}"
+    email_body = f"""
+    Dear Advisor,
+    
+    A student has submitted an ADD_COURSE override request:
+    Student: {student_info}
+    Requested Courses: {requested_courses}
+    Student Message: "{comments}"
+    
+    Action Link: {action_link}
+    """
+    print(f"EMAIL SENT TO ADVISOR {advisor_email}: Subject: Course Add Request Submitted | Body: {email_body}")
+
+    flash('Course add request submitted successfully to advisor.', 'success')
+    return redirect('/advising?tab=requests')
+
+# Submit Section Change Requests (Batch)
+@app.route('/student/submit-change-request-multi', methods=['POST'])
+@login_required
+def submit_change_request_multi():
+    if current_user.role != 'student':
+        return redirect(url_for('home'))
+    student = Student.query.filter_by(user_id=current_user.id).first()
+    if not student:
+        flash("Student profile not found.", "error")
+        return redirect(url_for('login_page'))
+    active_setting = SystemSetting.query.filter_by(key='request_phase_active').first()
+    if not active_setting or active_setting.value != 'true':
+        flash('Course request phase is currently closed by the Administrator.', 'error')
+        return redirect('/advising')
+    if not student.advisor_id:
+        flash('No advisor assigned to route request.', 'error')
+        return redirect('/advising')
+    comments = request.form.get('comments', '').strip()
+    if not comments:
+        flash('Justification comments are required.', 'error')
+        return redirect('/advising')
+    swaps_json = request.form.get('swaps', '[]')
+    try:
+        swaps = json.loads(swaps_json)
+    except Exception:
+        flash('Invalid section change selections.', 'error')
+        return redirect('/advising')
+    if not swaps or not isinstance(swaps, list):
+        flash('Please select at least one section swap.', 'error')
+        return redirect('/advising')
+    if len(swaps) > 2:
+        flash('You can request a section change for a maximum of two (2) courses in a single request.', 'error')
+        return redirect('/advising')
+
+    created_requests = []
+    for s in swaps:
+        current_sec_id = s.get('current_section_id')
+        new_sec_id = s.get('new_section_id')
+        current_sec = SectionOffering.query.get(current_sec_id)
+        new_sec = SectionOffering.query.get(new_sec_id)
+        if not current_sec or not new_sec:
+            flash('Invalid sections selected.', 'error')
+            return redirect('/advising')
+        if current_sec.course_code.replace(' Lab', '') != new_sec.course_code.replace(' Lab', ''):
+            flash('Section change must stay within the same course.', 'error')
+            return redirect('/advising')
+        req = AdvisingRequest(
+            id=f"REQ-{student.id}-{int(datetime.utcnow().timestamp())}-{random.randint(1000, 9999)}",
+            student_id=student.id,
+            section_id=new_sec_id,
+            current_section_id=current_sec_id,
+            course_id=new_sec.course_code,
+            type='change_section',
+            comments=comments,
+            semester_id=get_next_semester(),
+            advisor_id=student.advisor_id
+        )
+        db.session.add(req)
+        created_requests.append(req)
+    db.session.commit()
+
+    # Advisor Email Notification
+    advisor = Faculty.query.get(student.advisor_id)
+    advisor_user = User.query.get(advisor.user_id) if advisor else None
+    advisor_email = advisor_user.email if advisor_user else "advisor@ewu.edu"
+    student_info = f"Student ID: {student.id}, Name: {student.name}"
+    requested_swaps = []
+    for r in created_requests:
+        cur_s = SectionOffering.query.get(r.current_section_id)
+        new_s = SectionOffering.query.get(r.section_id)
+        if cur_s and new_s:
+            requested_swaps.append(f"{cur_s.course_code}: Sec {cur_s.section_number} -> Sec {new_s.section_number}")
+    swaps_text = ", ".join(requested_swaps)
+    action_link = f"http://localhost:3001/faculty/view-student-requests/{student.id}"
+    email_body = f"""
+    Dear Advisor,
+    
+    A student has submitted a CHANGE_SECTION request:
+    Student: {student_info}
+    Requested Swaps: {swaps_text}
+    Student Message: "{comments}"
+    
+    Action Link: {action_link}
+    """
+    print(f"EMAIL SENT TO ADVISOR {advisor_email}: Subject: Section Change Request Submitted | Body: {email_body}")
+
+    flash('Section change swap request sent to academic advisor.', 'success')
+    return redirect('/advising?tab=requests')
+
+@app.route('/faculty/view-student-requests/<student_id>')
+@login_required
+def faculty_view_student_requests(student_id):
+    if current_user.role != 'faculty':
+        return redirect(url_for('home'))
+    return redirect(url_for('faculty_dashboard') + f'?target_student={student_id}')
 
 # ADMIN VIEWS
 @app.route('/admin')
@@ -2302,7 +2674,8 @@ def admin_dashboard():
         current_semester=get_current_semester(),
         pre_advising_active=is_setting_true('pre_advising_active'),
         final_advising_active=is_setting_true('final_advising_active'),
-        request_phase_active=is_setting_true('request_phase_active')
+        request_phase_active=is_setting_true('request_phase_active'),
+        drop_withdraw_active=is_setting_true('drop_withdraw_active')
     )
 
 # Admin toggle settings
@@ -2320,6 +2693,122 @@ def toggle_setting(key):
     setting.value = 'true' if setting.value == 'false' else 'false'
     db.session.commit()
     flash(f"System setting '{key}' toggled to {setting.value}.", 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/resolve-seat-request/<req_id>', methods=['POST'])
+@login_required
+def admin_resolve_seat_request(req_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    action = request.form.get('action') # 'increase_enroll', 'just_increase', 'reject'
+    req = AdvisingRequest.query.get(req_id)
+    if not req or req.type != 'seat_increase':
+        flash("Seat increase request not found.", "error")
+        return redirect(url_for('admin_dashboard'))
+        
+    student = Student.query.get(req.student_id)
+    sec = SectionOffering.query.get(req.section_id)
+    
+    if not student or not sec:
+        flash("Invalid student or section for this request.", "error")
+        return redirect(url_for('admin_dashboard'))
+        
+    student_user = User.query.get(student.user_id)
+    student_email = student_user.email if student_user else None
+    
+    if action == 'increase_enroll':
+        # 1. Increase capacity
+        sec.capacity += 1
+        if sec.linked_section_id:
+            linked_sec = SectionOffering.query.get(sec.linked_section_id)
+            if linked_sec:
+                linked_sec.capacity += 1
+                
+        # 2. Register/enroll student in this section
+        existing_reg = Registration.query.filter_by(student_id=student.id, section_id=sec.id, semester_id=req.semester_id).first()
+        if not existing_reg:
+            db.session.add(Registration(
+                id=f"REG-{student.id}-{sec.id}",
+                student_id=student.id,
+                section_id=sec.id,
+                semester_id=req.semester_id
+            ))
+            sec.enrolled_count += 1
+            
+        if sec.linked_section_id:
+            linked_lab = SectionOffering.query.get(sec.linked_section_id)
+            if linked_lab:
+                existing_lab_reg = Registration.query.filter_by(student_id=student.id, section_id=linked_lab.id, semester_id=req.semester_id).first()
+                if not existing_lab_reg:
+                    db.session.add(Registration(
+                        id=f"REG-{student.id}-{linked_lab.id}",
+                        student_id=student.id,
+                        section_id=linked_lab.id,
+                        semester_id=req.semester_id
+                    ))
+                    linked_lab.enrolled_count += 1
+                    
+        req.status = 'approved'
+        msg = f"Your seat increase request for {sec.course_code} Sec {sec.section_number} was approved and you have been registered for this section."
+        
+        # Save notification
+        notif = Notification(
+            id=f"NTF-{student.id}-{int(datetime.utcnow().timestamp())}",
+            student_id=student.id,
+            title="Seat Request Approved & Enrolled",
+            message=msg
+        )
+        db.session.add(notif)
+        db.session.commit()
+        
+        # Send Email Notification
+        print(f"EMAIL SENT TO {student_email}: Subject: Seat Request Approved | Body: {msg}")
+        flash("Request approved: Section capacity increased and student registered successfully.", "success")
+        
+    elif action == 'just_increase':
+        # 1. Just increase capacity
+        sec.capacity += 1
+        if sec.linked_section_id:
+            linked_sec = SectionOffering.query.get(sec.linked_section_id)
+            if linked_sec:
+                linked_sec.capacity += 1
+                
+        req.status = 'approved'
+        msg = f"Your seat increase request for {sec.course_code} Sec {sec.section_number} was approved (section capacity increased). Please go ahead and manually register for it."
+        
+        # Save notification
+        notif = Notification(
+            id=f"NTF-{student.id}-{int(datetime.utcnow().timestamp())}",
+            student_id=student.id,
+            title="Seat Request Approved",
+            message=msg
+        )
+        db.session.add(notif)
+        db.session.commit()
+        
+        # Send Email Notification
+        print(f"EMAIL SENT TO {student_email}: Subject: Seat Request Approved | Body: {msg}")
+        flash("Request approved: Section capacity increased.", "success")
+        
+    elif action == 'reject':
+        req.status = 'rejected'
+        msg = f"Your seat increase request for {sec.course_code} Sec {sec.section_number} was rejected by the administration."
+        
+        # Save notification
+        notif = Notification(
+            id=f"NTF-{student.id}-{int(datetime.utcnow().timestamp())}",
+            student_id=student.id,
+            title="Seat Request Rejected",
+            message=msg
+        )
+        db.session.add(notif)
+        db.session.commit()
+        
+        # Send Email Notification
+        print(f"EMAIL SENT TO {student_email}: Subject: Seat Request Rejected | Body: {msg}")
+        flash("Request rejected.", "success")
+        
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/update-current-semester', methods=['POST'])
@@ -3410,7 +3899,34 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
     if not schedule_str or str(schedule_str).strip().lower() in ('none', ''):
         return
     current_sem = get_current_semester()
+    
+    # Gather all new section IDs from the routine string first
+    new_sec_ids = set()
     items = re.findall(r'[^,\[]+(?:\[[^\]]*\])?', schedule_str)
+    for item in items:
+        item = item.strip()
+        if not item: continue
+        match = re.search(r'([A-Za-z0-9\s]+)\s*\[\s*Sec\s*([^,\]]+)\s*,\s*([^\]]+)\]', item)
+        if match:
+            ccode = match.group(1).strip().replace(' ', '')
+            sec_num_raw = match.group(2).strip()
+            try:
+                sec_num = f"{int(sec_num_raw):02d}"
+            except ValueError:
+                sec_num = sec_num_raw
+            sec_id = f"{ccode}-{sec_num}-{current_sem}"
+            new_sec_ids.add(sec_id)
+            
+    # Delete any existing registrations in current semester not in the new routine
+    if not curr_sem_drop:
+        old_regs = Registration.query.filter_by(student_id=student_id, semester_id=current_sem).all()
+        for r in old_regs:
+            if r.section_id not in new_sec_ids:
+                sec_offering = SectionOffering.query.get(r.section_id)
+                if sec_offering:
+                    sec_offering.enrolled_count = max(0, sec_offering.enrolled_count - 1)
+                db.session.delete(r)
+        db.session.flush()
     for item in items:
         item = item.strip()
         if not item: continue
@@ -3702,7 +4218,7 @@ def import_excel_students(file_source):
             ccodes = [c.strip() for c in re.split(r'[,;\s]+', curr_courses) if c.strip()]
             for cc in ccodes:
                 if not cc: continue
-                sec = SectionOffering.query.filter_by(course_code=cc).first()
+                sec = SectionOffering.query.filter_by(course_code=cc, semester_id=get_current_semester()).first()
                 if sec:
                     reg_id = f"REG-{std_id}-{sec.id}"
                     existing_reg = Registration.query.get(reg_id)
@@ -3711,7 +4227,7 @@ def import_excel_students(file_source):
                             id=reg_id,
                             student_id=std_id,
                             section_id=sec.id,
-                            semester_id=sec.semester_id,
+                            semester_id=get_current_semester(),
                             status='registered'
                         )
                         db.session.add(new_reg)
@@ -3742,8 +4258,6 @@ def import_excel_students(file_source):
             for cc in ccodes_next:
                 if not cc: continue
                 sec = SectionOffering.query.filter_by(course_code=cc, semester_id=next_sem).first()
-                if not sec:
-                    sec = SectionOffering.query.filter_by(course_code=cc).first()
                 if sec:
                     reg_id = f"REG-{std_id}-{sec.id}"
                     existing_reg = Registration.query.get(reg_id)

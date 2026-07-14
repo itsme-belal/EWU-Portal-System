@@ -451,33 +451,73 @@
 
 <!-- REQUESTS TAB -->
 <div id="tab-requests" class="tab-content hidden space-y-6">
-    <div>
-        <h1 class="text-2xl font-extrabold tracking-tight">Pending Override Requests</h1>
-        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Review and resolve student override requests. Mandatory justifications required.</p>
+    <div class="flex justify-between items-center flex-wrap gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-4">
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tight">Pending Override Requests</h1>
+            <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Review, search, and resolve student course registration and swap override requests.</p>
+        </div>
+        <!-- Live search filters -->
+        <div class="flex items-center gap-3">
+            <div class="relative w-64">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-[#94a3b8] pointer-events-none">
+                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                </span>
+                <input type="text" id="requests-search" oninput="filterFacultyRequests()" placeholder="Search by Student ID or Course..." 
+                       class="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs outline-none focus:border-blue-500 text-slate-800 dark:text-slate-100">
+            </div>
+            <button onclick="clearFacultyRequestsFilters()" class="text-xs text-slate-500 hover:text-slate-400">Clear</button>
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-4">
+    <!-- Batch Control Bar (hidden by default, sticky) -->
+    <div id="batch-control-bar" class="hidden sticky top-4 z-30 bg-slate-900/90 dark:bg-[#0c101d]/90 backdrop-blur border border-[#1e293b] p-4 rounded-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4 transition-all duration-300">
+        <div class="flex items-center gap-2.5">
+            <span class="bg-blue-600 text-white font-extrabold text-[0.7rem] px-2 py-0.5 rounded-full" id="selected-count-badge">0</span>
+            <span class="text-xs font-bold text-slate-200">Requests Selected</span>
+        </div>
+        <div class="flex-1 max-w-xl w-full">
+            <input type="text" id="batch-advisor-note" placeholder="Write mandatory justification comments for all selected..." 
+                   class="w-full px-3.5 py-2 bg-slate-950/40 border border-slate-700/80 rounded-lg text-xs outline-none text-slate-200 focus:border-blue-500 placeholder-slate-500">
+        </div>
+        <div class="flex gap-2 w-full md:w-auto justify-end">
+            <button onclick="submitBatchRequests('rejected')" class="w-full md:w-auto text-xs px-4 py-2 font-black bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+                Batch Reject
+            </button>
+            <button onclick="submitBatchRequests('approved')" class="w-full md:w-auto text-xs px-4 py-2 font-black bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                Batch Approve
+            </button>
+        </div>
+    </div>
+
+    <!-- Requests list container -->
+    <div class="grid grid-cols-1 gap-4" id="faculty-requests-list">
         {% for req in requests %}
-        <div class="stitch-card p-5 space-y-3 border border-slate-200 dark:border-slate-800">
+        <div class="faculty-request-card stitch-card p-5 space-y-3 border transition-all duration-300 {% if req.status == 'pending_advisor' %}border-slate-200 dark:border-slate-800{% else %}border-slate-100 dark:border-slate-900/30 opacity-75{% endif %}" 
+             data-student-id="{{ req.student_id }}" data-student-name="{{ req.student_name | lower }}" data-course-id="{{ req.course_id | lower }}" data-req-id="{{ req.id }}" id="req-card-{{ req.id }}">
             <div class="flex justify-between items-start flex-wrap gap-2 pb-2 border-b border-[#e2e8f0] dark:border-[#1e293b]">
-                <div>
-                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">
-                        Waiver Request Details
-                    </h3>
-                    <p class="text-xs text-[#94a3b8] mt-0.5">
-                        Student ID: <strong>{{ req.student_id }}</strong> ({{ req.student_name }})
-                    </p>
+                <div class="flex items-center gap-3">
+                    {% if req.status == 'pending_advisor' %}
+                    <input type="checkbox" name="select_request" value="{{ req.id }}" onchange="updateSelectedRequestsCount()" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
+                    {% endif %}
+                    <div>
+                        <h3 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                            {{ req.type.replace('_', ' ') | uppercase }} Request
+                        </h3>
+                        <p class="text-xs text-[#94a3b8] mt-0.5">
+                            Student ID: <strong>{{ req.student_id }}</strong> ({{ req.student_name }})
+                        </p>
+                    </div>
                 </div>
                 <div class="flex gap-2">
                     <span class="stitch-badge bg-amber-500/15 text-amber-500 text-[0.62rem] uppercase">{{ req.type.replace('_', ' ') }}</span>
-                    <span class="stitch-badge bg-slate-500/15 text-slate-400 text-[0.62rem]">{{ req.status }}</span>
+                    <span class="stitch-badge {% if req.status == 'pending_advisor' %}bg-blue-500/15 text-blue-500{% elif req.status == 'approved' %}bg-green-500/15 text-green-500{% else %}bg-red-500/15 text-red-500{% endif %} text-[0.62rem]">{{ req.status }}</span>
                 </div>
             </div>
 
             <div class="text-xs space-y-2 py-1 text-slate-700 dark:text-slate-300">
                 <p>Course Code Requested: <strong class="text-blue-600 dark:text-blue-400">{{ req.course_id }}</strong></p>
                 {% if req.section_id %}
-                <p>Target Section ID: <strong>{{ req.section_id }}</strong></p>
+                <p>Target Section ID / Swap: <strong>{{ req.section_id }}</strong></p>
                 {% endif %}
                 <p class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border italic border-[#e2e8f0] dark:border-[#1e293b]">
                     "{{ req.comments }}"
@@ -490,7 +530,7 @@
                 <div>
                     <label class="block text-[0.68rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Advisor Comments / Reasons (Mandatory)</label>
                     <input type="text" name="advisor_note" placeholder="Write justification for decision..." required
-                           class="w-full px-3 py-2 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs outline-none focus:border-blue-500">
+                           class="w-full px-3 py-2 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200">
                 </div>
                 <div class="flex justify-end gap-2">
                     <button type="submit" name="status" value="rejected" class="text-xs px-3.5 py-2 font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors">
@@ -1152,5 +1192,115 @@
             targetSelect.appendChild(option);
         });
     }
+
+    // REQUEST OVERRIDES & BATCH ACTIONS
+    function filterFacultyRequests() {
+        const query = document.getElementById('requests-search').value.trim().toLowerCase();
+        const cards = document.querySelectorAll('.faculty-request-card');
+        cards.forEach(card => {
+            const studentId = card.getAttribute('data-student-id') || '';
+            const studentName = card.getAttribute('data-student-name') || '';
+            const courseId = card.getAttribute('data-course-id') || '';
+            if (studentId.toLowerCase().includes(query) || studentName.toLowerCase().includes(query) || courseId.toLowerCase().includes(query)) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
+
+    function clearFacultyRequestsFilters() {
+        document.getElementById('requests-search').value = '';
+        filterFacultyRequests();
+    }
+
+    function updateSelectedRequestsCount() {
+        const checked = Array.from(document.querySelectorAll('input[name="select_request"]:checked'));
+        const count = checked.length;
+        const badge = document.getElementById('selected-count-badge');
+        const bar = document.getElementById('batch-control-bar');
+        if (badge) badge.textContent = count;
+        if (bar) {
+            if (count > 0) {
+                bar.classList.remove('hidden');
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+    }
+
+    function submitBatchRequests(status) {
+        const checked = Array.from(document.querySelectorAll('input[name="select_request"]:checked'));
+        if (checked.length === 0) {
+            alert('No requests selected.');
+            return;
+        }
+        const note = document.getElementById('batch-advisor-note').value.trim();
+        if (!note) {
+            alert('Advisor justification/comments are mandatory for batch resolution.');
+            return;
+        }
+        const requestIds = checked.map(cb => cb.value);
+        if (!confirm(`Are you sure you want to batch ${status} ${requestIds.length} request(s)?`)) {
+            return;
+        }
+        showToast('info', 'Processing batch requests...');
+        fetch('/faculty/resolve-requests-batch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                request_ids: requestIds,
+                status: status,
+                advisor_note: note
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('success', 'Batch requests resolved successfully.');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showToast('error', data.message || 'Error processing batch requests.');
+            }
+        })
+        .catch(err => {
+            showToast('error', 'Network error. Please try again.');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes pulse-blue {
+                0%, 100% { border-color: rgba(59, 130, 246, 1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+                50% { border-color: rgba(99, 102, 241, 1); box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetStudent = urlParams.get('target_student');
+        if (targetStudent) {
+            switchTab('requests');
+            const searchInput = document.getElementById('requests-search');
+            if (searchInput) {
+                searchInput.value = targetStudent;
+                filterFacultyRequests();
+                setTimeout(() => {
+                    const cards = document.querySelectorAll(`.faculty-request-card[data-student-id="${targetStudent}"]`);
+                    cards.forEach(card => {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        card.classList.remove('border-slate-200', 'dark:border-slate-800');
+                        card.classList.add('border-blue-500');
+                        card.style.animation = 'pulse-blue 1.5s infinite';
+                    });
+                }, 500);
+            }
+        }
+    });
 </script>
 {% endblock %}

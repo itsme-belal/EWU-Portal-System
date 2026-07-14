@@ -233,3 +233,12 @@ class Announcement(db.Model):
     created_by = db.Column(db.String(100), nullable=False)
     created_at = db.Column(db.String(50), nullable=False)
     target_role = db.Column(db.String(20), nullable=False) # 'student', 'faculty', 'all'
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.String(50), primary_key=True)
+    student_id = db.Column(db.String(50), db.ForeignKey('students.id'), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
