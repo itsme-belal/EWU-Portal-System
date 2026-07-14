@@ -53,6 +53,7 @@
     </button>
     <div id="submenu-theme" class="submenu">
         <button onclick="applyTheme('light')" id="theme-btn-light" class="nav-sub-item theme-selector-btn">Light</button>
+        <button onclick="applyTheme('dark')" id="theme-btn-dark" class="nav-sub-item theme-selector-btn">Dark</button>
         <button onclick="applyTheme('cosmic')" id="theme-btn-cosmic" class="nav-sub-item theme-selector-btn">Cosmic</button>
         <button onclick="applyTheme('image')" id="theme-btn-image" class="nav-sub-item theme-selector-btn">University Theme</button>
     </div>
@@ -596,9 +597,13 @@
                          data-is-f-grade="{{ 'true' if is_f else 'false' }}"
                          data-is-d-grade="{{ 'true' if is_d else 'false' }}"
                          data-is-retake="{{ 'true' if is_retake else 'false' }}"
-                         onclick="togglePlanCourse('{{ course.code }}')"
+                         onclick="togglePlanCourse('{{ course.code }}', 'add')"
                          style="cursor: pointer;"
-                         class="pre-course-card stitch-card py-3 px-4 border transition-all duration-150 hover:bg-slate-50 dark:hover:bg-slate-900/10 {{ 'border-blue-500 bg-blue-50/10' if selected else 'border-[#e2e8f0] dark:border-[#1e293b]' }}">
+                         class="relative pre-course-card stitch-card py-3 pl-4 pr-10 border transition-all duration-300 hover:scale-[1.01] hover:shadow-md {{ 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/25' if selected else 'border-[#e2e8f0] dark:border-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-900/10' }}">
+                        <!-- Checkmark Badge -->
+                        <div class="absolute top-1/2 right-3 -translate-y-1/2 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md transition-all duration-300 {{ 'opacity-100 scale-100' if selected else 'opacity-0 scale-75' }}" id="check-badge-{{ course.code }}">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        </div>
                         <div class="grid grid-cols-3 gap-4 items-center w-full text-xs">
                             <div class="flex items-center gap-2">
                                 <div class="w-6 h-6 rounded bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 flex-shrink-0">
@@ -688,28 +693,10 @@
                     </div>
                 </div>
 
-                <div class="glass-card p-4 overflow-x-auto max-h-[700px]" id="advising-table-container">
-                    <table class="w-full text-left text-xs border-collapse">
-                        <thead>
-                            <tr class="border-b border-[#e2e8f0] dark:border-[#1e293b] text-slate-400">
-                                <th class="hidden">ID</th>
-                                <th class="py-3 px-2 font-bold">Course Code</th>
-                                <th class="py-3 px-2 font-bold">Section</th>
-                                <th class="py-3 px-2 font-bold">Date &amp; Time</th>
-                                <th class="py-3 px-2 font-bold text-center">Credit</th>
-                                <th class="py-3 px-2 font-bold text-center">Seat Capacity</th>
-                                <th class="py-3 px-2 font-bold">Dedicated Department</th>
-                                <th class="py-3 px-2 font-bold">Room</th>
-                                <th class="py-3 px-2 font-bold">Pre-Requisite</th>
-                                <th class="hidden">Linked Course ID</th>
-                                <th class="py-3 px-2 font-bold text-center">Completed Credit Requirement</th>
-                                <th class="py-3 px-2 font-bold text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="advising-table-body" class="divide-y divide-[#e2e8f0] dark:divide-[#1e293b] text-slate-800 dark:text-slate-200">
-                            <!-- Populated dynamically in JS -->
-                        </tbody>
-                    </table>
+                <div class="overflow-y-auto max-h-[700px] pr-1" id="advising-table-container">
+                    <div id="advising-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Populated dynamically in JS -->
+                    </div>
                 </div>
             </div>
 
@@ -1533,6 +1520,23 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
+    // Global advising & registration data (defined at top to avoid Temporal Dead Zone errors)
+    let planCourseCodes = {{ plan_course_ids | tojson }};
+    const coursesData = {{ courses_json | safe }};
+    let registrationsList = {{ selected_section_ids | tojson }};
+    const sectionsData = {{ sections_json | safe }};
+    const failedCodes = {{ f_grades | tojson }};
+    const dCodes = {{ d_grades | tojson }};
+    const recommendedCodes = {{ recommended_courses | tojson }};
+    const passedCodes = {{ passed_codes | tojson }};
+    let currentAdvisingFilter = 'recommended';
+    let searchAdvisingQuery = '';
+    
+    // Portal phase entry controls
+    const isPreActive = {{ 'true' if pre_advising_active else 'false' }};
+    const isFinalActive = {{ 'true' if final_advising_active else 'false' }};
+    const prePlanSubmitted = {{ 'true' if plan_course_ids | length > 0 else 'false' }};
+
     function updateBreadcrumbs(tabId) {
         const breadcrumbEl = document.getElementById('portal-breadcrumb');
         if (!breadcrumbEl) return;
@@ -1649,10 +1653,7 @@
         lucide.createIcons();
     }
 
-    // Portal phase entry controls
-    const isPreActive = {{ 'true' if pre_advising_active else 'false' }};
-    const isFinalActive = {{ 'true' if final_advising_active else 'false' }};
-    const prePlanSubmitted = {{ 'true' if plan_course_ids | length > 0 else 'false' }};
+    // Portal phase entry controls (moved to top of script)
 
     function showAdvisingHub() {
         const hub = document.getElementById('advising-hub');
@@ -1692,9 +1693,7 @@
         }
     }
 
-    // Pre-advising selections
-    let planCourseCodes = {{ plan_course_ids | tojson }};
-    const coursesData = {{ courses_json | safe }};
+    // Pre-advising selections (moved to top of script)
 
     function updatePreAdvisingCartList() {
         const listDiv = document.getElementById('pre-advising-cart-list');
@@ -1724,7 +1723,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="text-[0.65rem] font-bold text-slate-400">${displayCredits} CR</span>
-                        <button onclick="togglePlanCourse('${code}')" class="text-rose-400 hover:text-rose-300 font-bold p-1">
+                        <button onclick="togglePlanCourse('${code}', 'remove')" class="text-rose-400 hover:text-rose-300 font-bold p-1">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -1734,14 +1733,23 @@
         lucide.createIcons();
     }
 
-    function togglePlanCourse(code) {
+    function togglePlanCourse(code, action = 'add') {
         const idx = planCourseCodes.indexOf(code);
         let selectedNow = false;
         let originalPlanCodes = [...planCourseCodes];
 
-        if (idx > -1) {
-            planCourseCodes.splice(idx, 1);
-        } else {
+        if (action === 'remove') {
+            if (idx > -1) {
+                planCourseCodes.splice(idx, 1);
+                selectedNow = false;
+            } else {
+                return;
+            }
+        } else { // action === 'add'
+            if (idx > -1) {
+                // Already selected, do nothing
+                return;
+            }
             if (planCourseCodes.length >= 6) {
                 showToast('error', 'Limit exceeded: Maximum of 6 courses allowed.');
                 return;
@@ -1779,13 +1787,22 @@
 
         // Toggling visual elements locally
         const cardEl = document.getElementById(`course-card-${code}`);
+        const checkEl = document.getElementById(`check-badge-${code}`);
         if (cardEl) {
             if (selectedNow) {
-                cardEl.classList.remove('border-[#e2e8f0]', 'dark:border-[#1e293b]');
-                cardEl.classList.add('border-blue-500', 'bg-blue-50/10');
+                cardEl.classList.remove('border-[#e2e8f0]', 'dark:border-[#1e293b]', 'hover:bg-slate-50', 'dark:hover:bg-slate-900/10');
+                cardEl.classList.add('border-blue-500', 'bg-blue-50/50', 'dark:bg-blue-950/25');
+                if (checkEl) {
+                    checkEl.classList.remove('opacity-0', 'scale-75');
+                    checkEl.classList.add('opacity-100', 'scale-100');
+                }
             } else {
-                cardEl.classList.remove('border-blue-500', 'bg-blue-50/10');
-                cardEl.classList.add('border-[#e2e8f0]', 'dark:border-[#1e293b]');
+                cardEl.classList.remove('border-blue-500', 'bg-blue-50/50', 'dark:bg-blue-950/25');
+                cardEl.classList.add('border-[#e2e8f0]', 'dark:border-[#1e293b]', 'hover:bg-slate-50', 'dark:hover:bg-slate-900/10');
+                if (checkEl) {
+                    checkEl.classList.remove('opacity-100', 'scale-100');
+                    checkEl.classList.add('opacity-0', 'scale-75');
+                }
             }
         }
 
@@ -1815,13 +1832,22 @@
                 document.getElementById('plan-input').value = JSON.stringify(planCourseCodes);
                 
                 const cardElRevert = document.getElementById(`course-card-${code}`);
+                const checkElRevert = document.getElementById(`check-badge-${code}`);
                 if (cardElRevert) {
                     if (planCourseCodes.includes(code)) {
-                        cardElRevert.classList.remove('border-[#e2e8f0]', 'dark:border-[#1e293b]');
-                        cardElRevert.classList.add('border-blue-500', 'bg-blue-50/10');
+                        cardElRevert.classList.remove('border-[#e2e8f0]', 'dark:border-[#1e293b]', 'hover:bg-slate-50', 'dark:hover:bg-slate-900/10');
+                        cardElRevert.classList.add('border-blue-500', 'bg-blue-50/50', 'dark:bg-blue-950/25');
+                        if (checkElRevert) {
+                            checkElRevert.classList.remove('opacity-0', 'scale-75');
+                            checkElRevert.classList.add('opacity-100', 'scale-100');
+                        }
                     } else {
-                        cardElRevert.classList.remove('border-blue-500', 'bg-blue-50/10');
-                        cardElRevert.classList.add('border-[#e2e8f0]', 'dark:border-[#1e293b]');
+                        cardElRevert.classList.remove('border-blue-500', 'bg-blue-50/50', 'dark:bg-blue-950/25');
+                        cardElRevert.classList.add('border-[#e2e8f0]', 'dark:border-[#1e293b]', 'hover:bg-slate-50', 'dark:hover:bg-slate-900/10');
+                        if (checkElRevert) {
+                            checkElRevert.classList.remove('opacity-100', 'scale-100');
+                            checkElRevert.classList.add('opacity-0', 'scale-75');
+                        }
                     }
                 }
                 updatePreAdvisingCartList();
@@ -1895,15 +1921,7 @@
         });
     }
 
-    // Final advising AJAX booking and filtering logic
-    let registrationsList = {{ selected_section_ids | tojson }};
-    const sectionsData = {{ sections_json | safe }};
-    const failedCodes = {{ f_grades | tojson }};
-    const dCodes = {{ d_grades | tojson }};
-    const recommendedCodes = {{ recommended_courses | tojson }};
-    const passedCodes = {{ passed_codes | tojson }};
-    let currentAdvisingFilter = 'recommended';
-    let searchAdvisingQuery = '';
+    // Final advising AJAX booking and filtering logic (moved to top of script)
 
     function searchAdvisingCourses() {
         searchAdvisingQuery = document.getElementById('course-search-input').value.trim().toUpperCase();
@@ -1960,9 +1978,9 @@
     }
 
     function loadAdvisingSections() {
-        const tbody = document.getElementById('advising-table-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+        const cardsContainer = document.getElementById('advising-cards-container');
+        if (!cardsContainer) return;
+        cardsContainer.innerHTML = '';
 
         // Group / Filter sectionsData
         let filteredSections = sectionsData;
@@ -1984,7 +2002,7 @@
         }
 
         if (filteredSections.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-xs text-[#94a3b8] py-8 text-center bg-white dark:bg-[#0a0f1e] rounded-xl border border-dashed border-[#e2e8f0] dark:border-[#1e293b]">No courses match the active filter criteria.</td></tr>';
+            cardsContainer.innerHTML = '<div class="col-span-full text-xs text-[#94a3b8] py-8 text-center bg-white dark:bg-[#0a0f1e] rounded-xl border border-dashed border-[#e2e8f0] dark:border-[#1e293b]">No courses match the active filter criteria.</div>';
             return;
         }
 
@@ -2020,79 +2038,85 @@
                 }
             }
 
-            // Decide color coding class
-            let rowClass = "hover:bg-slate-50 dark:hover:bg-slate-900/20 transition-colors";
-            let statusText = '';
+            // Decide color coding border and classes
+            let borderClass = "border-[#e2e8f0] dark:border-[#1e293b] bg-white dark:bg-[#0a0f1e]/40 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/10";
+            let statusBadge = '';
+            let checkBadgeStyle = 'opacity-0 scale-75';
             
             if (isSelected) {
-                rowClass = "bg-emerald-500/10 dark:bg-emerald-500/5 border-l-4 border-emerald-500 text-emerald-700 dark:text-emerald-400 font-semibold";
-                statusText = ' (Enrolled)';
-            } else if (isFull) {
-                rowClass = "bg-amber-500/10 dark:bg-amber-500/5 border-l-4 border-amber-500 text-amber-700 dark:text-amber-400";
-                statusText = ' (Full)';
-            } else if (hasConflict) {
-                rowClass = "bg-red-500/10 dark:bg-red-500/5 border-l-4 border-red-500 text-red-700 dark:text-red-400";
-                statusText = ' (Conflict)';
-            }
-
-            let btnHtml = '';
-            if (isSelected) {
-                btnHtml = `
-                    <button onclick="toggleSectionAJAX('${sec.id}', ${isFull}, ${hasConflict}, ${isRestricted})" 
-                            class="px-2 py-1 text-[0.62rem] font-bold uppercase tracking-wider bg-red-600 hover:bg-red-700 text-white rounded transition-all">
-                        Drop
-                    </button>
-                `;
+                borderClass = "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-400";
+                statusBadge = `<span class="badge badge-success text-[0.6rem] font-bold">Enrolled</span>`;
+                checkBadgeStyle = "opacity-100 scale-100";
             } else if (isRestricted) {
-                btnHtml = `<span class="text-[0.62rem] text-red-500 font-bold">Restricted</span>`;
-            } else if (isFinalActive) {
-                if (isFull || hasConflict) {
-                    btnHtml = `
-                        <button disabled 
-                                class="px-2 py-1 text-[0.62rem] font-bold uppercase tracking-wider bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded cursor-not-allowed opacity-50">
-                            Add
-                        </button>
-                    `;
-                } else {
-                    btnHtml = `
-                        <button onclick="toggleSectionAJAX('${sec.id}', ${isFull}, ${hasConflict}, ${isRestricted})" 
-                                class="px-2 py-1 text-[0.62rem] font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white rounded transition-all">
-                            Add
-                        </button>
-                    `;
-                }
-            } else {
-                btnHtml = `<span class="text-[0.62rem] text-slate-400 font-bold">View Only</span>`;
+                borderClass = "border-slate-200 dark:border-[#1e293b] bg-slate-100/50 dark:bg-[#0a0f1e]/20 text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed";
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400">Restricted</span>`;
+            } else if (isFull) {
+                borderClass = "border-sky-400 bg-sky-50/50 text-sky-800 dark:border-yellow-400 dark:bg-yellow-950/20 dark:text-yellow-400";
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-sky-100 text-sky-800 dark:bg-yellow-400/20 dark:text-yellow-400">Full</span>`;
+            } else if (hasConflict) {
+                borderClass = "border-red-500 bg-red-50/50 text-red-800 dark:border-orange-400 dark:bg-orange-950/20 dark:text-orange-400";
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-red-100 text-red-800 dark:bg-orange-400/20 dark:text-orange-400">Conflict</span>`;
             }
 
-            const tr = document.createElement('tr');
-            tr.className = rowClass;
-            
             const prereqList = sec.prerequisites && sec.prerequisites.length > 0 ? sec.prerequisites.join(', ') : 'None';
-            const dedicatedDpts = sec.dedicated_departments && sec.dedicated_departments.length > 0 ? sec.dedicated_departments.join(', ') : 'None';
-            
-            tr.innerHTML = `
-                <td class="hidden">${sec.id}</td>
-                <td class="py-2.5 px-2 font-bold">${sec.course_code}${statusText}</td>
-                <td class="py-2.5 px-2 font-mono">${sec.section_number}</td>
-                <td class="py-2.5 px-2">${sec.schedule}</td>
-                <td class="py-2.5 px-2 text-center">${sec.credits} CR</td>
-                <td class="py-2.5 px-2 text-center font-mono">${sec.enrolled_count} / ${sec.capacity}</td>
-                <td class="py-2.5 px-2">${dedicatedDpts}</td>
-                <td class="py-2.5 px-2">${sec.room}</td>
-                <td class="py-2.5 px-2">${prereqList}</td>
-                <td class="hidden">${sec.linked_section_id || 'None'}</td>
-                <td class="py-2.5 px-2 text-center font-mono">${sec.completed_credit_requirement || 0} CR</td>
-                <td class="py-2.5 px-2 text-right">${btnHtml}</td>
+
+            const card = document.createElement('div');
+            card.className = `relative border transition-all duration-300 hover:scale-[1.01] hover:shadow-md cursor-pointer rounded-xl p-4 flex flex-col justify-between ${borderClass}`;
+            card.onclick = () => {
+                toggleSectionAJAX(sec.id, isFull, hasConflict, isRestricted, 'add');
+            };
+
+            card.innerHTML = `
+                <!-- Checkmark Badge -->
+                <div class="absolute top-3 right-3 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md transition-all duration-300 ${checkBadgeStyle}">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-start pr-6">
+                        <div>
+                            <span class="text-sm font-extrabold">${sec.course_code}</span>
+                            <span class="ml-1.5 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[0.65rem] font-bold">Sec ${sec.section_number}</span>
+                        </div>
+                        <div>
+                            ${statusBadge}
+                        </div>
+                    </div>
+
+                    <p class="text-[0.7rem] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[200px]" title="${sec.course_title}">${sec.course_title}</p>
+
+                    <div class="grid grid-cols-2 gap-y-1.5 gap-x-2 pt-2 border-t border-slate-100 dark:border-white/5 text-[0.7rem]">
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="font-semibold">${sec.schedule}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 justify-end">
+                            <i data-lucide="award" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="font-bold">${sec.credits} CR</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="font-medium">${sec.room}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 justify-end font-mono">
+                            <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Seats: ${sec.enrolled_count} / ${sec.capacity}</span>
+                        </div>
+                    </div>
+
+                    <div class="text-[0.65rem] pt-1 text-slate-400 dark:text-slate-500 italic">
+                        Prereq: ${prereqList}
+                    </div>
+                </div>
             `;
-            tbody.appendChild(tr);
+            cardsContainer.appendChild(card);
         });
 
         updateCartUI();
     }
 
     // Ajax booking function on click
-    function toggleSectionAJAX(secId, isFull, hasConflict, isRestricted) {
+    function toggleSectionAJAX(secId, isFull, hasConflict, isRestricted, action = 'add') {
         if (!isFinalActive) {
             showToast('error', 'Final Advising is currently closed. Registration is in view-only mode.');
             return;
@@ -2104,9 +2128,19 @@
 
         // Toggling already selected sections is always allowed (to drop)
         const isSelected = registrationsList.includes(secId);
-        if (!isSelected && (isFull || hasConflict)) {
-            showToast('error', isFull ? 'Section is full.' : 'Schedule conflict detected.');
-            return;
+        if (action === 'add') {
+            if (isSelected) {
+                // If already selected, clicking it again does nothing
+                return;
+            }
+            if (isFull || hasConflict) {
+                showToast('error', isFull ? 'Section is full.' : 'Schedule conflict detected.');
+                return;
+            }
+        } else if (action === 'remove') {
+            if (!isSelected) {
+                return;
+            }
         }
 
         fetch('/student/toggle-section', {
@@ -2120,21 +2154,19 @@
         .then(data => {
             if (data.status === 'success') {
                 showToast('success', data.message);
-                if (data.action === 'registered') {
-                    registrationsList.push(secId);
-                    // Add linked lab if backend added it
-                    const sec = sectionsData.find(s => s.id === secId);
-                    if (sec && sec.linked_section_id) {
-                        registrationsList.push(sec.linked_section_id);
+                
+                // Dynamic smooth refresh of state from backend without reloading the page
+                fetch('/student/get-advising-state')
+                .then(res => res.json())
+                .then(stateData => {
+                    if (stateData.status === 'success') {
+                        registrationsList = stateData.registrations;
+                        sectionsData.length = 0;
+                        sectionsData.push(...stateData.sections);
+                        
+                        loadAdvisingSections();
                     }
-                } else {
-                    registrationsList = registrationsList.filter(id => id !== secId);
-                    const sec = sectionsData.find(s => s.id === secId);
-                    if (sec && sec.linked_section_id) {
-                        registrationsList = registrationsList.filter(id => id !== sec.linked_section_id);
-                    }
-                }
-                loadAdvisingSections();
+                });
             } else {
                 showToast('error', data.message);
             }
@@ -2170,10 +2202,10 @@
                             actionHtml = `<span class="text-blue-500 dark:text-blue-400 text-[0.65rem] font-medium italic">Linked Lab</span>`;
                         } else {
                             actionHtml = `
-                                <button onclick="openChangeModal('${sec.id}', '${sec.course_code}')" class="px-2 py-1 bg-violet-500/10 border border-violet-500/20 text-violet-600 rounded text-[0.62rem] font-bold hover:bg-violet-600 hover:text-white transition-all">
-                                    Swap Sec
+                                <button onclick="openChangeModal('${sec.id}', '${sec.course_code}')" class="px-2 py-1 bg-violet-500/10 border border-violet-500/20 text-violet-600 rounded text-[0.62rem] font-bold hover:bg-violet-600 hover:text-white transition-all mr-1">
+                                    Swap
                                 </button>
-                                <button onclick="toggleSectionAJAX('${sec.id}', false, false, false)" class="text-red-500 hover:text-red-700">
+                                <button onclick="toggleSectionAJAX('${sec.id}', false, false, false, 'remove')" class="text-red-500 hover:text-red-700">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
                             `;

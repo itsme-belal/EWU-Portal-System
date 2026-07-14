@@ -323,6 +323,14 @@
             }, 4000);
         }
 
+        // Clean up fast-tab-styling to allow dynamic tab switching
+        window.addEventListener('DOMContentLoaded', function() {
+            const styleEl = document.getElementById('fast-tab-styling');
+            if (styleEl) {
+                styleEl.remove();
+            }
+        });
+
         // Display Flask flashed messages as toasts
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}

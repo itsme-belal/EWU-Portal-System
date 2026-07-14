@@ -119,6 +119,60 @@
 }
 .modal-scroll::-webkit-scrollbar { width:4px; }
 .modal-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:99px; }
+
+/* ── Admin Input & Button Overrides (Improvement Requirement #3) ── */
+.glass-card form:not(table *) select,
+.glass-card form:not(table *) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.glass-card form:not(table *) textarea,
+.input:not(table *),
+input[type="text"]:not(table *),
+input[type="email"]:not(table *),
+input[type="number"]:not(table *),
+input[type="password"]:not(table *),
+input[type="datetime-local"]:not(table *),
+select:not(table *) {
+  font-size: 0.875rem !important;
+  height: 2.85rem !important;
+  padding: 0.65rem 0.95rem !important;
+  border-radius: 8px !important;
+  line-height: 1.25 !important;
+}
+
+/* Adjust file input padding/height slightly so it doesn't get squished */
+input[type="file"] {
+  height: auto !important;
+  font-size: 0.875rem !important;
+  padding: 0.5rem 0 !important;
+}
+
+/* Make form grid layouts and spacing larger */
+.glass-card form .grid {
+  gap: 1.5rem !important;
+  margin-bottom: 1.25rem !important;
+}
+.glass-card form label {
+  font-size: 0.825rem !important;
+  color: #cbd5e1 !important;
+  margin-bottom: 0.6rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  display: block;
+}
+.dark .glass-card form label {
+  color: #cbd5e1 !important;
+}
+
+/* Make buttons larger and easier to click */
+.btn-primary,
+.glass-card form:not(table *) button[type="submit"] {
+  font-size: 0.875rem !important;
+  padding: 0.8rem 1.6rem !important;
+  height: auto !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
 </style>
 
 {% endblock %}
@@ -212,6 +266,7 @@
 </button>
 <div class="submenu pl-4" id="submenu-theme">
   <button onclick="applyTheme('light')" id="theme-btn-light" class="adm-sub-item">Light</button>
+  <button onclick="applyTheme('dark')" id="theme-btn-dark" class="adm-sub-item">Dark</button>
   <button onclick="applyTheme('cosmic')" id="theme-btn-cosmic" class="adm-sub-item">Cosmic</button>
   <button onclick="applyTheme('image')" id="theme-btn-image" class="adm-sub-item">University Theme</button>
 </div>

@@ -1347,20 +1347,29 @@ def toggle_section():
         if cs.course_code == sec.course_code:
             return jsonify({'status': 'error', 'message': f"You are already registered for section {cs.section_number} of {cs.course_code}. You can only register for one section per course."})
     
-    # Enforce maximum constraints: 15.0 credits & 6 courses
-    courses_count = len(current_sections) + 1
+    # Enforce maximum constraints: 15.0 credits & 5 unique courses
+    unique_course_codes = set()
+    for s in current_sections:
+        base_code = s.course_code.replace(' Lab', '').strip()
+        unique_course_codes.add(base_code)
+        
+    new_base_code = sec.course_code.replace(' Lab', '').strip()
+    unique_course_codes.add(new_base_code)
+    
+    courses_count = len(unique_course_codes)
+    
     total_credits = sum([s.credits for s in current_sections]) + sec.credits
     
-    # If lab auto-added, account for its credit and count
+    # If lab auto-added, account for its credit
     linked_lab = None
     if sec.linked_section_id:
         linked_lab = SectionOffering.query.get(sec.linked_section_id)
         if linked_lab:
-            courses_count += 1
-            total_credits += linked_lab.credits
+            if linked_lab.id not in [cs.id for cs in current_sections]:
+                total_credits += linked_lab.credits
             
-    if courses_count > 6 or total_credits > 15.0:
-        return jsonify({'status': 'error', 'message': 'Registration limit exceeded (Max 15.0 credits & 6 courses).'})
+    if courses_count > 5 or total_credits > 15.0:
+        return jsonify({'status': 'error', 'message': 'Registration limit exceeded (Max 15.0 credits & 5 courses).'})
         
     # Capacity Check
     if sec.enrolled_count >= sec.capacity:
@@ -1396,6 +1405,60 @@ def toggle_section():
     db.session.commit()
     
     return jsonify({'status': 'success', 'action': 'registered', 'message': f"Enrolled in {sec.course_code}."})
+
+@app.route('/student/get-advising-state')
+@login_required
+def get_advising_state():
+    if current_user.role != 'student':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+        
+    student = Student.query.filter_by(user_id=current_user.id).first()
+    if not student:
+        return jsonify({'status': 'error', 'message': 'Student profile not found'}), 404
+        
+    grades = Grade.query.filter_by(student_id=student.id).all()
+    def _grade_course_code(g):
+        sec = SectionOffering.query.get(g.section_id)
+        return sec.course_code if sec else g.section_id
+
+    passed_codes = [_grade_course_code(g) for g in grades if g.grade_letter not in ('F', None, '')]
+    f_grades     = [_grade_course_code(g) for g in grades if g.grade_letter == 'F']
+    d_grades     = [_grade_course_code(g) for g in grades if g.grade_letter in ['D', 'D+']]
+
+    current_sem_regs = Registration.query.filter_by(student_id=student.id, semester_id=get_current_semester()).all()
+    current_schedule_sections = [SectionOffering.query.get(r.section_id) for r in current_sem_regs if SectionOffering.query.get(r.section_id)]
+    current_course_codes = [sec.course_code for sec in current_schedule_sections if sec]
+    
+    eligible_course_codes = get_eligible_courses_for_student(student)
+    
+    registrations = Registration.query.filter_by(student_id=student.id, semester_id=get_next_semester()).all()
+    selected_section_ids = [r.section_id for r in registrations]
+    
+    sections = [s for s in SectionOffering.query.filter_by(semester_id=get_next_semester()).all()
+                if (s.course_code in eligible_course_codes or s.id in selected_section_ids) and s.course_code not in current_course_codes]
+                
+    sections_list = [{
+        'id': s.id,
+        'course_code': s.course_code,
+        'course_title': s.course_title,
+        'section_number': s.section_number,
+        'credits': s.credits,
+        'schedule': s.schedule,
+        'room': s.room,
+        'dedicated_departments': s.dedicated_departments,
+        'capacity': s.capacity,
+        'enrolled_count': s.enrolled_count,
+        'prerequisites': s.prerequisites,
+        'is_lab': s.is_lab,
+        'linked_section_id': s.linked_section_id,
+        'faculty_id': s.faculty_id
+    } for s in sections]
+    
+    return jsonify({
+        'status': 'success',
+        'registrations': selected_section_ids,
+        'sections': sections_list
+    })
 
 # Submit advising override request (Add Course Option - Max 2 requests)
 @app.route('/student/submit-request', methods=['POST'])
