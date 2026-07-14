@@ -501,7 +501,7 @@
                     {% endif %}
                     <div>
                         <h3 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">
-                            {{ req.type.replace('_', ' ') | uppercase }} Request
+                            {{ req.type.replace('_', ' ') | title }} Request
                         </h3>
                         <p class="text-xs text-[#94a3b8] mt-0.5">
                             Student ID: <strong>{{ req.student_id }}</strong> ({{ req.student_name }})

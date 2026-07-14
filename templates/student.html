@@ -736,7 +736,6 @@
         </div>
     </div>
 </div>
-</div>
 
 <!-- CLASS SCHEDULE TAB -->
 <div id="tab-schedule" class="tab-content hidden space-y-6">
@@ -1086,56 +1085,81 @@
 
             <!-- 1. Course Add Request Form -->
             <div id="form-add-course" class="stitch-card space-y-4">
-                <h3 class="font-bold text-sm text-blue-600 dark:text-blue-400">Submit Course Add Override Request</h3>
+                <div class="flex items-center justify-between border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Course Add Override Request</h3>
+                    <span class="text-xs text-slate-500">Submit requests to your advisor (Max 3 courses)</span>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left: Course Search & List -->
-                    <div class="lg:col-span-2 space-y-3">
-                        <div class="relative w-full">
-                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-[#94a3b8] pointer-events-none">
-                                <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                            </span>
-                            <input type="text" id="req-add-search" oninput="filterAddRequestCourses()" placeholder="Search catalog by course code or title..." 
-                                   class="w-full pl-9 pr-3 py-2 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 text-[#0f172a] dark:text-[#f1f5f9] placeholder-slate-400">
-                        </div>
-                        
-                        <div class="max-h-[350px] overflow-y-auto space-y-2 pr-1" id="req-add-course-list">
-                            {% for c in courses %}
-                            {% if not c.code.endswith(' Lab') %}
-                            <div class="req-add-card p-3 rounded-lg border border-[#e2e8f0] dark:border-[#1e293b] flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-900/15 transition-all" data-code="{{ c.code | lower }}" data-title="{{ c.title | lower }}">
-                                <div>
-                                    <div class="font-bold text-xs text-blue-600 dark:text-blue-400">{{ c.code }}</div>
-                                    <div class="text-[0.7rem] text-slate-500 mt-0.5">{{ c.title }}</div>
-                                    <div class="text-[0.62rem] text-slate-400 mt-0.5">Credits: {{ c.credits }} | Prereqs: {{ c.prerequisites | join(', ') if c.prerequisites else 'None' }}</div>
-                                </div>
-                                <button type="button" onclick="addToRequestCart('{{ c.code }}')" class="px-2.5 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[0.68rem] font-bold hover:bg-blue-200 transition-all">
-                                    + Add to Request Cart
+                    <!-- Left Panel: Live Catalog & Tabs -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <!-- Filter Tabs & Search Bar -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+                            <div class="flex flex-wrap gap-2" id="req-add-filter-container">
+                                <button type="button" onclick="setReqAddFilter('recommended')" id="req-add-filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all border border-transparent">
+                                    Recommended Courses
+                                </button>
+                                <button type="button" onclick="setReqAddFilter('retakeable')" id="req-add-filter-retakeable" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                                    Retakeable Courses
+                                </button>
+                                <button type="button" onclick="setReqAddFilter('d_grade')" id="req-add-filter-d_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                                    D/D+ Courses
+                                </button>
+                                <button type="button" onclick="setReqAddFilter('f_grade')" id="req-add-filter-f_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                                    F Courses
                                 </button>
                             </div>
-                            {% endif %}
-                            {% endfor %}
+                            <div class="relative w-full md:w-64">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-[#94a3b8] pointer-events-none">
+                                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                                </span>
+                                <input type="text" id="req-add-search-input" oninput="searchReqAddCourses()" placeholder="Search course code..." 
+                                       class="w-full pl-9 pr-3 py-1.5 bg-white/50 dark:bg-[#0f172a]/50 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 text-[#0f172a] dark:text-[#f1f5f9] placeholder-slate-400">
+                            </div>
+                        </div>
+
+                        <!-- Card Grid Container -->
+                        <div class="overflow-y-auto max-h-[500px] pr-1" id="req-add-table-container">
+                            <div id="req-add-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Populated dynamically via Javascript -->
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- Right: Request Cart & Submission -->
-                    <div class="space-y-4 bg-slate-950/20 p-4 rounded-xl border border-slate-800">
-                        <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Request Cart</h4>
-                        
-                        <!-- Selected Courses List -->
-                        <div id="add-request-cart-container" class="space-y-2 max-h-48 overflow-y-auto">
-                            <p class="text-[0.68rem] text-slate-500 italic" id="add-cart-empty-msg">No courses selected for request.</p>
-                        </div>
-                        
-                        <form action="{{ url_for('submit_add_request_multi') }}" method="POST" id="submit-add-request-form" class="space-y-3 pt-2">
-                            <input type="hidden" name="course_ids" id="add-request-cart-input" value="[]">
-                            <div>
-                                <label class="block text-[0.68rem] font-bold text-slate-300 uppercase tracking-wider mb-1.5">Mandatory Message / Reason:</label>
-                                <textarea name="comments" required rows="3" placeholder="Explain the academic reason why you need to register these courses..." 
-                                          class="w-full p-2.5 bg-white dark:bg-[#0c101d] border border-slate-700/60 rounded-lg text-xs outline-none focus:border-blue-500 text-slate-200"></textarea>
+
+                    <!-- Right Panel: Request Cart & Justification -->
+                    <div class="space-y-4">
+                        <div class="stitch-card space-y-4 h-fit bg-slate-950/20 border-slate-800">
+                            <div class="flex justify-between items-center border-b border-[#e2e8f0]/10 pb-2">
+                                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Live Cart</h3>
+                                <span class="text-[0.62rem] px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold rounded-full">Request Cart</span>
                             </div>
-                            <button type="submit" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-black shadow-lg shadow-blue-500/25 transition-all">
-                                Submit Add Course Request
-                            </button>
-                        </form>
+
+                            <div id="req-add-cart-items" class="space-y-2">
+                                <!-- Populated dynamically in JS -->
+                            </div>
+
+                            <div class="space-y-2 pt-2 border-t border-[#e2e8f0]/10 text-xs">
+                                <div class="flex justify-between font-medium">
+                                    <span>Total Credits:</span>
+                                    <span class="font-bold text-slate-200" id="req-add-cart-credits">0.0 CR</span>
+                                </div>
+                                <div class="flex justify-between font-medium">
+                                    <span>Course Count:</span>
+                                    <span class="font-bold text-slate-200" id="req-add-cart-count">0 / 3</span>
+                                </div>
+                            </div>
+
+                            <form action="{{ url_for('submit_add_request_multi') }}" method="POST" id="submit-add-request-form" class="space-y-3 pt-2">
+                                <input type="hidden" name="course_ids" id="add-request-cart-input" value="[]">
+                                <div>
+                                    <label class="block text-[0.68rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Mandatory Message / Reason:</label>
+                                    <textarea name="comments" required rows="3" placeholder="Explain the academic reason why you need to register these courses..." 
+                                              class="w-full p-2.5 bg-white dark:bg-[#0c101d] border border-[#e2e8f0]/10 dark:border-[#1e293b]/25 rounded-lg text-xs outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200"></textarea>
+                                </div>
+                                <button type="submit" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-black shadow-lg shadow-blue-500/25 transition-all">
+                                    Submit Add Course Request
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1193,35 +1217,83 @@
 
             <!-- 3. Seat Increase Request Form -->
             <div id="form-seat-increase" class="stitch-card space-y-4 hidden">
-                <h3 class="font-bold text-sm text-cyan-500">Submit Seat Capacity Increase Request</h3>
-                <form action="{{ url_for('submit_override_request') }}" method="POST" class="space-y-4">
-                    <input type="hidden" name="request_type" value="seat_increase">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Course Code</label>
-                            <select name="course_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
-                                {% for c in courses %}
-                                <option value="{{ c.code }}">{{ c.code }}{% if c.title and c.title.lower() != c.code.lower() %}: {{ c.title }}{% endif %}</option>
-                                {% endfor %}
-                            </select>
+                <div class="flex items-center justify-between border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Seat Capacity Increase Request</h3>
+                    <span class="text-xs text-slate-500">Submit requests to the Admin (Max 2 courses)</span>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left Panel: Live Catalog & Tabs -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <!-- Filter Tabs & Search Bar -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
+                            <div class="flex flex-wrap gap-2" id="req-seat-filter-container">
+                                <button type="button" onclick="setReqSeatFilter('recommended')" id="req-seat-filter-recommended" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all border border-transparent">
+                                    Recommended Courses
+                                </button>
+                                <button type="button" onclick="setReqSeatFilter('retakeable')" id="req-seat-filter-retakeable" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                                    Retakeable Courses
+                                </button>
+                                <button type="button" onclick="setReqSeatFilter('d_grade')" id="req-seat-filter-d_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                                    D/D+ Courses
+                                </button>
+                                <button type="button" onclick="setReqSeatFilter('f_grade')" id="req-seat-filter-f_grade" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all border border-transparent">
+                                    F Courses
+                                </button>
+                            </div>
+                            <div class="relative w-full md:w-64">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-[#94a3b8] pointer-events-none">
+                                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                                </span>
+                                <input type="text" id="req-seat-search-input" oninput="searchReqSeatCourses()" placeholder="Search course code..." 
+                                       class="w-full pl-9 pr-3 py-1.5 bg-white/50 dark:bg-[#0f172a]/50 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 text-[#0f172a] dark:text-[#f1f5f9] placeholder-slate-400">
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Section</label>
-                            <select name="section_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
-                                {% for s in sections %}
-                                <option value="{{ s.id }}">{{ s.course_code }} Sec {{ s.section_number }} ({{ s.schedule }}) - Seats: {{ s.enrolled_count }}/{{ s.capacity }}</option>
-                                {% endfor %}
-                            </select>
+
+                        <!-- Card Grid Container -->
+                        <div class="overflow-y-auto max-h-[500px] pr-1" id="req-seat-table-container">
+                            <div id="req-seat-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Populated dynamically via Javascript -->
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Justification / Reason</label>
-                        <textarea name="comments" required rows="3" placeholder="Why do you need a seat increase for this section? E.g., time conflict on all other sections..." class="w-full p-3 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"></textarea>
+
+                    <!-- Right Panel: Request Cart & Justification -->
+                    <div class="space-y-4">
+                        <div class="stitch-card space-y-4 h-fit bg-slate-950/20 border-slate-800">
+                            <div class="flex justify-between items-center border-b border-[#e2e8f0]/10 pb-2">
+                                <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Live Cart</h3>
+                                <span class="text-[0.62rem] px-2 py-0.5 bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300 font-bold rounded-full">Seat Request Cart</span>
+                            </div>
+
+                            <div id="req-seat-cart-items" class="space-y-2">
+                                <!-- Populated dynamically in JS -->
+                            </div>
+
+                            <div class="space-y-2 pt-2 border-t border-[#e2e8f0]/10 text-xs">
+                                <div class="flex justify-between font-medium">
+                                    <span>Total Credits:</span>
+                                    <span class="font-bold text-slate-200" id="req-seat-cart-credits">0.0 CR</span>
+                                </div>
+                                <div class="flex justify-between font-medium">
+                                    <span>Course Count:</span>
+                                    <span class="font-bold text-slate-200" id="req-seat-cart-count">0 / 2</span>
+                                </div>
+                            </div>
+
+                            <form action="{{ url_for('submit_seat_increase_multi') }}" method="POST" id="submit-seat-request-form" class="space-y-3 pt-2">
+                                <input type="hidden" name="section_ids" id="seat-request-cart-input" value="[]">
+                                <div>
+                                    <label class="block text-[0.68rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Mandatory Message / Reason:</label>
+                                    <textarea name="comments" required rows="3" placeholder="Explain the reasons why you need this section's capacity increased..." 
+                                              class="w-full p-2.5 bg-white dark:bg-[#0c101d] border border-[#e2e8f0]/10 dark:border-[#1e293b]/25 rounded-lg text-xs outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200"></textarea>
+                                </div>
+                                <button type="submit" class="w-full py-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white rounded-lg text-xs font-black shadow-lg shadow-cyan-500/25 transition-all">
+                                    Submit Seat Request
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                    <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-cyan-500 hover:bg-cyan-600 border-cyan-500 hover:border-cyan-600">
-                        Submit Seat Request
-                    </button>
-                </form>
+                </div>
             </div>
 
             <!-- 4. Drop Course Request Form -->
@@ -1589,7 +1661,7 @@
         <p class="text-xs text-[#94a3b8]">
             Select a replacement section for course <strong id="swap-course-display"></strong>. Requires mandatory advisor justification.
         </p>
-        <form action="{{ url_for('submit_change_request') }}" method="POST" class="space-y-4">
+        <form action="{{ url_for('submit_change_request_multi') }}" method="POST" class="space-y-4">
             <input type="hidden" name="current_section_id" id="swap-current-section-id">
             
             <div>
@@ -1705,6 +1777,17 @@
         const targetBtn = document.getElementById(`btn-form-${formId}`);
         if (targetBtn) {
             targetBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white border border-blue-600 transition-all";
+        }
+        if (formId === 'add-course') {
+            if (typeof loadReqAddSections === 'function') {
+                loadReqAddSections();
+                updateReqAddCartUI();
+            }
+        } else if (formId === 'seat-increase') {
+            if (typeof loadReqSeatSections === 'function') {
+                loadReqSeatSections();
+                updateReqSeatCartUI();
+            }
         }
     }
 
@@ -2087,60 +2170,448 @@
     }
 
     // ADD COURSE REQUEST CART LOGIC
-    let addRequestCart = [];
+    let addRequestCart = []; // stores section IDs
+    let currentReqAddFilter = 'recommended';
+    let reqAddSearchQuery = '';
 
-    function filterAddRequestCourses() {
-        const query = document.getElementById('req-add-search').value.trim().toLowerCase();
-        const cards = document.querySelectorAll('#req-add-course-list .req-add-card');
-        cards.forEach(card => {
-            const code = card.getAttribute('data-code') || '';
-            const title = card.getAttribute('data-title') || '';
-            if (code.includes(query) || title.includes(query)) {
-                card.classList.remove('hidden');
+    function setReqAddFilter(filterName) {
+        currentReqAddFilter = filterName;
+        // Update tab active styling
+        const buttons = document.querySelectorAll('#req-add-filter-container button');
+        buttons.forEach(btn => {
+            if (btn.id === `req-add-filter-${filterName}`) {
+                btn.classList.add('bg-blue-600', 'text-white');
+                btn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
             } else {
-                card.classList.add('hidden');
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
             }
         });
+        loadReqAddSections();
     }
 
-    function addToRequestCart(code) {
-        if (addRequestCart.includes(code)) {
-            alert('This course is already in your request cart.');
+    function searchReqAddCourses() {
+        reqAddSearchQuery = document.getElementById('req-add-search-input').value.trim().toUpperCase();
+        loadReqAddSections();
+    }
+
+    function loadReqAddSections() {
+        const cardsContainer = document.getElementById('req-add-cards-container');
+        if (!cardsContainer) return;
+        cardsContainer.innerHTML = '';
+
+        // Filter sectionsData based on category
+        let filtered = sectionsData;
+
+        // Exclude courses already registered in advising
+        const registeredAddCodes = registrationsList.map(id => {
+            const s = sectionsData.find(sec => sec.id === id);
+            return s ? s.course_code.replace(' Lab', '') : '';
+        }).filter(Boolean);
+        filtered = filtered.filter(sec => !registeredAddCodes.includes(sec.course_code.replace(' Lab', '')));
+
+        if (currentReqAddFilter === 'f_grade') {
+            filtered = filtered.filter(sec => failedCodes.includes(sec.course_code.replace(' Lab', '')));
+        } else if (currentReqAddFilter === 'recommended') {
+            filtered = filtered.filter(sec => recommendedCodes.includes(sec.course_code.replace(' Lab', '')));
+        } else if (currentReqAddFilter === 'd_grade') {
+            filtered = filtered.filter(sec => dCodes.includes(sec.course_code.replace(' Lab', '')));
+        } else if (currentReqAddFilter === 'retakeable') {
+            filtered = filtered.filter(sec => passedCodes.includes(sec.course_code.replace(' Lab', '')));
+        }
+
+        // Apply search query filter if present
+        if (reqAddSearchQuery) {
+            filtered = filtered.filter(sec => sec.course_code.toUpperCase().includes(reqAddSearchQuery));
+        }
+
+        if (filtered.length === 0) {
+            cardsContainer.innerHTML = '<div class="col-span-full text-xs text-[#94a3b8] py-8 text-center bg-white dark:bg-[#0a0f1e] rounded-xl border border-dashed border-[#e2e8f0] dark:border-[#1e293b]">No courses match the active filter criteria.</div>';
             return;
         }
-        addRequestCart.push(code);
-        updateAddRequestCartUI();
-    }
 
-    function removeFromRequestCart(code) {
-        addRequestCart = addRequestCart.filter(c => c !== code);
-        updateAddRequestCartUI();
-    }
+        filtered.forEach(sec => {
+            const isSelected = addRequestCart.includes(sec.id);
+            const isFull = sec.enrolled_count >= sec.capacity;
+            const isRestricted = sec.dedicated_departments && sec.dedicated_departments.length > 0 && !sec.dedicated_departments.includes('None') && !sec.dedicated_departments.includes('{{ student.department_id }}');
+            
+            // Decide color coding border and classes
+            let borderClass = "border-[#e2e8f0] dark:border-[#1e293b] bg-white dark:bg-[#0a0f1e]/40 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/10";
+            let statusBadge = '';
+            let checkBadgeStyle = 'opacity-0 scale-75';
+            
+            if (isSelected) {
+                borderClass = "border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-800 dark:text-blue-400";
+                statusBadge = `<span class="badge badge-primary text-[0.6rem] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">Selected</span>`;
+                checkBadgeStyle = "opacity-100 scale-100";
+            } else if (isRestricted) {
+                borderClass = "border-slate-200 dark:border-[#1e293b] bg-slate-100/50 dark:bg-[#0a0f1e]/20 text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed";
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400">Restricted</span>`;
+            } else if (isFull) {
+                borderClass = "border-sky-400 bg-sky-50/50 text-sky-800 dark:border-yellow-400 dark:bg-yellow-950/20 dark:text-yellow-400";
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-sky-100 text-sky-800 dark:bg-yellow-400/20 dark:text-yellow-400">Full</span>`;
+            }
 
-    function updateAddRequestCartUI() {
-        const container = document.getElementById('add-request-cart-container');
-        const hiddenInput = document.getElementById('add-request-cart-input');
-        if (!container || !hiddenInput) return;
+            const prereqList = sec.prerequisites && sec.prerequisites.length > 0 ? sec.prerequisites.join(', ') : 'None';
 
-        hiddenInput.value = JSON.stringify(addRequestCart);
+            const card = document.createElement('div');
+            card.className = `relative border transition-all duration-300 hover:scale-[1.01] hover:shadow-md cursor-pointer rounded-xl p-4 flex flex-col justify-between ${borderClass}`;
+            card.onclick = () => {
+                toggleReqAddSection(sec.id);
+            };
 
-        if (addRequestCart.length === 0) {
-            container.innerHTML = '<p class="text-[0.68rem] text-slate-500 italic" id="add-cart-empty-msg">No courses selected for request.</p>';
-            return;
-        }
+            card.innerHTML = `
+                <!-- Checkmark Badge -->
+                <div class="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md transition-all duration-300 ${checkBadgeStyle}">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
 
-        let html = '';
-        addRequestCart.forEach(code => {
-            html += `
-                <div class="flex items-center justify-between p-2 bg-slate-900/40 rounded-lg border border-slate-800 text-xs">
-                    <span class="font-bold text-blue-400">${code}</span>
-                    <button type="button" onclick="removeFromRequestCart('${code}')" class="text-red-500 hover:text-red-400 transition-colors">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
+                <div class="space-y-2">
+                    <div class="flex justify-between items-start pr-6">
+                        <div>
+                            <span class="text-sm font-extrabold">${sec.course_code}</span>
+                            <span class="ml-1.5 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[0.65rem] font-bold">Sec ${sec.section_number}</span>
+                        </div>
+                        <div>
+                            ${statusBadge}
+                        </div>
+                    </div>
+
+                    <p class="text-[0.7rem] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[200px]" title="${sec.course_title}">${sec.course_title}</p>
+
+                    <div class="grid grid-cols-2 gap-y-1.5 gap-x-2 pt-2 border-t border-slate-100 dark:border-white/5 text-[0.7rem]">
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="font-semibold">${sec.schedule}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 justify-end">
+                            <i data-lucide="award" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="font-bold">${sec.credits} CR</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="font-medium">${sec.room}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 justify-end font-mono">
+                            <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Seats: ${sec.enrolled_count} / ${sec.capacity}</span>
+                        </div>
+                    </div>
+
+                    <div class="text-[0.65rem] pt-1 text-slate-400 dark:text-slate-500 italic">
+                        Prereq: ${prereqList}
+                    </div>
                 </div>
             `;
+            cardsContainer.appendChild(card);
         });
+
+        // Initialize icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+
+    function toggleReqAddSection(secId) {
+        const sec = sectionsData.find(s => s.id === secId);
+        if (!sec) return;
+
+        const isSelected = addRequestCart.includes(secId);
+        if (isSelected) {
+            addRequestCart = addRequestCart.filter(id => id !== secId);
+        } else {
+            // Check if course already added (prevent adding multiple sections of same course)
+            const alreadyHasCourse = addRequestCart.some(id => {
+                const s = sectionsData.find(x => x.id === id);
+                return s && s.course_code === sec.course_code;
+            });
+            if (alreadyHasCourse) {
+                showToast('error', 'You have already selected a section for ' + sec.course_code + '.');
+                return;
+            }
+
+            // Check max 3 course request limit
+            if (addRequestCart.length >= 3) {
+                showToast('error', 'You can request a maximum of three (3) courses.');
+                return;
+            }
+
+            addRequestCart.push(secId);
+        }
+
+        loadReqAddSections();
+        updateReqAddCartUI();
+    }
+
+    function updateReqAddCartUI() {
+        const container = document.getElementById('req-add-cart-items');
+        const hiddenInput = document.getElementById('add-request-cart-input');
+        const creditsEl = document.getElementById('req-add-cart-credits');
+        const countEl = document.getElementById('req-add-cart-count');
+        if (!container || !hiddenInput || !creditsEl || !countEl) return;
+
+        // Serialize course codes from the selected sections
+        const courseCodes = addRequestCart.map(id => {
+            const sec = sectionsData.find(s => s.id === id);
+            return sec ? sec.course_code : '';
+        }).filter(code => code !== '');
+
+        hiddenInput.value = JSON.stringify(courseCodes);
+
+        let totalCredits = 0;
+        let html = '';
+
+        if (addRequestCart.length === 0) {
+            container.innerHTML = '<p class="text-[0.68rem] text-slate-500 italic">No courses selected for request.</p>';
+            creditsEl.textContent = '0.0 CR';
+            countEl.textContent = '0 / 3';
+            return;
+        }
+
+        addRequestCart.forEach(secId => {
+            const sec = sectionsData.find(s => s.id === secId);
+            if (sec) {
+                totalCredits += parseFloat(sec.credits);
+                html += `
+                    <div class="flex items-center justify-between p-3 bg-slate-900/40 rounded-lg border border-slate-800 text-xs">
+                        <div>
+                            <span class="font-bold text-blue-400">${sec.course_code} Sec ${sec.section_number}</span>
+                            <div class="text-[0.62rem] text-slate-400 mt-0.5">${sec.credits} CR • ${sec.schedule}</div>
+                        </div>
+                        <button type="button" onclick="toggleReqAddSection('${secId}')" class="text-red-500 hover:text-red-400 transition-colors">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+            }
+        });
+
         container.innerHTML = html;
+        creditsEl.textContent = totalCredits.toFixed(1) + ' CR';
+        countEl.textContent = `${addRequestCart.length} / 3`;
+
+        // Initialize icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+
+    // SEAT INCREASE REQUEST CART LOGIC
+    let seatRequestCart = []; // stores section IDs
+    let currentReqSeatFilter = 'recommended';
+    let reqSeatSearchQuery = '';
+
+    function setReqSeatFilter(filterName) {
+        currentReqSeatFilter = filterName;
+        // Update tab active styling
+        const buttons = document.querySelectorAll('#req-seat-filter-container button');
+        buttons.forEach(btn => {
+            if (btn.id === `req-seat-filter-${filterName}`) {
+                btn.classList.add('bg-blue-600', 'text-white');
+                btn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+            } else {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-800', 'dark:text-slate-200');
+            }
+        });
+        loadReqSeatSections();
+    }
+
+    function searchReqSeatCourses() {
+        reqSeatSearchQuery = document.getElementById('req-seat-search-input').value.trim().toUpperCase();
+        loadReqSeatSections();
+    }
+
+    function loadReqSeatSections() {
+        const cardsContainer = document.getElementById('req-seat-cards-container');
+        if (!cardsContainer) return;
+        cardsContainer.innerHTML = '';
+
+        // Filter sectionsData based on category
+        let filtered = sectionsData;
+
+        // Exclude courses already registered in advising
+        const registeredSeatCodes = registrationsList.map(id => {
+            const s = sectionsData.find(sec => sec.id === id);
+            return s ? s.course_code.replace(' Lab', '') : '';
+        }).filter(Boolean);
+        filtered = filtered.filter(sec => !registeredSeatCodes.includes(sec.course_code.replace(' Lab', '')));
+
+        if (currentReqSeatFilter === 'f_grade') {
+            filtered = filtered.filter(sec => failedCodes.includes(sec.course_code.replace(' Lab', '')));
+        } else if (currentReqSeatFilter === 'recommended') {
+            filtered = filtered.filter(sec => recommendedCodes.includes(sec.course_code.replace(' Lab', '')));
+        } else if (currentReqSeatFilter === 'd_grade') {
+            filtered = filtered.filter(sec => dCodes.includes(sec.course_code.replace(' Lab', '')));
+        } else if (currentReqSeatFilter === 'retakeable') {
+            filtered = filtered.filter(sec => passedCodes.includes(sec.course_code.replace(' Lab', '')));
+        }
+
+        // Apply search query filter if present
+        if (reqSeatSearchQuery) {
+            filtered = filtered.filter(sec => sec.course_code.toUpperCase().includes(reqSeatSearchQuery));
+        }
+
+        if (filtered.length === 0) {
+            cardsContainer.innerHTML = '<div class="col-span-full text-xs text-[#94a3b8] py-8 text-center bg-white dark:bg-[#0a0f1e] rounded-xl border border-dashed border-[#e2e8f0] dark:border-[#1e293b]">No courses match the active filter criteria.</div>';
+            return;
+        }
+
+        filtered.forEach(sec => {
+            const isSelected = seatRequestCart.includes(sec.id);
+            const isFull = sec.enrolled_count >= sec.capacity;
+            const isRestricted = sec.dedicated_departments && sec.dedicated_departments.length > 0 && !sec.dedicated_departments.includes('None') && !sec.dedicated_departments.includes('{{ student.department_id }}');
+            
+            // Decide color coding border and classes
+            let borderClass = "border-[#e2e8f0] dark:border-[#1e293b] bg-white dark:bg-[#0a0f1e]/40 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/10";
+            let statusBadge = '';
+            let checkBadgeStyle = 'opacity-0 scale-75';
+            
+            if (isSelected) {
+                borderClass = "border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-800 dark:text-blue-400";
+                statusBadge = `<span class="badge badge-primary text-[0.6rem] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">Selected</span>`;
+                checkBadgeStyle = "opacity-100 scale-100";
+            } else if (isRestricted) {
+                borderClass = "border-slate-200 dark:border-[#1e293b] bg-slate-100/50 dark:bg-[#0a0f1e]/20 text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed";
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400">Restricted</span>`;
+            } else if (isFull) {
+                borderClass = "border-sky-400 bg-sky-50/50 text-sky-800 dark:border-yellow-400 dark:bg-yellow-950/20 dark:text-yellow-400";
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-sky-100 text-sky-800 dark:bg-yellow-400/20 dark:text-yellow-400">Full</span>`;
+            }
+
+            const prereqList = sec.prerequisites && sec.prerequisites.length > 0 ? sec.prerequisites.join(', ') : 'None';
+
+            const card = document.createElement('div');
+            card.className = `relative border transition-all duration-300 hover:scale-[1.01] hover:shadow-md cursor-pointer rounded-xl p-4 flex flex-col justify-between ${borderClass}`;
+            card.onclick = () => {
+                toggleReqSeatSection(sec.id);
+            };
+
+            card.innerHTML = `
+                <!-- Checkmark Badge -->
+                <div class="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md transition-all duration-300 ${checkBadgeStyle}">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-start pr-6">
+                        <div>
+                            <span class="text-sm font-extrabold">${sec.course_code}</span>
+                            <span class="ml-1.5 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[0.65rem] font-bold">Sec ${sec.section_number}</span>
+                        </div>
+                        <div>
+                            ${statusBadge}
+                        </div>
+                    </div>
+
+                    <p class="text-[0.7rem] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[200px]" title="${sec.course_title}">${sec.course_title}</p>
+
+                    <div class="grid grid-cols-2 gap-y-1.5 gap-x-2 pt-2 border-t border-slate-100 dark:border-white/5 text-[0.7rem]">
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="font-semibold">${sec.schedule}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 justify-end">
+                            <i data-lucide="award" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="font-bold">${sec.credits} CR</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="font-medium">${sec.room}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 justify-end font-mono">
+                            <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>Seats: ${sec.enrolled_count} / ${sec.capacity}</span>
+                        </div>
+                    </div>
+
+                    <div class="text-[0.65rem] pt-1 text-slate-400 dark:text-slate-500 italic">
+                        Prereq: ${prereqList}
+                    </div>
+                </div>
+            `;
+            cardsContainer.appendChild(card);
+        });
+
+        // Initialize icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+
+    function toggleReqSeatSection(secId) {
+        const sec = sectionsData.find(s => s.id === secId);
+        if (!sec) return;
+
+        const isSelected = seatRequestCart.includes(secId);
+        if (isSelected) {
+            seatRequestCart = seatRequestCart.filter(id => id !== secId);
+        } else {
+            // Check if course already added (prevent adding multiple sections of same course)
+            const alreadyHasCourse = seatRequestCart.some(id => {
+                const s = sectionsData.find(x => x.id === id);
+                return s && s.course_code === sec.course_code;
+            });
+            if (alreadyHasCourse) {
+                showToast('error', 'You have already selected a section for ' + sec.course_code + '.');
+                return;
+            }
+
+            // Check max 2 course request limit
+            if (seatRequestCart.length >= 2) {
+                showToast('error', 'You can request seat increases for a maximum of two (2) courses.');
+                return;
+            }
+
+            seatRequestCart.push(secId);
+        }
+
+        loadReqSeatSections();
+        updateReqSeatCartUI();
+    }
+
+    function updateReqSeatCartUI() {
+        const container = document.getElementById('req-seat-cart-items');
+        const hiddenInput = document.getElementById('seat-request-cart-input');
+        const creditsEl = document.getElementById('req-seat-cart-credits');
+        const countEl = document.getElementById('req-seat-cart-count');
+        if (!container || !hiddenInput || !creditsEl || !countEl) return;
+
+        hiddenInput.value = JSON.stringify(seatRequestCart);
+
+        let totalCredits = 0;
+        let html = '';
+
+        if (seatRequestCart.length === 0) {
+            container.innerHTML = '<p class="text-[0.68rem] text-slate-500 italic">No courses selected for request.</p>';
+            creditsEl.textContent = '0.0 CR';
+            countEl.textContent = '0 / 2';
+            return;
+        }
+
+        seatRequestCart.forEach(secId => {
+            const sec = sectionsData.find(s => s.id === secId);
+            if (sec) {
+                totalCredits += parseFloat(sec.credits);
+                html += `
+                    <div class="flex items-center justify-between p-3 bg-slate-900/40 rounded-lg border border-slate-800 text-xs">
+                        <div>
+                            <span class="font-bold text-cyan-400">${sec.course_code} Sec ${sec.section_number}</span>
+                            <div class="text-[0.62rem] text-slate-400 mt-0.5">${sec.credits} CR • ${sec.schedule}</div>
+                        </div>
+                        <button type="button" onclick="toggleReqSeatSection('${secId}')" class="text-red-500 hover:text-red-400 transition-colors">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+            }
+        });
+
+        container.innerHTML = html;
+        creditsEl.textContent = totalCredits.toFixed(1) + ' CR';
+        countEl.textContent = `${seatRequestCart.length} / 2`;
+
+        // Initialize icons
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
@@ -2663,12 +3134,19 @@
     }
     switchTab(savedTab);
     
-    // Initialize pre-advising defaults
     if (typeof filterPreAdvising === 'function') {
         filterPreAdvising('recommended');
     }
     if (typeof updatePreAdvisingCartList === 'function') {
         updatePreAdvisingCartList();
+    }
+    if (typeof setReqAddFilter === 'function') {
+        setReqAddFilter('recommended');
+        updateReqAddCartUI();
+    }
+    if (typeof setReqSeatFilter === 'function') {
+        setReqSeatFilter('recommended');
+        updateReqSeatCartUI();
     }
 
     // Auto-highlight already-planned courses on page load
