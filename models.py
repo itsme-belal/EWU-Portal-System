@@ -36,6 +36,9 @@ class Faculty(db.Model):
     post = db.Column(db.String(100), nullable=True)
     present_address = db.Column(db.String(255), nullable=True)
     permanent_address = db.Column(db.String(255), nullable=True)
+    office = db.Column(db.String(100), nullable=True)
+    phone = db.Column(db.String(50), nullable=True)
+    research_interests = db.Column(db.String(500), nullable=True)
 
 class Student(db.Model):
     __tablename__ = 'students'
@@ -242,3 +245,65 @@ class Notification(db.Model):
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class CourseMaterial(db.Model):
+    __tablename__ = 'course_materials'
+    id = db.Column(db.String(50), primary_key=True)
+    section_id = db.Column(db.String(100), db.ForeignKey('section_offerings.id'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(255), nullable=False)
+    file_type = db.Column(db.String(50), nullable=False) # 'slide', 'note', 'assignment', 'lab'
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class CourseAnnouncement(db.Model):
+    __tablename__ = 'course_announcements'
+    id = db.Column(db.String(50), primary_key=True)
+    section_id = db.Column(db.String(100), db.ForeignKey('section_offerings.id'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id = db.Column(db.String(50), primary_key=True)
+    sender_id = db.Column(db.String(50), nullable=False) # User.id
+    receiver_id = db.Column(db.String(50), nullable=True) # User.id
+    content = db.Column(db.Text, nullable=False)
+    attachment_path = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_read = db.Column(db.Boolean, default=False)
+    course_chat_section_id = db.Column(db.String(100), db.ForeignKey('section_offerings.id'), nullable=True)
+
+class GradingScheme(db.Model):
+    __tablename__ = 'grading_schemes'
+    id = db.Column(db.String(50), primary_key=True) # SCHEME-section_id
+    section_id = db.Column(db.String(100), db.ForeignKey('section_offerings.id'), nullable=False)
+    _components = db.Column(db.Text, default='{}') # Saved as JSON string (e.g. {"Attendance": 10, "Midterm": 30})
+
+    @property
+    def components(self):
+        return json.loads(self._components or '{}')
+    
+    @components.setter
+    def components(self, value):
+        self._components = json.dumps(value)
+
+class StudentMark(db.Model):
+    __tablename__ = 'student_marks'
+    id = db.Column(db.String(100), primary_key=True) # MARK-student_id-section_id
+    student_id = db.Column(db.String(50), db.ForeignKey('students.id'), nullable=False)
+    section_id = db.Column(db.String(100), db.ForeignKey('section_offerings.id'), nullable=False)
+    _marks = db.Column(db.Text, default='{}') # Saved as JSON string (e.g. {"Attendance": 9, "Midterm": 25})
+    total_marks = db.Column(db.Float, default=0.0)
+    percentage = db.Column(db.Float, default=0.0)
+    grade_letter = db.Column(db.String(5), nullable=True)
+    grade_point = db.Column(db.Float, default=0.0)
+    is_published = db.Column(db.Boolean, default=False)
+
+    @property
+    def marks(self):
+        return json.loads(self._marks or '{}')
+    
+    @marks.setter
+    def marks(self, value):
+        self._marks = json.dumps(value)

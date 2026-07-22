@@ -4,13 +4,22 @@
     <script>
         (function() {
             const theme = localStorage.getItem('theme') || localStorage.getItem('ewu_theme') || 'light';
-            if (theme === 'dark' || theme === 'cosmic' || theme === 'image') {
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
                 document.documentElement.classList.add('dark');
-                document.documentElement.style.backgroundColor = '#0e1929';
-                document.documentElement.style.color = '#e8edf5';
+                document.documentElement.style.backgroundColor = '#111827';
+                document.documentElement.style.color = '#F1F5F9';
+            } else if (theme === 'cosmic') {
+                document.documentElement.classList.add('dark');
+                document.documentElement.style.backgroundColor = '#04050c';
+                document.documentElement.style.color = '#E0E7FF';
+            } else if (theme === 'image') {
+                document.documentElement.classList.add('dark');
+                document.documentElement.style.backgroundColor = '#0b0f19';
+                document.documentElement.style.color = '#F0F6FF';
             } else {
                 document.documentElement.classList.remove('dark');
-                document.documentElement.style.backgroundColor = '#ffffff';
+                document.documentElement.style.backgroundColor = '#F5F7FA';
                 document.documentElement.style.color = '#0f172a';
             }
         })();
@@ -25,44 +34,117 @@
             darkMode: 'class'
         }
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=portal-ui-20260628">
-    <!-- Plus Jakarta Sans Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=portal-v4-20260722">
+    <!-- Fonts: Inter + Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body {
-            font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-            overflow-x: hidden;
-        }
-        :root {
-            --sidebar-w: 260px;
-        }
+        body { font-family: 'Inter', 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
+        :root { --sidebar-w: 260px; }
+        /* Sidebar shows instantly with correct color — no flash */
         aside {
-            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(175deg, #312e81 0%, #1e1b4b 45%, #0f0e2e 100%) !important;
+            box-shadow: 4px 0 24px rgba(0,0,0,.3) !important;
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
         }
-        .main-content-container {
-            transition: margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .sidebar-closed aside {
-            transform: translateX(-100%);
-        }
-        .sidebar-closed .main-content-container {
-            margin-left: 0 !important;
-        }
+        .main-content-container { transition: margin-left 0.3s cubic-bezier(0.4,0,0.2,1); }
+        .sidebar-closed aside { transform: translateX(-100%); }
+        .sidebar-closed .main-content-container { margin-left: 0 !important; }
         @media (max-width: 1023px) {
-            .main-content-container {
-                margin-left: 0 !important;
-            }
-            aside {
-                transform: translateX(-100%);
-            }
-            body.sidebar-open aside {
-                transform: translateX(0);
-            }
+            .main-content-container { margin-left: 0 !important; }
+            aside { transform: translateX(-100%); }
+            body.sidebar-open aside { transform: translateX(0); }
+        }
+        /* Header instant color */
+        header {
+            background: linear-gradient(to right, #312e81, #1e1b4b) !important;
+            border-bottom: 1px solid rgba(255,255,255,.08) !important;
         }
     </style>
     {% block extra_head %}{% endblock %}
+    <style>
+        /* Shared experience layer — intentionally loaded after role pages so
+           Student, Faculty and Admin screens receive one consistent finish. */
+        :root {
+            --ease-out: cubic-bezier(.22, 1, .36, 1);
+            --surface-hover: color-mix(in srgb, var(--s0) 88%, var(--ewu-primary));
+        }
+        [data-theme="light"] {
+            --s1: #f6f8fc;
+            --s2: #eef2f8;
+            --s3: #dbe4f0;
+            --border: #dbe3ee;
+            --text-1: #14213a;
+            --text-2: #34445d;
+            --text-3: #5e708a;
+            --text-4: #7b8ba3;
+        }
+        .main-content-container { background: var(--s1); }
+        main > .tab-content { max-width: 1560px; margin-inline: auto; }
+        .tab-content:not(.hidden) { animation: portal-tab-in .42s var(--ease-out) both; }
+        @keyframes portal-tab-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Shared cards, control panels and data surfaces. */
+        .card, .stitch-card, .glass-card, .chart-card, .stat-card,
+        .filter-bar, .toggle-row {
+            box-shadow: 0 1px 2px rgba(15,23,42,.03), 0 8px 24px rgba(15,23,42,.055);
+            transition: transform .24s var(--ease-out), box-shadow .24s var(--ease-out), border-color .24s var(--ease-out), background .24s ease;
+        }
+        .card:hover, .stitch-card:hover, .glass-card:hover, .chart-card:hover {
+            border-color: color-mix(in srgb, var(--ewu-primary) 28%, var(--border));
+            box-shadow: 0 16px 36px rgba(15,23,42,.10);
+        }
+        .stat-card:hover { transform: translateY(-4px); }
+        .chart-card, .stitch-card, .glass-card { overflow: hidden; }
+
+        /* Dense information stays easy to scan in every role. */
+        main table { border-collapse: separate; border-spacing: 0; overflow: hidden; border-radius: 12px; }
+        main th { font-size: .68rem; letter-spacing: .075em; text-transform: uppercase; }
+        main tbody tr { transition: background .16s ease, transform .16s ease; }
+        main tbody tr:hover td { background: color-mix(in srgb, var(--s2) 78%, var(--ewu-primary)) !important; }
+        main td, main th { border-color: var(--border) !important; }
+
+        /* Buttons and fields have a uniform, tactile interaction language. */
+        main button, main a.btn-primary, main a.btn-secondary, main a.btn-danger {
+            transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out), filter .18s ease, background .18s ease, color .18s ease;
+        }
+        main button:not(:disabled):active, main a.btn-primary:active, main a.btn-secondary:active, main a.btn-danger:active { transform: translateY(1px) scale(.985); }
+        main button:disabled { cursor: not-allowed; opacity: .55; }
+        main input, main select, main textarea {
+            background-color: var(--s0) !important;
+            color: var(--text-1) !important;
+            border-color: var(--border) !important;
+        }
+        main input:hover, main select:hover, main textarea:hover { border-color: color-mix(in srgb, var(--border) 55%, var(--ewu-primary)); }
+        main input:focus, main select:focus, main textarea:focus {
+            border-color: var(--ewu-primary) !important;
+            box-shadow: 0 0 0 4px rgba(79,70,229,.12) !important;
+        }
+
+        /* Modal and empty-state surfaces need the same contrast as a page card. */
+        [class*="fixed"][class*="inset-0"] > [class*="bg-white"],
+        [class*="fixed"][class*="inset-0"] > [class*="bg-slate"] {
+            background: var(--s0) !important;
+            color: var(--text-1);
+            border-color: var(--border) !important;
+            box-shadow: 0 24px 80px rgba(15,23,42,.30);
+        }
+        [data-theme="dark"] main input, [data-theme="dark"] main select, [data-theme="dark"] main textarea,
+        [data-theme="cosmic"] main input, [data-theme="cosmic"] main select, [data-theme="cosmic"] main textarea,
+        [data-theme="image"] main input, [data-theme="image"] main select, [data-theme="image"] main textarea {
+            background: color-mix(in srgb, var(--s0) 88%, #0b1020) !important;
+        }
+
+        @media (max-width: 768px) {
+            main > .tab-content { gap: 1rem !important; }
+            main table { display: block; max-width: 100%; overflow-x: auto; white-space: nowrap; }
+            .stat-card:hover, .card:hover, .stitch-card:hover, .glass-card:hover, .chart-card:hover { transform: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+        }
+    </style>
 </head>
 <body class="sidebar-closed">
     <script>
@@ -124,31 +206,33 @@
         <!-- Sidebar -->
         <aside class="w-[var(--sidebar-w)] flex flex-col h-screen fixed top-0 left-0 z-50 overflow-y-auto">
             <!-- Sidebar Brand Header -->
-            <div class="px-4 py-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+            <div class="px-4 py-4 border-b flex items-center justify-between flex-shrink-0" style="border-color:rgba(255,255,255,.09)">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/15">
-                        <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
+                    <!-- Logo icon with glow -->
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#6366F1,#4F46E5);box-shadow:0 0 16px rgba(99,102,241,.45)">
+                        <i data-lucide="graduation-cap" class="w-5 h-5 text-white"></i>
                     </div>
                     <div>
-                        <p class="text-sm font-black text-white tracking-tight leading-none">EWU Portal</p>
-                        <p class="text-[0.6rem] text-white/50 font-bold uppercase tracking-widest mt-0.5">East West University</p>
+                        <p class="text-[.84rem] font-black text-white tracking-tight leading-none">EWU Portal</p>
+                        <p class="text-[0.58rem] font-bold uppercase tracking-[.15em] mt-0.5" style="color:rgba(165,180,252,.65)">East West University</p>
                     </div>
                 </div>
-                <button onclick="toggleSidebar()" class="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors" title="Close">
+                <button onclick="toggleSidebar()" class="p-1.5 rounded-lg transition-colors" style="color:rgba(255,255,255,.45)" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='rgba(255,255,255,.45)'" title="Close Sidebar">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
             <!-- Navigation Links -->
             <nav class="flex-1 p-3 overflow-y-auto space-y-0.5">
-                <div class="text-[0.56rem] font-black text-white/35 uppercase tracking-[0.15em] px-3 mb-3 mt-2">Navigation</div>
+                <div class="text-[0.55rem] font-black uppercase tracking-[.18em] px-3 mb-2.5 mt-1.5" style="color:rgba(165,180,252,.45)">Menu</div>
                 {% block sidebar_nav %}{% endblock %}
             </nav>
 
-            <!-- Bottom: Logout -->
-            <div class="p-3 border-t border-white/10 flex-shrink-0">
+            <!-- Bottom: User + Logout -->
+            <div class="p-3 flex-shrink-0" style="border-top:1px solid rgba(255,255,255,.08)">
                 <a href="{{ url_for('logout') }}"
-                   class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-semibold text-white/60 hover:bg-white/10 hover:text-white transition-all">
+                   class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-semibold transition-all"
+                   style="color:rgba(255,255,255,.55)" onmouseover="this.style.background='rgba(239,68,68,.12)';this.style.color='#fca5a5'" onmouseout="this.style.background='';this.style.color='rgba(255,255,255,.55)'">
                     <i data-lucide="log-out" class="w-4 h-4 flex-shrink-0"></i>
                     <span>Logout</span>
                 </a>
@@ -161,24 +245,32 @@
             <header class="h-[60px] flex items-center justify-between px-6 sticky top-0 z-40 flex-shrink-0">
                 <div class="flex items-center gap-3">
                     <button onclick="toggleSidebar()"
-                            class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white focus:outline-none transition-all"
+                            class="p-2 rounded-lg transition-all focus:outline-none"
+                            style="color:rgba(255,255,255,.7)" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='rgba(255,255,255,.7)'"
                             title="Toggle Sidebar">
                         <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
                     <!-- Breadcrumb -->
-                    <span class="text-xs text-slate-400 font-medium hidden sm:block" id="portal-breadcrumb">
+                    <span class="text-xs font-semibold hidden sm:block" id="portal-breadcrumb" style="color:rgba(255,255,255,.65)">
                         Home
                     </span>
                 </div>
-                <div class="flex items-center gap-3">
-                    <span class="px-3 py-1 rounded text-[0.68rem] font-black uppercase tracking-widest"
-                          style="background-color:{{ role_color }}18;color:{{ role_color }};border:1px solid {{ role_color }}40;">
+                <div class="flex items-center gap-2.5">
+                    <button onclick="window.location.reload()"
+                            class="p-2 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold"
+                            style="color:rgba(255,255,255,.65)" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='rgba(255,255,255,.65)'"
+                            title="Refresh Page">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        <span class="hidden md:inline">Refresh</span>
+                    </button>
+                    <span class="px-2.5 py-1 rounded-md text-[0.65rem] font-black uppercase tracking-widest"
+                          style="background-color:{{ role_color }}22;color:{{ role_color }};border:1px solid {{ role_color }}44;">
                         {{ current_user.role }}
                     </span>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 hidden sm:block">Hi, {{ profile_name }}</span>
-                        <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-white text-sm overflow-hidden ring-2 ring-slate-200 dark:ring-white/10"
-                             style="background:linear-gradient(135deg,{{ role_color }},{{ role_color }}aa);">
+                        <span class="text-xs font-semibold hidden sm:block" style="color:rgba(255,255,255,.75)">Hi, {{ profile_name }}</span>
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-white text-sm overflow-hidden"
+                             style="background:linear-gradient(135deg,{{ role_color }},{{ role_color }}aa);box-shadow:0 0 0 2px rgba(255,255,255,.2);">
                             {% if profile_pic %}
                             <img src="{{ url_for('static', filename='uploads/' ~ profile_pic) }}" alt="{{ profile_name }}" class="w-full h-full object-cover">
                             {% else %}
@@ -198,11 +290,11 @@
 
     <!-- Global Toast notification -->
     <div id="toast-box" class="fixed bottom-6 right-6 z-50 hidden transition-all duration-300 transform translate-y-4 opacity-0">
-        <div class="bg-white dark:bg-[#0a0f1e] border-l-4 p-4 rounded-lg shadow-xl flex items-start gap-3 min-w-[300px] border-[#e2e8f0] dark:border-[#1e293b]" id="toast-border">
+        <div id="toast-border" class="p-4 rounded-xl shadow-2xl flex items-start gap-3 min-w-[300px]" style="background:var(--s0);border-left:4px solid #10B981;border:1px solid var(--border);">
             <i id="toast-icon" class="w-5 h-5 mt-0.5"></i>
             <div>
-                <p class="font-bold text-sm" id="toast-title">Success</p>
-                <p class="text-xs text-[#475569] dark:text-[#94a3b8]" id="toast-msg"></p>
+                <p class="font-bold text-sm" id="toast-title" style="color:var(--text-1)">Success</p>
+                <p class="text-xs" id="toast-msg" style="color:var(--text-3)"></p>
             </div>
         </div>
     </div>
@@ -216,9 +308,17 @@
             const menu = document.getElementById(menuId);
             const arrow = document.getElementById(`${menuId}-arrow`);
             if (!menu) return;
-            const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !menu.classList.contains('open');
-            menu.classList.toggle('open', shouldOpen);
-            if (arrow) arrow.classList.toggle('open', shouldOpen);
+            const isHidden = menu.classList.contains('hidden') || !menu.classList.contains('open');
+            const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : isHidden;
+            if (shouldOpen) {
+                menu.classList.remove('hidden');
+                menu.classList.add('open');
+                if (arrow) arrow.classList.add('rotate-90', 'open');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('open');
+                if (arrow) arrow.classList.remove('rotate-90', 'open');
+            }
         }
 
         function toggleSidebar() {
@@ -247,7 +347,11 @@
             localStorage.setItem('theme', theme);
             localStorage.setItem('ewu_theme', theme);
 
-            document.body.classList.remove('theme-cosmic','theme-image');
+            // Set data-theme on BOTH html and body for CSS selectors
+            document.documentElement.setAttribute('data-theme', theme);
+            document.body.setAttribute('data-theme', theme);
+
+            document.body.classList.remove('theme-cosmic', 'theme-image');
             document.documentElement.classList.remove('dark');
             document.body.style.backgroundImage = '';
             document.body.style.backgroundSize = '';
@@ -256,23 +360,42 @@
 
             if (theme === 'dark') {
                 document.documentElement.classList.add('dark');
+                document.documentElement.style.backgroundColor = '#111827';
+                document.body.style.backgroundColor = '#111827';
+                document.documentElement.style.color = '#F1F5F9';
             } else if (theme === 'cosmic') {
                 document.documentElement.classList.add('dark');
                 document.body.classList.add('theme-cosmic');
-                document.body.style.backgroundImage = 'radial-gradient(ellipse at top left,#0d1b3e 0%,#020617 40%,#080814 100%)';
+                document.documentElement.style.backgroundColor = '#04050c';
+                document.body.style.backgroundColor = '#04050c';
+                document.documentElement.style.color = '#E0E7FF';
+                document.body.style.backgroundImage = 'radial-gradient(circle at 10% 20%, #04152d 0%, #0d0920 45%, #04050c 90%)';
                 document.body.style.backgroundAttachment = 'fixed';
             } else if (theme === 'image') {
                 document.documentElement.classList.add('dark');
                 document.body.classList.add('theme-image');
+                document.documentElement.style.backgroundColor = '#0b0f19';
+                document.body.style.backgroundColor = '#0b0f19';
+                document.documentElement.style.color = '#F0F6FF';
+                document.body.style.backgroundImage = "linear-gradient(rgba(5,9,20,.9), rgba(5,9,20,.94)), url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=1400')";
                 document.body.style.backgroundSize = 'cover';
                 document.body.style.backgroundPosition = 'center';
                 document.body.style.backgroundAttachment = 'fixed';
+            } else {
+                // Light theme
+                document.documentElement.style.backgroundColor = '#F5F7FA';
+                document.body.style.backgroundColor = '#F5F7FA';
+                document.documentElement.style.color = '#0f172a';
             }
-            // light: no dark class, clean white
 
+            // Update theme button active states
             document.querySelectorAll('[id^="theme-btn-"]').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.id === 'theme-btn-' + theme) btn.classList.add('active');
+                btn.classList.remove('active', 'ring-2', 'ring-indigo-500');
+                btn.style.outline = '';
+                if (btn.id === 'theme-btn-' + theme) {
+                    btn.classList.add('active');
+                    btn.style.outline = '2px solid #6366F1';
+                }
             });
         }
 
@@ -293,33 +416,34 @@
             const message = document.getElementById('toast-msg');
 
             message.textContent = msg;
-            
-            if (type === 'success') {
-                border.className = "bg-white dark:bg-[#0a0f1e] border-l-4 border-green-500 p-4 rounded-lg shadow-xl flex items-start gap-3 min-w-[300px]";
-                icon.className = "w-5 h-5 text-green-500 mt-0.5";
-                icon.setAttribute('data-lucide', 'check-circle-2');
-                title.textContent = "Success";
-                title.className = "font-bold text-sm text-green-800 dark:text-green-400";
-            } else {
-                border.className = "bg-white dark:bg-[#0a0f1e] border-l-4 border-red-500 p-4 rounded-lg shadow-xl flex items-start gap-3 min-w-[300px]";
-                icon.className = "w-5 h-5 text-red-500 mt-0.5";
-                icon.setAttribute('data-lucide', 'x-circle');
-                title.textContent = "Error";
-                title.className = "font-bold text-sm text-red-800 dark:text-red-400";
-            }
-            
-            lucide.createIcons();
-            
-            toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.remove('translate-y-4', 'opacity-0');
-            }, 50);
 
+            if (type === 'success') {
+                border.style.borderLeftColor = '#10B981';
+                border.style.borderLeftWidth = '4px';
+                border.style.borderLeftStyle = 'solid';
+                icon.className = 'w-5 h-5 mt-0.5';
+                icon.style.color = '#10B981';
+                icon.setAttribute('data-lucide', 'check-circle-2');
+                title.textContent = 'Success';
+                title.style.color = '#10B981';
+            } else {
+                border.style.borderLeftColor = '#EF4444';
+                border.style.borderLeftWidth = '4px';
+                border.style.borderLeftStyle = 'solid';
+                icon.className = 'w-5 h-5 mt-0.5';
+                icon.style.color = '#EF4444';
+                icon.setAttribute('data-lucide', 'x-circle');
+                title.textContent = 'Error';
+                title.style.color = '#EF4444';
+            }
+
+            lucide.createIcons();
+
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.remove('translate-y-4', 'opacity-0'); }, 50);
             setTimeout(() => {
                 toast.classList.add('translate-y-4', 'opacity-0');
-                setTimeout(() => {
-                    toast.classList.add('hidden');
-                }, 300);
+                setTimeout(() => { toast.classList.add('hidden'); }, 300);
             }, 4000);
         }
 

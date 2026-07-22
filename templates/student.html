@@ -282,13 +282,13 @@
             <!-- Student's Personal Clock Grid -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Pre-Advising Time Slot -->
-                <div class="p-3 bg-slate-950/30 rounded-xl border border-slate-800/80 space-y-2 flex flex-col justify-between">
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 flex flex-col justify-between">
                     <div class="space-y-1.5">
                         <div class="flex justify-between items-center">
                             <span class="text-[0.62rem] uppercase font-bold text-slate-400 tracking-wider">1. Pre-Advising Slot</span>
                             <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold {{ pre_status_class }}">{{ pre_status_label }}</span>
                         </div>
-                        <div class="text-xs font-bold text-slate-200">
+                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">
                             {% if student_pre_start != 'Not Set Yet' %}
                             {{ student_pre_start }}
                             {% else %}
@@ -302,13 +302,13 @@
                 </div>
 
                 <!-- Final Advising Time Slot -->
-                <div class="p-3 bg-slate-950/30 rounded-xl border border-slate-800/80 space-y-2 flex flex-col justify-between">
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 flex flex-col justify-between">
                     <div class="space-y-1.5">
                         <div class="flex justify-between items-center">
                             <span class="text-[0.62rem] uppercase font-bold text-slate-400 tracking-wider">2. Final Advising Slot</span>
                             <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold {{ final_status_class }}">{{ final_status_label }}</span>
                         </div>
-                        <div class="text-xs font-bold text-slate-200">
+                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">
                             {% if student_final_start != 'Not Set Yet' %}
                             {{ student_final_start }}
                             {% else %}
@@ -322,13 +322,13 @@
                 </div>
 
                 <!-- Advisor Request Time Slot -->
-                <div class="p-3 bg-slate-950/30 rounded-xl border border-slate-800/80 space-y-2 flex flex-col justify-between">
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 flex flex-col justify-between">
                     <div class="space-y-1.5">
                         <div class="flex justify-between items-center">
                             <span class="text-[0.62rem] uppercase font-bold text-slate-400 tracking-wider">3. Request Submissions</span>
                             <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold {{ request_status_class }}">{{ request_status_label }}</span>
                         </div>
-                        <div class="text-xs font-bold text-slate-200">
+                        <div class="text-xs font-bold text-slate-800 dark:text-slate-200">
                             {% if request_phase_active %}
                             Open after Final Advising
                             {% else %}
@@ -772,28 +772,28 @@
                 <table class="stitch-table w-full text-left text-xs">
                     <thead>
                         <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Serial</th>
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Course</th>
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Section</th>
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Credits</th>
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Timing</th>
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Room No.</th>
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Drop Status</th>
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Faculty Initial</th>
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Faculty Name</th>
-                            <th class="py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400">Faculty Email</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">SERIAL</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">COURSE</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">SECTION</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">CREDITS</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">TIMING</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">ROOM NO.</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">DROP STATUS</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">FACULTY INITIAL</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">FACULTY NAME</th>
+                            <th class="py-2.5 px-3 font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">FACULTY EMAIL</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in schedule_details %}
                         <tr class="border-b border-slate-100 dark:border-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-900/20">
-                            <td class="py-3 px-3">{{ item.serial }}</td>
+                            <td class="py-3 px-3 font-semibold text-slate-500 dark:text-slate-400">{{ item.serial }}</td>
                             <td class="py-3 px-3 font-bold text-blue-600 dark:text-blue-400">{{ item.course_code }}</td>
-                            <td class="py-3 px-3">{{ item.section_number }}</td>
+                            <td class="py-3 px-3 font-semibold">{{ item.section_number }}</td>
                             <td class="py-3 px-3 font-medium">{{ item.credits }} CR</td>
-                            <td class="py-3 px-3">{{ item.schedule }}</td>
-                            <td class="py-3 px-3">{{ item.room }}</td>
-                            <td class="py-3 px-3">
+                            <td class="py-3 px-3 font-mono text-[0.78rem]">{{ item.schedule }}</td>
+                            <td class="py-3 px-3 font-medium">{{ item.room }}</td>
+                            <td class="py-3 px-3 font-semibold">
                                 {% if item.drop_status == 'Yes' %}
                                 <span class="px-2 py-0.5 text-[0.62rem] font-bold rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">Yes</span>
                                 {% else %}
@@ -801,12 +801,12 @@
                                 {% endif %}
                             </td>
                             <td class="py-3 px-3 font-bold text-violet-500 dark:text-violet-400">{{ item.fac_initial }}</td>
-                            <td class="py-3 px-3">{{ item.fac_name }}</td>
-                            <td class="py-3 px-3 text-slate-400 dark:text-slate-500 text-[0.7rem]">{{ item.fac_email }}</td>
+                            <td class="py-3 px-3 font-semibold text-slate-800 dark:text-slate-200">{{ item.fac_name }}</td>
+                            <td class="py-3 px-3 text-slate-500 dark:text-slate-400 font-mono text-[0.7rem]">{{ item.fac_email }}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="11" class="text-center text-[#94a3b8] py-8">No registered courses found for {{ formatted_selected_sched_sem }}.</td>
+                            <td colspan="10" class="text-center text-[#94a3b8] py-8">No registered courses found for {{ formatted_selected_sched_sem }}.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -1070,15 +1070,9 @@
                 <button onclick="toggleRequestForm('drop-course')" id="btn-form-drop-course" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-transparent transition-all">
                     Drop Course
                 </button>
-                <button onclick="toggleRequestForm('withdraw-course')" id="btn-form-withdraw-course" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-transparent transition-all">
-                    Withdraw Course
-                </button>
                 {% else %}
                 <button class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-600 border border-transparent cursor-not-allowed" disabled title="Phase Closed by Admin">
                     Drop Course (Closed)
-                </button>
-                <button class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200/50 dark:bg-slate-800/30 text-slate-400 dark:text-slate-600 border border-transparent cursor-not-allowed" disabled title="Phase Closed by Admin">
-                    Withdraw Course (Closed)
                 </button>
                 {% endif %}
             </div>
@@ -1319,33 +1313,6 @@
                     </div>
                     <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-red-500 hover:bg-red-600 border-red-500 hover:border-red-600">
                         Submit Drop Request
-                    </button>
-                </form>
-            </div>
-
-            <!-- 5. Withdraw Course Request Form -->
-            <div id="form-withdraw-course" class="stitch-card space-y-4 hidden">
-                <h3 class="font-bold text-sm text-rose-500">Submit Withdraw Course Request</h3>
-                <form action="{{ url_for('submit_override_request') }}" method="POST" class="space-y-4">
-                    <input type="hidden" name="request_type" value="withdraw_course">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Course to Withdraw</label>
-                            <select name="course_id" required class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
-                                {% for s in next_schedule_sections %}
-                                <option value="{{ s.course_code }}">{{ s.course_code }} - Sec {{ s.section_number }}</option>
-                                {% else %}
-                                <option value="">No registered courses in your cart</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Justification / Reason (Mandatory)</label>
-                        <textarea name="comments" required rows="3" placeholder="Why do you need to withdraw from this course? E.g., class performance, excessive stress..." class="w-full p-3 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"></textarea>
-                    </div>
-                    <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-rose-500 hover:bg-rose-600 border-rose-500 hover:border-rose-600">
-                        Submit Withdraw Request
                     </button>
                 </form>
             </div>

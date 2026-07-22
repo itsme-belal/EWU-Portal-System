@@ -10,266 +10,603 @@
     </button>
 </div>
 
-<!-- My Courses Group -->
-<div class="mt-3 pt-2 border-t border-slate-800">
-    <button onclick="switchTab('my-courses'); toggleMenu('submenu-courses', true)" id="nav-my-courses-parent" class="nav-item flex items-center justify-between w-full">
-        <div class="flex items-center gap-2">
-            <i data-lucide="book-open" class="w-4 h-4"></i>
-            <span>My Courses</span>
-        </div>
-        <i data-lucide="chevron-right" id="submenu-courses-arrow" class="nav-arrow"></i>
+<!-- My Courses -->
+<div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+    <button onclick="switchTab('my-courses')" id="nav-my-courses" class="nav-item">
+        <i data-lucide="book-open" class="w-4 h-4"></i>
+        <span>My Courses</span>
     </button>
-    <div id="submenu-courses" class="submenu">
-        <button onclick="switchTab('attendance')" id="nav-attendance" class="nav-sub-item">Attendance</button>
-        <button onclick="switchTab('grading')" id="nav-grading" class="nav-sub-item">Grade Management</button>
-    </div>
 </div>
 
-<!-- Advising Group -->
-<div class="mt-3 pt-2 border-t border-slate-800">
-    <button onclick="switchTab('advisees'); toggleMenu('submenu-advising', true)" id="nav-advising-parent" class="nav-item flex items-center justify-between w-full">
+<!-- Advising -->
+<div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+    <button onclick="toggleMenu('submenu-advising', true); switchTab('advisees');" id="nav-advising-parent" class="nav-item flex items-center justify-between w-full">
         <div class="flex items-center gap-2">
             <i data-lucide="users" class="w-4 h-4"></i>
             <span>Advising</span>
         </div>
-        <i data-lucide="chevron-right" id="submenu-advising-arrow" class="nav-arrow"></i>
+        <i data-lucide="chevron-right" id="submenu-advising-arrow" class="nav-arrow transition-transform"></i>
     </button>
-    <div id="submenu-advising" class="submenu">
-        <button onclick="switchTab('advisees')" id="nav-advisees" class="nav-sub-item">My Advisee Students</button>
-        <button onclick="switchTab('advisee-advising')" id="nav-advisee-advising" class="nav-sub-item">Student Advising</button>
-        <button onclick="switchTab('requests')" id="nav-requests" class="nav-sub-item relative">
-            Course Requests
+    <div id="submenu-advising" class="submenu hidden space-y-1 pl-6 mt-1">
+        <button onclick="switchTab('advisees')" id="nav-advisees" class="nav-sub-item w-full text-left">My Advisee Students</button>
+        <button onclick="switchTab('dept-students')" id="nav-dept-students" class="nav-sub-item w-full text-left">All Students (Dept Roster)</button>
+        <button onclick="switchTab('requests')" id="nav-requests" class="nav-sub-item w-full text-left relative flex justify-between items-center">
+            <span>Course Requests</span>
             {% set pending_count = requests | selectattr('status', 'equalto', 'pending_advisor') | list | length %}
             {% if pending_count > 0 %}
-            <span class="ml-1 bg-red-500 text-slate-800 dark:text-white rounded-full text-[0.55rem] font-bold px-1.5 py-0.5">{{ pending_count }}</span>
+            <span class="bg-red-500 text-white rounded-full text-[0.55rem] font-bold px-1.5 py-0.5" id="sidebar-request-badge">{{ pending_count }}</span>
             {% endif %}
         </button>
-        <button onclick="switchTab('section-change')" id="nav-section-change" class="nav-sub-item">Section Change</button>
     </div>
 </div>
 
-<div class="mt-3 pt-2 border-t border-slate-800 space-y-1">
+<div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1">
     <button onclick="switchTab('schedule')" id="nav-schedule" class="nav-item">
         <i data-lucide="calendar" class="w-4 h-4"></i>
         <span>Class Schedule</span>
     </button>
+    <button onclick="switchTab('announcements')" id="nav-announcements" class="nav-item">
+        <i data-lucide="megaphone" class="w-4 h-4"></i>
+        <span>Announcements</span>
+    </button>
+    <button onclick="switchTab('messaging')" id="nav-messaging" class="nav-item">
+        <i data-lucide="message-square" class="w-4 h-4"></i>
+        <span>Messaging</span>
+    </button>
+    <button onclick="switchTab('reports')" id="nav-reports" class="nav-item">
+        <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+        <span>Reports</span>
+    </button>
     <button onclick="switchTab('settings')" id="nav-settings" class="nav-item">
         <i data-lucide="user" class="w-4 h-4"></i>
-        <span>Profile</span>
+        <span>Profile & Settings</span>
     </button>
 </div>
 
 <!-- Theme Selector -->
-<div class="mt-3 pt-2 border-t border-slate-800">
+<div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800">
     <button onclick="toggleMenu('submenu-theme')" class="nav-item flex items-center justify-between w-full">
         <div class="flex items-center gap-2">
-            <i data-lucide="palette" style="color:#ec4899;"></i>
+            <i data-lucide="palette" class="w-4 h-4 text-pink-500"></i>
             <span>Theme</span>
         </div>
-        <i data-lucide="chevron-right" id="submenu-theme-arrow" class="nav-arrow"></i>
+        <i data-lucide="chevron-right" id="submenu-theme-arrow" class="nav-arrow transition-transform"></i>
     </button>
-    <div id="submenu-theme" class="submenu">
-        <button onclick="applyTheme('light')" id="theme-btn-light" class="nav-sub-item theme-selector-btn">Light</button>
-        <button onclick="applyTheme('dark')" id="theme-btn-dark" class="nav-sub-item theme-selector-btn">Dark</button>
-        <button onclick="applyTheme('cosmic')" id="theme-btn-cosmic" class="nav-sub-item theme-selector-btn">Cosmic</button>
-        <button onclick="applyTheme('image')" id="theme-btn-image" class="nav-sub-item theme-selector-btn">University Theme</button>
+    <div id="submenu-theme" class="submenu hidden space-y-1 pl-6 mt-1">
+        <button onclick="applyTheme('light')" id="theme-btn-light" class="nav-sub-item w-full text-left">Light</button>
+        <button onclick="applyTheme('dark')" id="theme-btn-dark" class="nav-sub-item w-full text-left">Dark</button>
+        <button onclick="applyTheme('cosmic')" id="theme-btn-cosmic" class="nav-sub-item w-full text-left">Cosmic</button>
+        <button onclick="applyTheme('image')" id="theme-btn-image" class="nav-sub-item w-full text-left">University Theme</button>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- DASHBOARD TAB -->
-<div id="tab-dashboard" class="tab-content hidden space-y-6">
-    <div class="stitch-card faculty-hero flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-        <div>
-            <p class="text-xs font-bold uppercase tracking-[0.2em] text-blue-100">Faculty Portal</p>
-            <h1 class="text-3xl font-extrabold tracking-tight mt-2">{{ faculty.name }}</h1>
-            <p class="text-sm text-blue-100 mt-1">{{ dept.name if dept else faculty.department_id }} | {{ active_semester }}</p>
-        </div>
-        <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
-            <div class="rounded-lg bg-white/10 border border-slate-200 dark:border-white/10 p-3 text-center">
-                <p class="text-2xl font-black">{{ advisees | length }}</p>
-                <p class="text-[0.65rem] uppercase tracking-wider text-blue-100">Advisees</p>
-            </div>
-            <div class="rounded-lg bg-white/10 border border-slate-200 dark:border-white/10 p-3 text-center">
-                <p class="text-2xl font-black">{{ sections | length }}</p>
-                <p class="text-[0.65rem] uppercase tracking-wider text-blue-100">Sections</p>
-            </div>
-            <div class="rounded-lg bg-white/10 border border-slate-200 dark:border-white/10 p-3 text-center">
-                <p class="text-2xl font-black">{{ pending_count }}</p>
-                <p class="text-[0.65rem] uppercase tracking-wider text-blue-100">Requests</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="stitch-card metric-card flex flex-col justify-between">
-            <span class="text-[0.65rem] font-bold text-[#94a3b8] uppercase tracking-wider">My Advisees</span>
-            <p class="text-2xl font-extrabold text-violet-500 mt-2">{{ advisees | length }} Students</p>
-        </div>
-        <div class="stitch-card metric-card flex flex-col justify-between">
-            <span class="text-[0.65rem] font-bold text-[#94a3b8] uppercase tracking-wider">Active Sections</span>
-            <p class="text-2xl font-extrabold text-blue-500 mt-2">{{ sections | length }} Sections</p>
-        </div>
-        <div class="stitch-card metric-card flex flex-col justify-between">
-            <span class="text-[0.65rem] font-bold text-[#94a3b8] uppercase tracking-wider">Pending Requests</span>
-            <p class="text-2xl font-extrabold text-amber-500 mt-2">
-                {{ pending_count }} Pending
+<!-- 1. DASHBOARD TAB -->
+<div id="tab-dashboard" class="tab-content space-y-6">
+    <!-- Hero Banner -->
+    <div class="stitch-card p-6 bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 text-white rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-white/5 pointer-events-none"></div>
+        <div class="absolute -left-10 -top-10 w-32 h-32 rounded-full bg-white/5 pointer-events-none"></div>
+        <div class="relative z-10">
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">Welcome Back</p>
+            <h1 class="text-3xl font-extrabold tracking-tight mt-1">{{ faculty.name }}</h1>
+            <p class="text-sm text-blue-200 mt-2 flex items-center gap-2">
+                <i data-lucide="building" class="w-4 h-4"></i> {{ dept.name if dept else faculty.department_id }}
+                <span class="w-1 h-1 rounded-full bg-blue-300"></span>
+                <i data-lucide="calendar-days" class="w-4 h-4"></i> {{ active_semester }}
             </p>
         </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button onclick="switchTab('advisees')" class="quick-card text-left">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center">
-                    <i data-lucide="users" class="w-4 h-4"></i>
-                </div>
-                <div>
-                    <p class="font-bold text-sm">Advisee Students</p>
-                    <p class="text-xs text-[#94a3b8]">Review academic and financial status.</p>
-                </div>
+        <div class="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto">
+            <div class="rounded-xl bg-white/10 backdrop-blur-md border border-white/10 p-3.5 text-center">
+                <p class="text-2xl font-black text-white" id="stat-courses">{{ sections | length }}</p>
+                <p class="text-[0.6rem] uppercase tracking-wider text-blue-200 font-bold mt-1">Courses</p>
             </div>
-        </button>
-        <button onclick="switchTab('requests')" class="quick-card text-left">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
-                </div>
-                <div>
-                    <p class="font-bold text-sm">Course Requests</p>
-                    <p class="text-xs text-[#94a3b8]">Approve or reject student requests.</p>
-                </div>
-            </div>
-        </button>
-        <button onclick="switchTab('schedule')" class="quick-card text-left">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                    <i data-lucide="calendar-days" class="w-4 h-4"></i>
-                </div>
-                <div>
-                    <p class="font-bold text-sm">Class Schedule</p>
-                    <p class="text-xs text-[#94a3b8]">View weekly teaching assignments.</p>
-                </div>
-            </div>
-        </button>
-    </div>
-
-    <!-- Offered Sections -->
-    <div class="stitch-card space-y-4">
-        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Offered Sections</h3>
-        {% if sections %}
-        <div class="table-container">
-            <table class="stitch-table">
-                <thead>
-                    <tr>
-                        <th>Course</th>
-                        <th>Section</th>
-                        <th>Schedule</th>
-                        <th>Room</th>
-                        <th>Enrolled</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div class="rounded-xl bg-white/10 backdrop-blur-md border border-white/10 p-3.5 text-center">
+                <p class="text-2xl font-black text-white" id="stat-students">
+                    {% set total_std = namespace(value=0) %}
                     {% for sec in sections %}
-                    <tr>
-                        <td class="font-bold text-blue-600 dark:text-blue-400">{{ sec.course_code }}</td>
-                        <td>Section {{ sec.section_number }}</td>
-                        <td>{{ sec.schedule }}</td>
-                        <td>{{ sec.room }}</td>
-                        <td>{{ sec.enrolled_count }} / {{ sec.capacity }}</td>
-                        <td>
-                            <div class="flex flex-wrap gap-2">
-                                <button onclick="openSectionTool('attendance', '{{ sec.id }}')" class="px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-[0.65rem] font-bold transition-colors">Attendance</button>
-                                <button onclick="openSectionTool('grading', '{{ sec.id }}')" class="px-2 py-1 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-[0.65rem] font-bold transition-colors">Grades</button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center text-[#94a3b8] py-4">No teaching assignments this semester.</td>
-                    </tr>
+                        {% set total_std.value = total_std.value + sec.enrolled_count %}
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">
-                <i data-lucide="calendar-x" class="w-5 h-5"></i>
+                    {{ total_std.value }}
+                </p>
+                <p class="text-[0.6rem] uppercase tracking-wider text-blue-200 font-bold mt-1">Students</p>
             </div>
-            <div>
-                <p class="font-bold text-sm text-[#0f172a] dark:text-[#f1f5f9]">No teaching assignments yet</p>
-                <p class="text-xs text-[#94a3b8] mt-1">Admin has not assigned any {{ active_semester }} sections to this faculty account.</p>
+            <div class="rounded-xl bg-white/10 backdrop-blur-md border border-white/10 p-3.5 text-center">
+                <p class="text-2xl font-black text-white" id="stat-advisees">{{ advisees | length }}</p>
+                <p class="text-[0.6rem] uppercase tracking-wider text-blue-200 font-bold mt-1">Advisees</p>
             </div>
-            <button onclick="switchTab('advisees')" class="stitch-btn btn-secondary rounded-lg text-xs py-2 px-4">View Advisees</button>
+            <div class="rounded-xl bg-white/10 backdrop-blur-md border border-white/10 p-3.5 text-center">
+                <p class="text-2xl font-black text-white" id="stat-hours">
+                    {% set total_credits = namespace(value=0) %}
+                    {% for sec in sections %}
+                        {% set total_credits.value = total_credits.value + sec.credits %}
+                    {% endfor %}
+                    {{ total_credits.value * 3 }}
+                </p>
+                <p class="text-[0.6rem] uppercase tracking-wider text-blue-200 font-bold mt-1">Hours / Wk</p>
+            </div>
         </div>
-        {% endif %}
+    </div>
+
+    <!-- Quick Stats Cards & Actions -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Today's Schedule -->
+        <div class="stitch-card flex flex-col justify-between h-full bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 shadow-md rounded-2xl p-5 lg:col-span-2">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+                <h3 class="font-black text-sm uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-4 h-4 text-blue-500"></i> Today's Classes
+                </h3>
+                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium" id="today-name-display"></span>
+            </div>
+            <div id="todays-classes-list" class="space-y-3 min-h-[140px] flex flex-col justify-center">
+                <!-- Populated via JS based on current day of week -->
+            </div>
+        </div>
+
+        <!-- Upcoming / Overview Quick List -->
+        <div class="stitch-card flex flex-col justify-between h-full bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 shadow-md rounded-2xl p-5">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+                <h3 class="font-black text-sm uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <i data-lucide="activity" class="w-4 h-4 text-violet-500"></i> Actions & Alerts
+                </h3>
+            </div>
+            <div class="space-y-4">
+                <!-- Action Item: Requests -->
+                <div class="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold text-slate-850 dark:text-slate-250">Override Requests</p>
+                        <p class="text-[0.7rem] text-slate-500 dark:text-slate-400">
+                            {{ pending_count }} pending advisee seat/swap requests.
+                        </p>
+                        <button onclick="switchTab('requests')" class="text-[0.7rem] font-bold text-amber-600 dark:text-amber-400 mt-1 hover:underline">
+                            Resolve Requests &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action Item: Grades -->
+                <div class="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="award" class="w-4 h-4"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold text-slate-850 dark:text-slate-250">Pending Grades</p>
+                        <p class="text-[0.7rem] text-slate-500 dark:text-slate-400">
+                            Publish grading for active courses.
+                        </p>
+                        <button onclick="switchTab('my-courses')" class="text-[0.7rem] font-bold text-emerald-600 dark:text-emerald-400 mt-1 hover:underline">
+                            Grade Workspace &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action Item: Announcements -->
+                <div class="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="megaphone" class="w-4 h-4"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold text-slate-850 dark:text-slate-250">Latest Notices</p>
+                        {% if system_announcements %}
+                        <p class="text-[0.7rem] text-slate-500 dark:text-slate-400 truncate">
+                            "{{ system_announcements[0].title }}"
+                        </p>
+                        {% else %}
+                        <p class="text-[0.7rem] text-slate-500 dark:text-slate-400">No system announcements.</p>
+                        {% endif %}
+                        <button onclick="switchTab('announcements')" class="text-[0.7rem] font-bold text-blue-600 dark:text-blue-400 mt-1 hover:underline">
+                            View All Notices &rarr;
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Class List & Workspace Access -->
+    <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-md space-y-4">
+        <h3 class="font-black text-sm uppercase tracking-wider text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 pb-2">
+            Academic Courses Workspace
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for sec in sections %}
+            <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:border-blue-500 transition-all flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start">
+                        <span class="px-2 py-0.5 text-[0.65rem] font-black bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded uppercase">
+                            {{ sec.course_code }}
+                        </span>
+                        <span class="text-xs font-bold text-slate-500 dark:text-slate-400">
+                            Sec {{ sec.section_number }}
+                        </span>
+                    </div>
+                    <h4 class="font-extrabold text-xs text-slate-800 dark:text-slate-150 mt-2 truncate">{{ sec.course_title }}</h4>
+                    <div class="text-[0.7rem] text-slate-500 dark:text-slate-400 space-y-1 mt-2.5">
+                        <p class="flex items-center gap-1.5"><i data-lucide="clock" class="w-3.5 h-3.5"></i> {{ sec.schedule }}</p>
+                        <p class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Room {{ sec.room }}</p>
+                        <p class="flex items-center gap-1.5"><i data-lucide="users-2" class="w-3.5 h-3.5"></i> Enrolled: {{ sec.enrolled_count }} / {{ sec.capacity }}</p>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+                    <button onclick="enterWorkspace('{{ sec.id }}')" class="flex-1 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all text-center">
+                        Workspace
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full py-8 text-center text-slate-500 dark:text-slate-400">
+                <i data-lucide="info" class="w-8 h-8 mx-auto mb-2 text-slate-400"></i>
+                <p class="text-sm font-semibold">No assigned courses found for this semester.</p>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 </div>
 
-<!-- MY ADVISEES TAB -->
-<div id="tab-advisees" class="tab-content hidden space-y-6">
-    <div class="flex justify-between items-center flex-wrap gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-4">
-        <div>
-            <h1 class="text-2xl font-extrabold tracking-tight">Assigned Student Advisees</h1>
-            <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Oversee and monitor academic performance, dues, and advising completion</p>
+<!-- 2. MY COURSES TAB & WORKSPACE -->
+<div id="tab-my-courses" class="tab-content hidden space-y-6">
+    <!-- Course List View -->
+    <div id="courses-list-container" class="space-y-6">
+        <div class="flex justify-between items-center flex-wrap gap-4">
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight">Teaching Assignments</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Select any course section below to manage grades, materials, and attendance.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Semester:</label>
+                <select id="course-semester-selector" onchange="changeSemesterFilter(this.value)" class="p-2 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-350">
+                    <option value="{{ active_semester }}" selected>{{ active_semester }} (Active)</option>
+                    <option value="{{ prev_semester }}">{{ prev_semester }}</option>
+                </select>
+            </div>
         </div>
-        
-        <!-- Search bar -->
-        <div class="relative w-full max-w-xs">
-            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-[#94a3b8]">
-                <i data-lucide="search" class="w-4 h-4"></i>
-            </span>
-            <input type="text" id="advisee-search" oninput="filterAdviseeList()" placeholder="Search by name or ID..." 
-                   class="w-full pl-9 pr-4 py-2 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="courses-grid-list">
+            <!-- Populated via Jinja2 & filtered via JS -->
+            {% for sec in sections %}
+            <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-all rounded-2xl shadow-sm flex flex-col justify-between cursor-pointer" onclick="enterWorkspace('{{ sec.id }}')">
+                <div>
+                    <div class="flex justify-between items-center">
+                        <span class="px-2.5 py-0.5 rounded text-[0.62rem] font-black uppercase tracking-wider bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300">
+                            {{ sec.course_code }}
+                        </span>
+                        <span class="text-xs font-black text-slate-500">Section {{ sec.section_number }}</span>
+                    </div>
+                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-white mt-3 leading-tight">{{ sec.course_title }}</h3>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 mt-4">
+                        <p class="flex items-center gap-1.5"><i data-lucide="clock" class="w-3.5 h-3.5"></i> {{ sec.schedule }}</p>
+                        <p class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Room {{ sec.room }}</p>
+                        <p class="flex items-center gap-1.5"><i data-lucide="credit-card" class="w-3.5 h-3.5"></i> {{ sec.credits }} Credits</p>
+                        <p class="flex items-center gap-1.5"><i data-lucide="users" class="w-3.5 h-3.5"></i> Enrolled: {{ sec.enrolled_count }} / {{ sec.capacity }}</p>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <span class="text-[0.68rem] font-bold text-blue-600 dark:text-blue-400 hover:underline">Open Workspace &rarr;</span>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
-    <!-- Advisee list roster -->
-    <div class="stitch-card space-y-4">
+    <!-- Workspace Detail View -->
+    <div id="course-workspace-container" class="hidden space-y-6">
+        <button onclick="exitWorkspace()" class="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Course List
+        </button>
+
+        <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col md:flex-row justify-between md:items-center gap-4">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-extrabold text-slate-850 dark:text-white" id="workspace-course-title">CSE303</h2>
+                    <span class="px-2 py-0.5 rounded text-[0.6rem] font-black bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" id="workspace-section-badge">Section 1</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" id="workspace-course-desc">Database Management Systems | 3.0 Credits</p>
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs" id="workspace-stats-badges">
+                <span class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold" id="workspace-room-badge">Room: 402</span>
+                <span class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold" id="workspace-enrolled-badge">Students: 32/40</span>
+            </div>
+        </div>
+
+        <!-- Workspace Tabs Menu -->
+        <div class="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto gap-5">
+            <button onclick="switchWorkspaceSubTab('overview')" id="ws-tab-btn-overview" class="ws-sub-tab active py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 border-transparent transition-colors">Overview</button>
+            <button onclick="switchWorkspaceSubTab('students')" id="ws-tab-btn-students" class="ws-sub-tab py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 border-transparent transition-colors">Student Roster</button>
+            <button onclick="switchWorkspaceSubTab('attendance')" id="ws-tab-btn-attendance" class="ws-sub-tab py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 border-transparent transition-colors">Attendance</button>
+            <button onclick="switchWorkspaceSubTab('grading')" id="ws-tab-btn-grading" class="ws-sub-tab py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 border-transparent transition-colors">Grading & Marks</button>
+            <button onclick="switchWorkspaceSubTab('materials')" id="ws-tab-btn-materials" class="ws-sub-tab py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 border-transparent transition-colors">Materials</button>
+            <button onclick="switchWorkspaceSubTab('announcements')" id="ws-tab-btn-announcements" class="ws-sub-tab py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 border-transparent transition-colors">Notices</button>
+        </div>
+
+        <!-- 2A. Workspace Overview SubTab -->
+        <div id="ws-content-overview" class="ws-sub-tab-content space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="book-open" class="w-4 h-4 text-blue-500"></i> Course Syllabus Overview</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">This course focuses on designing databases, executing SQL statements, schema normalizations, transactions, recovery systems, and concurrency controls.</p>
+                </div>
+                <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="info" class="w-4 h-4 text-violet-500"></i> Teaching Support</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">If there are clashes or double registrations, please contact department coordinators or request a section increase override instantly.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2B. Workspace Students SubTab -->
+        <div id="ws-content-students" class="ws-sub-tab-content hidden space-y-4">
+            <div class="flex justify-between items-center gap-4 flex-wrap">
+                <div class="relative w-72">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                        <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                    </span>
+                    <input type="text" id="roster-search-input" oninput="filterWorkspaceRoster()" placeholder="Search student name or ID..." class="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-850 rounded-lg text-xs outline-none focus:border-blue-500 text-slate-850 dark:text-slate-100">
+                </div>
+                <button onclick="exportRoster()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i> Export Roster (CSV)
+                </button>
+            </div>
+            <div class="stitch-card p-0 overflow-hidden bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                <div class="table-container">
+                    <table class="stitch-table" id="workspace-student-table">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Student Name</th>
+                                <th>Advisor</th>
+                                <th>Completed CR</th>
+                                <th>CGPA</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workspace-roster-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2C. Workspace Attendance SubTab -->
+        <div id="ws-content-attendance" class="ws-sub-tab-content hidden space-y-4">
+            <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl flex justify-between items-center gap-4 flex-wrap">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div>
+                        <label class="block text-[0.62rem] font-bold uppercase tracking-wider text-slate-400 mb-1">Session Date:</label>
+                        <input type="date" id="ws-attendance-date" onchange="loadWorkspaceAttendance()" class="p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold outline-none text-slate-700 dark:text-slate-300">
+                    </div>
+                    <div class="flex items-end h-10">
+                        <button onclick="markAllPresent()" class="px-3 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-300 text-xs font-bold rounded-lg transition-colors">
+                            Mark All Present
+                        </button>
+                    </div>
+                </div>
+                <div class="text-[0.68rem] text-slate-500 text-right">
+                    <p class="font-bold text-slate-700 dark:text-slate-350">Keyboard Shortcuts enabled:</p>
+                    <p class="mt-0.5">Down Arrow: keep current value and move down</p>
+                    <p>Spacebar: toggle Present / Absent and move down</p>
+                </div>
+            </div>
+
+            <div class="stitch-card p-0 overflow-hidden bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                <div class="table-container">
+                    <table class="stitch-table">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Student Name</th>
+                                <th>Attendance Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ws-attendance-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="flex justify-end items-center gap-3">
+                <span class="text-xs text-slate-500" id="attendance-autosave-indicator"></span>
+                <button onclick="submitWorkspaceAttendance()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-md">
+                    <i data-lucide="check" class="w-4 h-4"></i> Save Attendance
+                </button>
+            </div>
+        </div>
+
+        <!-- 2D. Workspace Grading SubTab -->
+        <div id="ws-content-grading" class="ws-sub-tab-content hidden space-y-6">
+            <!-- Step 1: Define Scheme -->
+            <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
+                <h3 class="font-extrabold text-sm text-slate-850 dark:text-white flex items-center gap-1.5">
+                    <i data-lucide="settings" class="w-4 h-4 text-violet-500"></i> Course Grading Scheme
+                </h3>
+                <p class="text-xs text-slate-500">Specify evaluation components and weights. Total weights must sum to exactly 100%.</p>
+                
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3" id="grading-scheme-inputs">
+                    <!-- Dynamic inputs populated via JS -->
+                </div>
+                <div class="flex justify-between items-center pt-2">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-350" id="scheme-sum-display">Total Weight: 0%</span>
+                    <button onclick="saveGradingScheme()" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg transition-all">
+                        Save Scheme Weights
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Marks entry roster -->
+            <div class="stitch-card p-0 overflow-hidden bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center gap-2 flex-wrap">
+                    <h3 class="font-extrabold text-sm text-slate-850 dark:text-white">Continuous Evaluation Marks</h3>
+                    <div class="flex gap-2">
+                        <button onclick="exportGrades()" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-300">
+                            Export Marks
+                        </button>
+                        <button onclick="publishWorkspaceGrades()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Publish & Finalize
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="stitch-table">
+                        <thead id="ws-grading-thead">
+                            <!-- Dynamic columns depending on scheme components -->
+                        </thead>
+                        <tbody id="ws-grading-tbody">
+                            <!-- Student rows populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2E. Workspace Materials SubTab -->
+        <div id="ws-content-materials" class="ws-sub-tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Upload form -->
+                <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl h-fit space-y-4">
+                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="upload-cloud" class="w-4 h-4 text-blue-500"></i> Upload Materials</h3>
+                    <form id="material-upload-form" onsubmit="uploadMaterial(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">File Title / Description:</label>
+                            <input type="text" name="title" required placeholder="e.g. Lecture 1 Introduction slides" class="w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-slate-100">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Category:</label>
+                                <select name="file_type" class="w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-slate-100">
+                                    <option value="slide">Slides</option>
+                                    <option value="note">Notes</option>
+                                    <option value="assignment">Assignment</option>
+                                    <option value="lab">Lab Files</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Select File:</label>
+                                <input type="file" name="file" required class="text-xs w-full p-1 border border-slate-250 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-[#0f172a] text-slate-700 dark:text-slate-350">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors">
+                            Upload Slide / Document
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Material list -->
+                <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl lg:col-span-2 space-y-4">
+                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="folder" class="w-4 h-4 text-violet-500"></i> Course Files & Assets</h3>
+                    <div class="space-y-3" id="ws-materials-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2F. Workspace Notices SubTab -->
+        <div id="ws-content-announcements" class="ws-sub-tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Post form -->
+                <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl h-fit space-y-4">
+                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="edit" class="w-4 h-4 text-blue-500"></i> Post New Notice</h3>
+                    <form id="notice-post-form" onsubmit="postCourseNotice(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Announcement Title:</label>
+                            <input type="text" name="title" required placeholder="e.g. Midterm exam scheduling details" class="w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Details:</label>
+                            <textarea name="content" rows="4" required placeholder="Write the details for students here..." class="w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-slate-100"></textarea>
+                        </div>
+                        <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors">
+                            Publish Notice
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Announcement list -->
+                <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl lg:col-span-2 space-y-4">
+                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="megaphone" class="w-4 h-4 text-violet-500"></i> Course Notice Board</h3>
+                    <div class="space-y-3" id="ws-notices-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. ADVISING OVERRIDES - MY ADVISEES -->
+<div id="tab-advisees" class="tab-content hidden space-y-6">
+    <!-- Advising Subnav -->
+    <div class="advising-subnav flex gap-2 p-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl max-w-md">
+        <button onclick="switchTab('advisees')" class="advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center" data-subtab="advisees">My Advisees</button>
+        <button onclick="switchTab('dept-students')" class="advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center" data-subtab="dept-students">Dept Students</button>
+        <button onclick="switchTab('requests')" class="advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center relative" data-subtab="requests">
+            <span>Course Requests</span>
+            {% set pending_count = requests | selectattr('status', 'equalto', 'pending_advisor') | list | length %}
+            {% if pending_count > 0 %}
+            <span class="ml-1 bg-red-500 text-white rounded-full text-[0.55rem] font-bold px-1.5 py-0.5" id="advising-subnav-request-badge-advisees">{{ pending_count }}</span>
+            {% endif %}
+        </button>
+    </div>
+
+    <div class="flex justify-between items-center flex-wrap gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tight">Assigned Student Advisees</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Oversee advisees, lift holds, and execute administrative registration overrides.</p>
+        </div>
+        <div class="relative w-64">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+            </span>
+            <input type="text" id="advisees-search-input" oninput="filterAdviseesRoster()" placeholder="Search advisee..." class="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-800 dark:text-slate-100">
+        </div>
+    </div>
+
+    <div class="stitch-card p-0 overflow-hidden bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
         <div class="table-container">
             <table class="stitch-table">
                 <thead>
                     <tr>
                         <th>Student Details</th>
-                        <th>Credits Completed</th>
-                        <th>Remaining Credits</th>
                         <th>CGPA</th>
-                        <th>Financial Status</th>
-                        <th>Pre-Advising Status</th>
+                        <th>Completed Credits</th>
+                        <th>Remaining Credits</th>
+                        <th>Holds / Financials</th>
+                        <th>Override Action</th>
                     </tr>
                 </thead>
                 <tbody id="advisees-list-tbody">
                     {% for std in advisees %}
-                    <tr class="advisee-row" data-name="{{ std.name | lower }}" data-id="{{ std.id | lower }}">
+                    <tr class="advisee-row-item" data-id="{{ std.id }}" data-name="{{ std.name | lower }}">
                         <td>
                             <p class="font-bold text-xs">{{ std.name }}</p>
-                            <p class="text-[0.65rem] text-[#94a3b8] font-mono">{{ std.id }}</p>
+                            <p class="text-[0.65rem] text-slate-400 font-mono">{{ std.id }}</p>
                         </td>
+                        <td class="font-mono font-bold text-xs">{{ "%.2f"|format(std.cgpa) }}</td>
                         <td>{{ std.completed_credits }} CR</td>
-                        <td>{{ [0.0, (dept_major_credits.get(std.department_id, 140.0) - std.completed_credits)] | max }} CR</td>
-                        <td class="font-mono font-bold">{{ "%.2f"|format(std.cgpa) }}</td>
+                        <td>{{ [0.0, (dept_major_credits.get(std.department_id, 140.0) - std.completed_credits)] | max | round(1) }} CR</td>
                         <td>
                             {% if std.outstanding_balance > 0 %}
-                            <span class="stitch-badge badge-hold text-[0.62rem]">TAKA {{ std.outstanding_balance }} Dues</span>
+                            <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                                BDT {{ std.outstanding_balance }} Dues
+                            </span>
                             {% else %}
-                            <span class="stitch-badge badge-active text-[0.62rem]">Cleared</span>
+                            <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                Cleared
+                            </span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if std.id in plan_student_ids %}
-                            <span class="stitch-badge badge-active text-[0.62rem]">Completed</span>
-                            {% else %}
-                            <span class="stitch-badge bg-slate-500/15 text-slate-400 text-[0.62rem]">Missed</span>
-                            {% endif %}
+                            <button onclick="openOverrideModal('{{ std.id }}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[0.65rem] font-black rounded transition-colors">
+                                Override Register
+                            </button>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-[#94a3b8] py-4">No student advisees registered.</td>
+                        <td colspan="6" class="text-center text-slate-500 py-4">No student advisees found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -278,210 +615,126 @@
     </div>
 </div>
 
-<!-- ADVISEE ADVISING TAB (Advisor Override Registration) -->
-<div id="tab-advisee-advising" class="tab-content hidden space-y-6">
-    <div>
-        <h1 class="text-2xl font-extrabold tracking-tight">Manual Registration Override</h1>
-        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Bypass pre-advising and manually schedule course sections directly for student accounts</p>
+<!-- 4. ADVISING OVERRIDES - DEPT STUDENTS -->
+<div id="tab-dept-students" class="tab-content hidden space-y-6">
+    <!-- Advising Subnav -->
+    <div class="advising-subnav flex gap-2 p-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl max-w-md">
+        <button onclick="switchTab('advisees')" class="advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center" data-subtab="advisees">My Advisees</button>
+        <button onclick="switchTab('dept-students')" class="advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center" data-subtab="dept-students">Dept Students</button>
+        <button onclick="switchTab('requests')" class="advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center relative" data-subtab="requests">
+            <span>Course Requests</span>
+            {% set pending_count = requests | selectattr('status', 'equalto', 'pending_advisor') | list | length %}
+            {% if pending_count > 0 %}
+            <span class="ml-1 bg-red-500 text-white rounded-full text-[0.55rem] font-bold px-1.5 py-0.5" id="advising-subnav-request-badge-dept">{{ pending_count }}</span>
+            {% endif %}
+        </button>
     </div>
 
-    <div class="stitch-card space-y-4">
-        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Override Control Panel</h3>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-4">
-            <div>
-                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Target Advisee:</label>
-                <select id="advisee-selector" class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input" onchange="selectAdviseeForRegistration(this.value)">
-                    <option value="">-- Choose Advisee --</option>
-                    {% for adv in advisees %}
-                    <option value="{{ adv.id }}">{{ adv.name }} ({{ adv.id }})</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="flex items-end">
-                <div id="advisee-status-indicator" class="text-xs font-semibold text-[#64748b]">
-                    Status: Select student advisee
-                </div>
-            </div>
-        </div>
-
-        <div id="advisee-registration-interface" class="hidden space-y-4">
-            <h4 class="text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider">All Offered Sections ({{ active_semester }})</h4>
-            <div class="table-wrap max-h-[400px] overflow-y-auto">
-                <table class="stitch-table">
-                    <thead>
-                        <tr>
-                            <th>Enroll Status</th>
-                            <th>Course</th>
-                            <th>Section</th>
-                            <th>Schedule</th>
-                            <th>Room</th>
-                            <th>Enrolled Ratio</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for sec in all_sections %}
-                        <tr>
-                            <td>
-                                <input type="checkbox" id="override-checkbox-{{ sec.id }}" value="{{ sec.id }}" class="advisee-reg-checkbox w-4 h-4 text-blue-600 rounded">
-                            </td>
-                            <td class="font-bold text-xs">{{ sec.course_code }}</td>
-                            <td>
-                                Section {{ sec.section_number }}
-                                {% if sec.is_lab %}
-                                <span class="stitch-badge bg-amber-500/15 text-amber-500 text-[0.6rem] ml-1">Lab</span>
-                                {% else %}
-                                <span class="stitch-badge bg-blue-500/15 text-blue-500 text-[0.6rem] ml-1">Theory</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ sec.schedule }}</td>
-                            <td>{{ sec.room }}</td>
-                            <td class="font-mono">{{ sec.enrolled_count }} / {{ sec.capacity }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-            <form id="advisee-override-form" action="{{ url_for('register_advisee_override') }}" method="POST" onsubmit="submitAdviseeOverride(event)">
-                <input type="hidden" name="student_id" id="override-student-id">
-                <input type="hidden" name="section_ids" id="override-section-ids">
-                <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-gradient-to-r from-blue-600 to-indigo-600">
-                    <i data-lucide="check" class="w-4 h-4"></i> Complete Registration Override
-                </button>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- ATTENDANCE TAB -->
-<div id="tab-attendance" class="tab-content hidden space-y-6">
-    <div>
-        <h1 class="text-2xl font-extrabold tracking-tight">Class Attendance</h1>
-        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Select a teaching section, mark the roster, and save attendance for the selected date.</p>
-    </div>
-
-    <div class="stitch-card space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div>
-                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Section</label>
-                <select id="attendance-section-select" class="p-2 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs stitch-input" onchange="loadAttendanceRoster(this.value)">
-                    <option value="">-- Choose Section --</option>
-                    {% for sec in sections %}
-                    <option value="{{ sec.id }}">{{ sec.course_code }} - Sec {{ sec.section_number }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Attendance Date</label>
-                <input type="date" id="attendance-date" class="stitch-input text-xs" onchange="reloadAttendanceIfReady()">
-            </div>
-            <div id="attendance-summary" class="text-xs text-[#64748b] dark:text-[#94a3b8]">
-                Choose a section to load registered students.
-            </div>
-        </div>
-
-        <div id="attendance-roster" class="hidden space-y-4">
-            <div class="table-container">
-                <table class="stitch-table">
-                    <thead>
-                        <tr>
-                            <th>Student ID</th>
-                            <th>Student Name</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendance-tbody">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
-            </div>
-            <button onclick="saveAttendance()" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4">
-                <i data-lucide="check" class="w-4 h-4"></i> Save Attendance
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- GRADING TAB -->
-<div id="tab-grading" class="tab-content hidden space-y-6">
-    <div>
-        <h1 class="text-2xl font-extrabold tracking-tight">Marks & Grading Entry</h1>
-        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Load a section roster, calculate letters from marks, and publish grades to student transcripts.</p>
-    </div>
-
-    <div class="stitch-card space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div>
-                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Section</label>
-                <select id="grading-section-select" class="p-2 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs stitch-input" onchange="loadGradingRoster(this.value)">
-                    <option value="">-- Choose Section --</option>
-                    {% for sec in sections %}
-                    <option value="{{ sec.id }}">{{ sec.course_code }} - Sec {{ sec.section_number }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div id="grading-summary" class="md:col-span-2 text-xs text-[#64748b] dark:text-[#94a3b8]">
-                Choose a section to load registered students.
-            </div>
-        </div>
-
-        <div id="grading-roster" class="hidden space-y-4">
-            <div class="table-container">
-                <table class="stitch-table">
-                    <thead>
-                        <tr>
-                            <th>Student ID</th>
-                            <th>Student Name</th>
-                            <th>Marks (0-100)</th>
-                            <th>Letter Grade</th>
-                        </tr>
-                    </thead>
-                    <tbody id="grading-tbody">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
-            </div>
-            <button onclick="saveGrades()" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4">
-                <i data-lucide="save" class="w-4 h-4"></i> Publish Grade Roster
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- REQUESTS TAB -->
-<div id="tab-requests" class="tab-content hidden space-y-6">
-    <div class="flex justify-between items-center flex-wrap gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-4">
+    <div class="flex justify-between items-center flex-wrap gap-4">
         <div>
-            <h1 class="text-2xl font-extrabold tracking-tight">Pending Override Requests</h1>
-            <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Review, search, and resolve student course registration and swap override requests.</p>
+            <h1 class="text-2xl font-extrabold tracking-tight">Department Students</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Search and audit all registered students within the department.</p>
         </div>
-        <!-- Live search filters -->
+        <div class="relative w-72">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+            </span>
+            <input type="text" id="dept-search-input" oninput="filterDeptRoster()" placeholder="Search by name or ID..." class="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-800 dark:text-slate-100">
+        </div>
+    </div>
+
+    <div class="stitch-card p-0 overflow-hidden bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+        <div class="table-container">
+            <table class="stitch-table">
+                <thead>
+                    <tr>
+                        <th>Student Details</th>
+                        <th>CGPA</th>
+                        <th>Completed Credits</th>
+                        <th>Hold Status</th>
+                        <th>Advising Window</th>
+                    </tr>
+                </thead>
+                <tbody id="dept-list-tbody">
+                    {% for std in dept_students %}
+                    <tr class="dept-row-item" data-id="{{ std.id }}" data-name="{{ std.name | lower }}">
+                        <td>
+                            <p class="font-bold text-xs">{{ std.name }}</p>
+                            <p class="text-[0.65rem] text-slate-400 font-mono">{{ std.id }}</p>
+                        </td>
+                        <td class="font-mono text-xs">{{ "%.2f"|format(std.cgpa) }}</td>
+                        <td>{{ std.completed_credits }} CR</td>
+                        <td>
+                            {% if std.outstanding_balance > 0 %}
+                            <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">Dues</span>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Cleared</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-xs text-slate-500 font-medium">
+                            Group: {{ std.completed_credits // 10 }} ({{ (std.completed_credits // 10)*10 }} - {{ ((std.completed_credits // 10)*10) + 10 }} CR)
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-slate-500 py-4">No department student records.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 5. ADVISING OVERRIDES - COURSE REQUESTS -->
+<div id="tab-requests" class="tab-content hidden space-y-6">
+    <!-- Advising Subnav -->
+    <div class="advising-subnav flex gap-2 p-1 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl max-w-md">
+        <button onclick="switchTab('advisees')" class="advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center" data-subtab="advisees">My Advisees</button>
+        <button onclick="switchTab('dept-students')" class="advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center" data-subtab="dept-students">Dept Students</button>
+        <button onclick="switchTab('requests')" class="advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center relative" data-subtab="requests">
+            <span>Course Requests</span>
+            {% set pending_count = requests | selectattr('status', 'equalto', 'pending_advisor') | list | length %}
+            {% if pending_count > 0 %}
+            <span class="ml-1 bg-red-500 text-white rounded-full text-[0.55rem] font-bold px-1.5 py-0.5" id="advising-subnav-request-badge-requests">{{ pending_count }}</span>
+            {% endif %}
+        </button>
+    </div>
+
+    <div class="flex justify-between items-center flex-wrap gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tight">Student Advising & Seat Requests</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Review requests from students to add courses or increase seats.</p>
+        </div>
+        
         <div class="flex items-center gap-3">
             <div class="relative w-64">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-[#94a3b8] pointer-events-none">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                     <i data-lucide="search" class="w-3.5 h-3.5"></i>
                 </span>
-                <input type="text" id="requests-search" oninput="filterFacultyRequests()" placeholder="Search by Student ID or Course..." 
-                       class="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs outline-none focus:border-blue-500 text-slate-800 dark:text-slate-100">
+                <input type="text" id="requests-search" oninput="filterFacultyRequests()" placeholder="Search Student ID or Course..." 
+                       class="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-800 dark:text-slate-100">
             </div>
             <button onclick="clearFacultyRequestsFilters()" class="text-xs text-slate-500 hover:text-slate-400">Clear</button>
         </div>
     </div>
 
-    <!-- Batch Control Bar (hidden by default, sticky) -->
-    <div id="batch-control-bar" class="hidden sticky top-4 z-30 bg-slate-900/90 dark:bg-[#0c101d]/90 backdrop-blur border border-[#1e293b] p-4 rounded-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4 transition-all duration-300">
-        <div class="flex items-center gap-2.5">
+    <!-- Batch Control Bar -->
+    <div id="batch-control-bar" class="hidden sticky top-4 z-30 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4 transition-all">
+        <div class="flex items-center gap-2">
             <span class="bg-blue-600 text-white font-extrabold text-[0.7rem] px-2 py-0.5 rounded-full" id="selected-count-badge">0</span>
-            <span class="text-xs font-bold text-slate-200">Requests Selected</span>
+            <span class="text-xs font-bold text-slate-250">Requests Selected</span>
         </div>
         <div class="flex-1 max-w-xl w-full">
             <input type="text" id="batch-advisor-note" placeholder="Write mandatory justification comments for all selected..." 
-                   class="w-full px-3.5 py-2 bg-slate-950/40 border border-slate-700/80 rounded-lg text-xs outline-none text-slate-200 focus:border-blue-500 placeholder-slate-500">
+                   class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs outline-none text-slate-200 placeholder-slate-500">
         </div>
         <div class="flex gap-2 w-full md:w-auto justify-end">
             <button onclick="submitBatchRequests('rejected')" class="w-full md:w-auto text-xs px-4 py-2 font-black bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
                 Batch Reject
+            </button>
+            <button onclick="submitBatchRequests('returned')" class="w-full md:w-auto text-xs px-4 py-2 font-black bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors">
+                Batch Return
             </button>
             <button onclick="submitBatchRequests('approved')" class="w-full md:w-auto text-xs px-4 py-2 font-black bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
                 Batch Approve
@@ -489,286 +742,462 @@
         </div>
     </div>
 
-    <!-- Requests list container -->
+    <!-- Requests list -->
     <div class="grid grid-cols-1 gap-4" id="faculty-requests-list">
         {% for req in requests %}
-        <div class="faculty-request-card stitch-card p-5 space-y-3 border transition-all duration-300 {% if req.status == 'pending_advisor' %}border-slate-200 dark:border-slate-800{% else %}border-slate-100 dark:border-slate-900/30 opacity-75{% endif %}" 
+        <div class="faculty-request-card stitch-card p-5 space-y-3 border transition-all duration-300 {% if req.status == 'pending_advisor' %}border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827]{% else %}border-slate-100 dark:border-slate-900/30 opacity-70 bg-slate-50/50 dark:bg-slate-900/10{% endif %}" 
              data-student-id="{{ req.student_id }}" data-student-name="{{ req.student_name | lower }}" data-course-id="{{ req.course_id | lower }}" data-req-id="{{ req.id }}" id="req-card-{{ req.id }}">
-            <div class="flex justify-between items-start flex-wrap gap-2 pb-2 border-b border-[#e2e8f0] dark:border-[#1e293b]">
+            <div class="flex justify-between items-start flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                 <div class="flex items-center gap-3">
                     {% if req.status == 'pending_advisor' %}
-                    <input type="checkbox" name="select_request" value="{{ req.id }}" onchange="updateSelectedRequestsCount()" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
+                    <input type="checkbox" name="select_request" value="{{ req.id }}" onchange="updateSelectedRequestsCount()" class="w-4 h-4 text-blue-600 rounded border-slate-350 cursor-pointer">
                     {% endif %}
                     <div>
-                        <h3 class="font-extrabold text-sm text-slate-800 dark:text-slate-100">
+                        <h3 class="font-extrabold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
                             {{ req.type.replace('_', ' ') | title }} Request
+                            {% if req.type == 'seat_increase' %}
+                            <span class="px-2 py-0.5 rounded text-[0.55rem] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Seat Override</span>
+                            {% endif %}
                         </h3>
-                        <p class="text-xs text-[#94a3b8] mt-0.5">
+                        <p class="text-xs text-slate-400 mt-0.5">
                             Student ID: <strong>{{ req.student_id }}</strong> ({{ req.student_name }})
                         </p>
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <span class="stitch-badge bg-amber-500/15 text-amber-500 text-[0.62rem] uppercase">{{ req.type.replace('_', ' ') }}</span>
-                    <span class="stitch-badge {% if req.status == 'pending_advisor' %}bg-blue-500/15 text-blue-500{% elif req.status == 'approved' %}bg-green-500/15 text-green-500{% else %}bg-red-500/15 text-red-500{% endif %} text-[0.62rem]">{{ req.status }}</span>
+                    <span class="px-2 py-0.5 rounded text-[0.6rem] font-bold {% if req.status == 'pending_advisor' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300{% elif req.status == 'approved' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300{% elif req.status == 'returned' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %} text-[0.62rem]">{{ req.status }}</span>
                 </div>
             </div>
 
             <div class="text-xs space-y-2 py-1 text-slate-700 dark:text-slate-300">
-                <p>Course Code Requested: <strong class="text-blue-600 dark:text-blue-400">{{ req.course_id }}</strong></p>
+                <p>Course Requested: <strong class="text-blue-600 dark:text-blue-400">{{ req.course_id }}</strong></p>
                 {% if req.section_id %}
-                <p>Target Section ID / Swap: <strong>{{ req.section_id }}</strong></p>
+                <p>Target Section / Swap: <strong>{{ req.section_id }}</strong></p>
                 {% endif %}
-                <p class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border italic border-[#e2e8f0] dark:border-[#1e293b]">
+                <p class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border italic border-slate-200 dark:border-slate-800">
                     "{{ req.comments }}"
                 </p>
             </div>
 
-            <!-- Resolve Form with Mandatory Advisor Note -->
+            <!-- Resolve Form -->
             {% if req.status == 'pending_advisor' %}
             <form action="{{ url_for('resolve_request', req_id=req.id) }}" method="POST" class="space-y-3 pt-2">
                 <div>
-                    <label class="block text-[0.68rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Advisor Comments / Reasons (Mandatory)</label>
-                    <input type="text" name="advisor_note" placeholder="Write justification for decision..." required
-                           class="w-full px-3 py-2 bg-white dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200">
+                    <label class="block text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Advisor justification (Mandatory):</label>
+                    <input type="text" name="advisor_note" placeholder="Justification details..." required
+                           class="w-full px-3 py-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-800 dark:text-slate-200">
                 </div>
                 <div class="flex justify-end gap-2">
-                    <button type="submit" name="status" value="rejected" class="text-xs px-3.5 py-2 font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors">
-                        Reject Request
+                    <button type="submit" name="status" value="rejected" class="text-xs px-3.5 py-2 font-bold bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:text-red-400 rounded-lg transition-colors">
+                        Reject
                     </button>
-                    <button type="submit" name="status" value="approved" class="text-xs px-3.5 py-2 font-bold bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors">
-                        Approve Request
+                    <button type="submit" name="status" value="returned" class="text-xs px-3.5 py-2 font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 rounded-lg transition-colors">
+                        Return for Correction
+                    </button>
+                    <button type="submit" name="status" value="approved" class="text-xs px-3.5 py-2 font-bold bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                        Approve & Apply
                     </button>
                 </div>
             </form>
             {% else %}
-            <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-[#e2e8f0] dark:border-[#1e293b] text-xs text-blue-600">
-                Advisor justification: <strong>"{{ req.advisor_note or 'No note provided' }}"</strong>
+            <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs text-blue-600 dark:text-blue-400">
+                Advisor Comments: <strong>"{{ req.advisor_note or 'No justification comments added.' }}"</strong>
             </div>
             {% endif %}
         </div>
         {% else %}
-        <p class="text-xs text-[#94a3b8] text-center py-8 bg-white dark:bg-[#0a0f1e] border border-dashed rounded-xl border-slate-200 dark:border-slate-800">
-            No pending advising or waiver requests.
+        <p class="text-xs text-slate-500 text-center py-8 bg-white dark:bg-[#111827] border border-dashed rounded-xl border-slate-200 dark:border-slate-800">
+            No override registration requests pending review.
         </p>
         {% endfor %}
     </div>
 </div>
-<!-- MY COURSES TAB -->
-<div id="tab-my-courses" class="tab-content hidden space-y-6">
-    <div>
-        <h1 class="text-2xl font-extrabold tracking-tight">My Teaching Assignments</h1>
-        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Review assigned courses, student capacities, attendance, and grading tools for {{ active_semester }}.</p>
-    </div>
 
-    <div class="stitch-card space-y-4">
-        {% if sections %}
-        <div class="table-container">
-            <table class="stitch-table">
-                <thead>
-                    <tr>
-                        <th>Course Code</th>
-                        <th>Course Title</th>
-                        <th>Section</th>
-                        <th>Schedule</th>
-                        <th>Room</th>
-                        <th>Enrollment</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for sec in sections %}
-                    <tr>
-                        <td class="font-bold text-xs text-blue-600 dark:text-blue-400">{{ sec.course_code }}</td>
-                        <td class="text-xs">{{ sec.course_title }}</td>
-                        <td class="text-xs font-semibold">
-                            {{ sec.section_number }}
-                            {% if sec.is_lab %}
-                            <span class="stitch-badge bg-amber-500/15 text-amber-500 text-[0.58rem] ml-1">Lab</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-xs font-mono">{{ sec.schedule }}</td>
-                        <td class="text-xs">{{ sec.room }}</td>
-                        <td class="text-xs">{{ sec.enrolled_count }} / {{ sec.capacity }}</td>
-                        <td>
-                            <div class="flex flex-wrap gap-2">
-                                <button onclick="openSectionTool('attendance', '{{ sec.id }}')" class="px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-[0.65rem] font-bold transition-colors">Attendance</button>
-                                <button onclick="openSectionTool('grading', '{{ sec.id }}')" class="px-2 py-1 rounded bg-violet-100 hover:bg-violet-200 text-violet-700 text-[0.65rem] font-bold transition-colors">Grading</button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center text-[#94a3b8] py-4">No course assignments found for {{ active_semester }}.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- CLASS SCHEDULE TAB -->
+<!-- 6. CLASS SCHEDULE TAB -->
 <div id="tab-schedule" class="tab-content hidden space-y-6">
     <div>
         <h1 class="text-2xl font-extrabold tracking-tight">Instructor Class Schedule</h1>
-        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Weekly view of lecturing hours and counselling sections</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Weekly lecturing schedule and section mappings.</p>
     </div>
 
-    <div class="stitch-card space-y-4">
+    <div class="stitch-card p-0 overflow-hidden bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
         <div class="table-container">
             <table class="stitch-table">
                 <thead>
                     <tr>
                         <th>Day</th>
-                        <th>Time</th>
+                        <th>Time Slot</th>
                         <th>Course</th>
                         <th>Section</th>
-                        <th>Room</th>
-                        <th>Enrollment</th>
+                        <th>Classroom</th>
+                        <th>Enrolled</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in schedule_items %}
                     <tr>
-                        <td class="font-bold text-xs">{{ item.day }}</td>
+                        <td class="font-bold text-xs text-slate-800 dark:text-slate-200">{{ item.day }}</td>
                         <td class="font-mono text-xs">{{ item.time }}</td>
-                        <td class="schedule-pill p-2 text-xs rounded">
-                            <strong class="block text-blue-600 dark:text-blue-400">{{ item.section.course_code }}</strong>
-                            <span class="text-[0.65rem] text-[#94a3b8] block">{{ item.section.course_title }}</span>
+                        <td>
+                            <strong class="text-blue-650 dark:text-blue-400 text-xs">{{ item.section.course_code }}</strong>
+                            <span class="text-[0.65rem] text-slate-400 block truncate max-w-[200px]">{{ item.section.course_title }}</span>
                         </td>
-                        <td class="text-xs">Section {{ item.section.section_number }}</td>
-                        <td class="text-xs">{{ item.section.room }}</td>
+                        <td class="text-xs font-semibold">Section {{ item.section.section_number }}</td>
+                        <td class="text-xs">Room {{ item.section.room }}</td>
                         <td class="text-xs">{{ item.section.enrolled_count }} / {{ item.section.capacity }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-[#94a3b8] py-4">No scheduled classes for {{ active_semester }}.</td>
+                        <td colspan="6" class="text-center text-slate-500 py-4">No scheduled lectures found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">
-                <i data-lucide="book-open" class="w-5 h-5"></i>
-            </div>
-            <div>
-                <p class="font-bold text-sm text-[#0f172a] dark:text-[#f1f5f9]">No courses assigned</p>
-                <p class="text-xs text-[#94a3b8] mt-1">Attendance and grade tools become available as soon as a section is assigned to you.</p>
-            </div>
-            <button onclick="switchTab('schedule')" class="stitch-btn btn-secondary rounded-lg text-xs py-2 px-4">Open Schedule</button>
+    </div>
+</div>
+
+<!-- 7. ANNOUNCEMENTS TAB -->
+<div id="tab-announcements" class="tab-content hidden space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Post form -->
+        <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl h-fit space-y-4">
+            <h3 class="font-extrabold text-sm text-slate-850 dark:text-white flex items-center gap-1.5">
+                <i data-lucide="megaphone" class="w-4 h-4 text-blue-500"></i> Dispatch Notice
+            </h3>
+            <form id="announcement-broadcast-form" onsubmit="broadcastSystemNotice(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Announcement Title:</label>
+                    <input type="text" name="title" required placeholder="e.g. Advising window extensions details" class="w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Target Scope:</label>
+                    <select name="target_role" class="w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-slate-100">
+                        <option value="all">Everyone (Students & Faculty)</option>
+                        <option value="student">Students Only</option>
+                        <option value="faculty">Faculty Only</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Details Content:</label>
+                    <textarea name="content" rows="5" required placeholder="Type the notice details..." class="w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-slate-100"></textarea>
+                </div>
+                <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors shadow">
+                    Broadcast Notice
+                </button>
+            </form>
         </div>
-        {% endif %}
+
+        <!-- History list -->
+        <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl lg:col-span-2 space-y-4">
+            <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="history" class="w-4 h-4 text-violet-500"></i> Dispatch History</h3>
+            <div class="space-y-4 max-h-[500px] overflow-y-auto pr-1" id="broadcasts-history-list">
+                {% for ann in system_announcements %}
+                <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-extrabold text-xs text-slate-800 dark:text-slate-100">{{ ann.title }}</h4>
+                        <span class="px-2 py-0.5 rounded text-[0.55rem] font-bold bg-slate-200 dark:bg-slate-800 text-slate-650 dark:text-slate-350 uppercase">
+                            {{ ann.target_role }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{{ ann.content }}</p>
+                    <span class="text-[0.62rem] text-slate-400 font-mono block">{{ ann.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                {% else %}
+                <p class="text-xs text-slate-500 text-center py-4">No broadcasts dispatched.</p>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- SECTION CHANGE TAB -->
-<div id="tab-section-change" class="tab-content hidden space-y-6">
-    <div>
-        <h1 class="text-2xl font-extrabold tracking-tight">Manual Section Swap</h1>
-        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Advisor override to switch student sections instantly bypassing advising timeline restrictions</p>
-    </div>
+<!-- 8. MESSAGING TAB -->
+<div id="tab-messaging" class="tab-content hidden space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+        <!-- Thread list (Left) -->
+        <div class="stitch-card p-4 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col justify-between h-full">
+            <div class="space-y-4 flex-1 overflow-y-auto pr-1">
+                <div class="pb-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <h3 class="font-extrabold text-sm text-slate-850 dark:text-white">Active Conversations</h3>
+                    <button onclick="openNewMessageModal()" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition-colors" title="New Message">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="space-y-2" id="messaging-threads-list">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </div>
 
-    <div class="stitch-card max-w-xl space-y-4">
-        <form action="{{ url_for('faculty_swap_section') }}" method="POST" class="space-y-4">
-            <div>
-                <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select Student</label>
-                <select name="student_id" id="swap-student-id" required onchange="loadSectionSwapOptions(this.value)" class="p-2.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs w-full stitch-input">
-                    <option value="">-- Choose Advisee --</option>
-                    {% for std in advisees %}
-                    <option value="{{ std.id }}">{{ std.id }} - {{ std.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Messages Area (Right) -->
+        <div class="stitch-card p-4 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col justify-between h-full lg:col-span-2">
+            <!-- Active Conversation Header -->
+            <div class="pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <div>
-                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Current Registered Section</label>
-                    <select name="current_section_id" id="swap-current-section" required onchange="populateSwapTargets()" class="stitch-input text-xs">
-                        <option value="">Select a student first</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[0.7rem] font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">New Target Section</label>
-                    <select name="wanted_section_id" id="swap-target-section" required class="stitch-input text-xs">
-                        <option value="">Select current section first</option>
-                    </select>
+                    <h3 class="font-extrabold text-sm text-slate-800 dark:text-white" id="active-chat-title">Select a Conversation</h3>
+                    <p class="text-[0.7rem] text-slate-500" id="active-chat-subtitle">Choose a thread to start chatting.</p>
                 </div>
             </div>
-            <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4 bg-amber-500 border-amber-500 hover:bg-amber-600">
-                Execute Swap
-            </button>
-        </form>
+
+            <!-- Chat bubbles wrapper -->
+            <div class="flex-1 overflow-y-auto py-4 space-y-3 px-1" id="chat-messages-container">
+                <div class="h-full flex flex-col items-center justify-center text-slate-400">
+                    <i data-lucide="message-square" class="w-12 h-12 stroke-[1.5] mb-2 text-slate-350"></i>
+                    <p class="text-xs">No active chat selected.</p>
+                </div>
+            </div>
+
+            <!-- Chat input form -->
+            <form id="chat-send-form" onsubmit="sendChatMessage(event)" class="pt-3 border-t border-slate-100 dark:border-slate-800 flex gap-2 items-center">
+                <input type="hidden" name="receiver_option" id="chat-receiver-option">
+                <input type="text" name="content" required placeholder="Type a message..." class="flex-1 p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-800 dark:text-white">
+                <button type="submit" class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
-<!-- SETTINGS TAB -->
+<!-- 9. REPORTS TAB -->
+<div id="tab-reports" class="tab-content hidden space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Grade Distribution Chart -->
+        <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
+            <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="bar-chart" class="w-4 h-4 text-blue-500"></i> Grade Distributions</h3>
+            <div class="space-y-4" id="reports-grade-dist-container">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+
+        <!-- Attendance Trends -->
+        <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
+            <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="calendar" class="w-4 h-4 text-violet-500"></i> Attendance Trajectories</h3>
+            <div class="space-y-4" id="reports-attendance-container">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+
+        <!-- At Risk Alerts -->
+        <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl lg:col-span-2 space-y-4">
+            <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-1.5"><i data-lucide="alert-triangle" class="w-4 h-4 text-red-500"></i> At-Risk Students Alerts</h3>
+            <div class="table-container">
+                <table class="stitch-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Course</th>
+                            <th>Current Marks</th>
+                            <th>Attendance Rate</th>
+                            <th>Trigger Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-at-risk-tbody">
+                        <!-- Dynamic at-risk elements -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 10. PROFILE & SETTINGS TAB -->
 <div id="tab-settings" class="tab-content hidden space-y-6">
-    <div>
-        <h1 class="text-2xl font-extrabold tracking-tight">Faculty Profile</h1>
-        <p class="text-sm text-[#475569] dark:text-[#94a3b8]">Review your faculty details and manage security credentials.</p>
-    </div>
-
-    <div class="stitch-card max-w-xl space-y-5">
-        <div class="flex flex-col sm:flex-row gap-5 sm:items-center">
-            <div class="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/20 overflow-hidden flex items-center justify-center text-violet-500 font-black text-3xl flex-shrink-0">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Pic and Identity -->
+        <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl text-center space-y-4">
+            <div class="w-24 h-24 rounded-full bg-slate-100 border border-slate-200 mx-auto overflow-hidden flex items-center justify-center text-3xl font-black text-blue-600">
                 {% if faculty.profile_pic %}
-                <img src="{{ url_for('static', filename='uploads/' ~ faculty.profile_pic) }}" alt="{{ faculty.name }} profile picture" class="w-full h-full object-cover">
+                <img src="{{ url_for('static', filename='uploads/' ~ faculty.profile_pic) }}" alt="Avatar" class="w-full h-full object-cover">
                 {% else %}
                 {{ faculty.name[:1] | upper }}
                 {% endif %}
             </div>
-            <div class="min-w-0">
-                <p class="text-xs font-bold uppercase tracking-wider text-[#94a3b8]">Faculty Profile</p>
-                <h2 class="text-xl font-extrabold truncate">{{ faculty.name }}</h2>
-                <p class="text-sm text-[#64748b] dark:text-[#94a3b8]">{{ faculty.id }} | {{ dept.name if dept else faculty.department_id }}</p>
+            <div>
+                <h3 class="font-extrabold text-base text-slate-800 dark:text-white">{{ faculty.name }}</h3>
+                <p class="text-xs text-slate-400 mt-1 font-semibold">{{ faculty.id }} | Designation: Faculty</p>
+                <p class="text-[0.7rem] text-slate-400 mt-1">Department: {{ dept.name if dept else faculty.department_id }}</p>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-[#e2e8f0] dark:border-[#1e293b]">
-                <span class="block text-[#94a3b8] font-bold uppercase tracking-wider">Assigned Advisees</span>
-                <strong class="block mt-1">{{ advisees | length }} students</strong>
+        <!-- Read-Only Profile Details -->
+        <div class="stitch-card p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl lg:col-span-2 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
+                <h3 class="font-extrabold text-sm text-slate-850 dark:text-white">Faculty Profile Details (Read-Only)</h3>
+                <span class="px-2.5 py-1 text-[0.62rem] font-bold rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Managed by Admin</span>
             </div>
-            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-[#e2e8f0] dark:border-[#1e293b]">
-                <span class="block text-[#94a3b8] font-bold uppercase tracking-wider">Teaching Sections</span>
-                <strong class="block mt-1">{{ sections | length }} sections</strong>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span class="block text-[0.62rem] font-bold uppercase tracking-wider text-slate-400">Full Name</span>
+                    <p class="font-extrabold text-slate-850 dark:text-white mt-1">{{ faculty.name }}</p>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span class="block text-[0.62rem] font-bold uppercase tracking-wider text-slate-400">Department & Designation</span>
+                    <p class="font-bold text-slate-800 dark:text-slate-200 mt-1">{{ dept.name if dept else faculty.department_id }} {% if faculty.post %}({{ faculty.post }}){% endif %}</p>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span class="block text-[0.62rem] font-bold uppercase tracking-wider text-slate-400">Office Room</span>
+                    <p class="font-semibold text-slate-800 dark:text-slate-200 mt-1">{{ faculty.office or 'Not specified' }}</p>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span class="block text-[0.62rem] font-bold uppercase tracking-wider text-slate-400">Phone Number</span>
+                    <p class="font-mono font-semibold text-slate-800 dark:text-slate-200 mt-1">{{ faculty.phone or 'Not specified' }}</p>
+                </div>
             </div>
-        </div>
 
-        <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-[#e2e8f0] dark:border-[#1e293b]">
-            <span class="block text-xs text-[#94a3b8] font-bold uppercase tracking-wider">About / Professional Bio</span>
-            <p class="mt-2 text-sm text-[#475569] dark:text-[#cbd5e1] leading-relaxed">{{ faculty.about if faculty.about else 'No biography has been added yet.' }}</p>
+            <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
+                <span class="block text-[0.62rem] font-bold uppercase tracking-wider text-slate-400 mb-1">Research Interests / Specializations</span>
+                <p class="text-slate-700 dark:text-slate-300 font-medium leading-relaxed">{{ faculty.research_interests or 'No research interests listed.' }}</p>
+            </div>
+
+            <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
+                <span class="block text-[0.62rem] font-bold uppercase tracking-wider text-slate-400 mb-1">Academic Bio / About</span>
+                <p class="text-slate-700 dark:text-slate-300 leading-relaxed">{{ faculty.about or 'No bio information provided.' }}</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span class="block text-[0.62rem] font-bold uppercase tracking-wider text-slate-400">Present Address</span>
+                    <p class="text-slate-700 dark:text-slate-300 mt-1">{{ faculty.present_address or 'Not specified' }}</p>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span class="block text-[0.62rem] font-bold uppercase tracking-wider text-slate-400">Permanent Address</span>
+                    <p class="text-slate-700 dark:text-slate-300 mt-1">{{ faculty.permanent_address or 'Not specified' }}</p>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <div class="stitch-card max-w-xl space-y-4">
-        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Change Password</h3>
-        <form action="{{ url_for('change_password') }}" method="POST" class="space-y-4">
+<!-- ================= MODALS ================= -->
+
+<!-- 1. Override Advising Override Modal -->
+<div id="override-register-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col justify-between shadow-2xl overflow-hidden">
+        <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
             <div>
-                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">New Password</label>
-                <input type="password" name="new_password" required minlength="6" placeholder="New password" class="stitch-input text-xs">
+                <h3 class="font-extrabold text-sm text-slate-800 dark:text-white">Manual Advising Override Control</h3>
+                <p class="text-[0.68rem] text-slate-500 dark:text-slate-400" id="override-modal-student-desc"></p>
+            </div>
+            <button onclick="closeOverrideModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-5 overflow-y-auto space-y-6 flex-1 text-xs">
+            <!-- Registered Sections list -->
+            <div class="space-y-3">
+                <h4 class="font-black text-xs uppercase tracking-wider text-slate-400">Current Registered Sections</h4>
+                <div class="table-container p-0 border rounded-xl overflow-hidden">
+                    <table class="stitch-table">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Section</th>
+                                <th>Credits</th>
+                                <th>Schedule</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="override-current-regs-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Available Courses list -->
+            <div class="space-y-3">
+                <h4 class="font-black text-xs uppercase tracking-wider text-slate-400">Offered Sections Override Registration</h4>
+                <div class="flex justify-between items-center gap-2">
+                    <input type="text" id="override-search-filter" oninput="filterOverrideSections()" placeholder="Search available sections..." class="p-1.5 w-64 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-800 dark:text-white">
+                </div>
+                <div class="table-container p-0 border rounded-xl overflow-hidden max-h-[260px] overflow-y-auto">
+                    <table class="stitch-table">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Section</th>
+                                <th>Credits</th>
+                                <th>Schedule</th>
+                                <th>Classroom</th>
+                                <th>Ratio</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="override-available-sections-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
+            <span class="text-xs text-slate-500" id="override-balance-indicator">Total credits: 0.0 CR</span>
+            <button onclick="closeOverrideModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-350 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold rounded-lg transition-colors text-slate-700 dark:text-white">
+                Done
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Messaging New Chat Modal -->
+<div id="new-message-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+        <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+            <h3 class="font-extrabold text-sm text-slate-800 dark:text-white">Create Conversation</h3>
+            <button onclick="closeNewMessageModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form id="new-conversation-form" onsubmit="createNewConversation(event)" class="p-5 space-y-4 text-xs">
+            <div>
+                <label class="block text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 mb-1">Target Recipient:</label>
+                <select name="receiver_option" required class="w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-white">
+                    <option value="">-- Choose Recipient --</option>
+                    <optgroup label="Advisees">
+                        <option value="all_advisees">All Assigned Advisees</option>
+                        {% for adv in advisees %}
+                        <option value="{{ adv.user_id }}">{{ adv.name }} ({{ adv.id }})</option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Class Sections Group Chat">
+                        {% for sec in sections %}
+                        <option value="course_chat_{{ sec.id }}">{{ sec.course_code }} Sec {{ sec.section_number }} Group Chat</option>
+                        <option value="all_students_sec_{{ sec.id }}">Broadcast to All Students in {{ sec.course_code }} Sec {{ sec.section_number }}</option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
             </div>
             <div>
-                <label class="block text-xs font-bold text-[#475569] dark:text-[#94a3b8] uppercase tracking-wider mb-2">Confirm New Password</label>
-                <input type="password" name="confirm_password" required minlength="6" placeholder="Confirm password" class="stitch-input text-xs">
+                <label class="block text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 mb-1">Initial Message:</label>
+                <textarea name="content" rows="4" required placeholder="Type your initial message content here..." class="w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-white"></textarea>
             </div>
-            <button type="submit" class="stitch-btn btn-primary rounded-lg text-xs py-2 px-4">
-                Update Password
+            <div>
+                <label class="block text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 mb-1">Attach File (Optional):</label>
+                <input type="file" name="file" class="text-xs w-full p-1 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-[#0f172a] text-slate-700 dark:text-slate-350">
+            </div>
+            <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors">
+                Send Message
             </button>
         </form>
     </div>
 </div>
+
 <script>
+    // Local data storage
     const advisees = {{ advisees_json | safe }};
     const facultySections = {{ sections_json | safe }};
     const allSections = {{ all_sections_json | safe }};
-    const gradeLetters = ['', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F'];
-    let currentAttendanceSectionId = '';
-    let currentGradingSectionId = '';
-    let currentSwapSections = [];
+    
+    let currentWorkspaceSectionId = '';
+    let currentWorkspaceSubTab = 'overview';
+    let currentActiveChatId = '';
+    
+    // Day conversion mapping
+    const daysSort = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+    // Helper functions
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, char => ({
             '&': '&amp;',
@@ -779,208 +1208,403 @@
         }[char]));
     }
 
+    function toggleMenu(menuId, forceOpen) {
+        const menu = document.getElementById(menuId);
+        const arrow = document.getElementById(menuId + '-arrow');
+        if (menu) {
+            const isCurrentlyHidden = menu.classList.contains('hidden');
+            const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : isCurrentlyHidden;
+            
+            if (shouldOpen) {
+                menu.classList.remove('hidden');
+                menu.classList.add('open');
+                if (arrow) arrow.classList.add('rotate-90', 'open');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('open');
+                if (arrow) arrow.classList.remove('rotate-90', 'open');
+            }
+        }
+    }
+
     function updateBreadcrumbs(tabId) {
         const breadcrumbEl = document.getElementById('portal-breadcrumb');
         if (!breadcrumbEl) return;
         const mapping = {
             'dashboard': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Dashboard</span>',
-            'attendance': 'Home / My Courses / <span class="text-slate-700 dark:text-slate-300 font-semibold">Attendance</span>',
-            'grading': 'Home / My Courses / <span class="text-slate-700 dark:text-slate-300 font-semibold">Grade Management</span>',
-            'advisees': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">My Advisee Students</span>',
-            'advisee-advising': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">Student Advising</span>',
-            'requests': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">Override Requests</span>',
-            'section-change': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">Section Swap Override</span>',
+            'my-courses': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">My Courses</span>',
+            'advisees': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">My Advisees</span>',
+            'dept-students': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">Department Students</span>',
+            'requests': 'Home / Advising / <span class="text-slate-700 dark:text-slate-300 font-semibold">Advising Requests</span>',
             'schedule': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Class Schedule</span>',
-            'settings': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">My Profile</span>'
+            'announcements': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Announcements</span>',
+            'messaging': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Messaging</span>',
+            'reports': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Reports</span>',
+            'settings': 'Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">Profile Settings</span>'
         };
         breadcrumbEl.innerHTML = mapping[tabId] || `Home / <span class="text-slate-700 dark:text-slate-300 font-semibold">${tabId}</span>`;
     }
 
     function switchTab(tabId) {
-        const target = document.getElementById(`tab-${tabId}`);
-        if (!target) {
-            tabId = 'dashboard';
-        }
-
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-
-        document.querySelectorAll('.nav-item, .nav-sub-item').forEach(el => el.classList.remove('active'));
-
-        const mainBtn = document.getElementById(`nav-${tabId}`);
-        if (mainBtn) {
-            mainBtn.classList.add('active');
+        const target = document.getElementById(`tab-${tabId}`);
+        if (target) {
+            target.classList.remove('hidden');
         }
+        
+        // Highlight active navbar
+        document.querySelectorAll('.nav-item, .nav-sub-item').forEach(el => el.classList.remove('active'));
+        
+        const mainBtn = document.getElementById(`nav-${tabId}`);
+        if (mainBtn) mainBtn.classList.add('active');
 
-        // Highlight matching sub-items dynamically
-        document.querySelectorAll('.nav-sub-item').forEach(subBtn => {
-            const onclickAttr = subBtn.getAttribute('onclick') || '';
-            if (onclickAttr.includes(`switchTab('${tabId}')`)) {
-                subBtn.classList.add('active');
-                const submenu = subBtn.closest('.submenu');
-                if (submenu && typeof toggleMenu === 'function') {
-                    toggleMenu(submenu.id, true);
+        // Check if inside advising sub-menu
+        const subItems = ['advisees', 'dept-students', 'requests'];
+        if (subItems.includes(tabId)) {
+            const menu = document.getElementById('submenu-advising');
+            if (menu) menu.classList.remove('hidden');
+            const arrow = document.getElementById('submenu-advising-arrow');
+            if (arrow) arrow.rotate = '90'; // fallback
+            if (arrow) arrow.classList.add('rotate-90');
+            const subBtn = document.getElementById(`nav-${tabId}`);
+            if (subBtn) subBtn.classList.add('active');
+            document.getElementById('nav-advising-parent')?.classList.add('active');
+            
+            // Highlight active advising subnav buttons in page
+            document.querySelectorAll('.advising-subnav-btn').forEach(btn => {
+                if (btn.getAttribute('data-subtab') === tabId) {
+                    btn.className = "advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center bg-blue-600 text-white shadow-sm";
+                } else {
+                    btn.className = "advising-subnav-btn flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-center text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50";
                 }
-                
-                // Highlight corresponding parent item
-                if (submenu) {
-                    const parentId = submenu.id.replace('submenu-', 'nav-') + '-parent';
-                    document.getElementById(parentId)?.classList.add('active');
-                }
-            }
-        });
+            });
+        }
 
         updateBreadcrumbs(tabId);
         localStorage.setItem('faculty_active_tab', tabId);
+        
+        // Perform tab specific loads
+        if (tabId === 'messaging') {
+            loadMessagingThreads();
+        } else if (tabId === 'reports') {
+            loadReportsData();
+        }
+        
         if (window.lucide) lucide.createIcons();
     }
 
-    function todayLocalIso() {
-        const now = new Date();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        return `${now.getFullYear()}-${month}-${day}`;
+    // Today's schedule calculation
+    function loadTodaySchedule() {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const todayName = days[new Date().getDay()];
+        
+        const displaySpan = document.getElementById('today-name-display');
+        if (displaySpan) displaySpan.textContent = todayName;
+
+        const listDiv = document.getElementById('todays-classes-list');
+        if (!listDiv) return;
+
+        // Query sched items passed from python
+        const todaysClasses = [];
+        // Loop schedule items rendered by Jinja2 schedule tab or parse from facultySections
+        facultySections.forEach(sec => {
+            if (!sec.schedule) return;
+            // Schedule pattern: "Mon 08:30-10:00, Wed 08:30-10:00"
+            const parts = sec.schedule.split(',');
+            parts.forEach(p => {
+                const trimP = p.trim();
+                const dayAbbrev = trimP.split(' ')[0]; // Mon, Tue, Wed, Thu, Fri, Sat, Sun
+                
+                const abbrevMap = {
+                    'Sun': 'Sunday', 'Mon': 'Monday', 'Tue': 'Tuesday', 
+                    'Wed': 'Wednesday', 'Thu': 'Thursday', 'Fri': 'Friday', 'Sat': 'Saturday'
+                };
+                
+                if (abbrevMap[dayAbbrev] === todayName) {
+                    todaysClasses.push({
+                        code: sec.course_code,
+                        title: sec.course_title,
+                        section: sec.section_number,
+                        time: trimP.replace(dayAbbrev, '').trim(),
+                        room: sec.room
+                    });
+                }
+            });
+        });
+
+        listDiv.innerHTML = '';
+        if (todaysClasses.length === 0) {
+            listDiv.innerHTML = `
+                <div class="text-center text-slate-400 py-4">
+                    <i data-lucide="smile" class="w-8 h-8 mx-auto mb-1 stroke-[1.5] text-slate-350"></i>
+                    <p class="text-xs font-semibold">No lectures scheduled for today.</p>
+                </div>
+            `;
+        } else {
+            // Sort by time
+            todaysClasses.sort((a,b) => a.time.localeCompare(b.time));
+            todaysClasses.forEach(c => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 hover:border-blue-500 transition-colors';
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 flex items-center justify-center font-black text-xs">
+                            ${escapeHtml(c.code.slice(0,3))}
+                        </div>
+                        <div>
+                            <p class="text-xs font-extrabold text-slate-800 dark:text-white">${escapeHtml(c.code)} (Sec ${escapeHtml(c.section)})</p>
+                            <p class="text-[0.65rem] text-slate-400 truncate max-w-[200px]">${escapeHtml(c.title)}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-blue-500"></i> ${escapeHtml(c.time)}</p>
+                        <p class="text-[0.65rem] text-slate-400">Room ${escapeHtml(c.room)}</p>
+                    </div>
+                `;
+                listDiv.appendChild(row);
+            });
+        }
+        if (window.lucide) lucide.createIcons();
     }
 
+    // DOM ready setup
     document.addEventListener('DOMContentLoaded', function () {
-        const attendanceDate = document.getElementById('attendance-date');
-        if (attendanceDate && !attendanceDate.value) {
-            attendanceDate.value = todayLocalIso();
+        loadTodaySchedule();
+
+        const attDate = document.getElementById('ws-attendance-date');
+        if (attDate) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            attDate.value = `${yyyy}-${mm}-${dd}`;
         }
 
         const savedTab = localStorage.getItem('faculty_active_tab') || 'dashboard';
         switchTab(savedTab);
     });
 
-    function openSectionTool(tool, sectionId) {
-        switchTab(tool);
-        if (tool === 'attendance') {
-            const select = document.getElementById('attendance-section-select');
-            select.value = sectionId;
-            loadAttendanceRoster(sectionId);
-        } else if (tool === 'grading') {
-            const select = document.getElementById('grading-section-select');
-            select.value = sectionId;
-            loadGradingRoster(sectionId);
-        }
-    }
-
-    function filterAdviseeList() {
-        const query = document.getElementById('advisee-search').value.toLowerCase().trim();
-        document.querySelectorAll('.advisee-row').forEach(row => {
-            const name = row.getAttribute('data-name');
-            const id = row.getAttribute('data-id');
-            row.classList.toggle('hidden', !(name.includes(query) || id.includes(query)));
+    // Semester Selector
+    function changeSemesterFilter(val) {
+        showToast('info', `Filtering courses for ${val}...`);
+        // If they select past semesters, filter client list or reload
+        // Since we only query active semester sections from backend, we keep client search
+        const gridItems = document.querySelectorAll('#courses-grid-list > div');
+        gridItems.forEach(item => {
+            // Can adapt if backend supports multiple semesters
         });
     }
 
-    function selectAdviseeForRegistration(stdId) {
-        const interfaceDiv = document.getElementById('advisee-registration-interface');
-        const statusSpan = document.getElementById('advisee-status-indicator');
-        document.getElementById('override-student-id').value = stdId;
+    // Roster Search Filters
+    function filterAdviseesRoster() {
+        const query = document.getElementById('advisees-search-input').value.trim().toLowerCase();
+        document.querySelectorAll('.advisee-row-item').forEach(row => {
+            const id = row.getAttribute('data-id') || '';
+            const name = row.getAttribute('data-name') || '';
+            row.classList.toggle('hidden', !(id.includes(query) || name.includes(query)));
+        });
+    }
 
-        if (!stdId) {
-            interfaceDiv.classList.add('hidden');
-            statusSpan.textContent = 'Status: Select student advisee';
+    function filterDeptRoster() {
+        const query = document.getElementById('dept-search-input').value.trim().toLowerCase();
+        document.querySelectorAll('.dept-row-item').forEach(row => {
+            const id = row.getAttribute('data-id') || '';
+            const name = row.getAttribute('data-name') || '';
+            row.classList.toggle('hidden', !(id.includes(query) || name.includes(query)));
+        });
+    }
+
+    // ================= WORKSPACE LOGIC =================
+    function enterWorkspace(sectionId) {
+        currentWorkspaceSectionId = sectionId;
+        const sec = facultySections.find(s => s.id === sectionId);
+        if (!sec) {
+            showToast('error', 'Section details not found.');
             return;
         }
 
-        const selectedAdvisee = advisees.find(a => a.id === stdId);
-        if (!selectedAdvisee) {
-            showToast('error', 'Advisee record was not found.');
-            return;
-        }
+        // Fill course metadata
+        document.getElementById('workspace-course-title').textContent = `${sec.course_code} - ${sec.course_title}`;
+        document.getElementById('workspace-section-badge').textContent = `Section ${sec.section_number}`;
+        document.getElementById('workspace-course-desc').textContent = `${sec.credits} Credits | Schedule: ${sec.schedule}`;
+        document.getElementById('workspace-room-badge').textContent = `Room: ${sec.room}`;
+        document.getElementById('workspace-enrolled-badge').textContent = `Students: ${sec.enrolled_count}/${sec.capacity}`;
 
-        statusSpan.innerHTML = selectedAdvisee.has_plan
-            ? 'Status: <span class="text-green-600 font-bold">Pre-Advising Completed</span>'
-            : 'Status: <span class="text-amber-600 font-bold">Pre-Advising Missed (Advisor Override Mode)</span>';
+        // Switch container
+        document.getElementById('courses-list-container').classList.add('hidden');
+        document.getElementById('course-workspace-container').classList.remove('hidden');
 
-        document.querySelectorAll('.advisee-reg-checkbox').forEach(cb => cb.checked = false);
+        // Auto navigate to overview subtab
+        switchWorkspaceSubTab('overview');
+        
+        // Pre-fetch workspace data
+        loadWorkspaceRoster();
+        loadWorkspaceAttendance();
+        loadWorkspaceGrading();
+        loadWorkspaceMaterials();
+        loadWorkspaceNotices();
+    }
 
-        fetch(`/faculty/get-student-sections/${encodeURIComponent(stdId)}`)
+    function exitWorkspace() {
+        document.getElementById('course-workspace-container').classList.add('hidden');
+        document.getElementById('courses-list-container').classList.remove('hidden');
+        currentWorkspaceSectionId = '';
+    }
+
+    function switchWorkspaceSubTab(tabId) {
+        currentWorkspaceSubTab = tabId;
+        document.querySelectorAll('.ws-sub-tab').forEach(el => el.classList.remove('active', 'border-blue-600', 'text-blue-600'));
+        document.querySelectorAll('.ws-sub-tab-content').forEach(el => el.classList.add('hidden'));
+
+        const tabBtn = document.getElementById(`ws-tab-btn-${tabId}`);
+        if (tabBtn) tabBtn.classList.add('active', 'border-blue-600', 'text-blue-600');
+
+        const contentDiv = document.getElementById(`ws-content-${tabId}`);
+        if (contentDiv) contentDiv.classList.remove('hidden');
+        
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // 2B. Workspace Student Roster
+    function loadWorkspaceRoster() {
+        const tbody = document.getElementById('workspace-roster-tbody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Loading student roster...</td></tr>';
+
+        fetch(`/faculty/section-roster/${encodeURIComponent(currentWorkspaceSectionId)}`)
             .then(res => res.json())
             .then(data => {
                 if (data.status !== 'success') {
-                    showToast('error', data.message || 'Could not load current registrations.');
+                    showToast('error', data.message);
                     return;
                 }
-                data.sections.forEach(secId => {
-                    const cb = document.getElementById(`override-checkbox-${secId}`);
-                    if (cb) cb.checked = true;
-                });
-            })
-            .catch(() => showToast('error', 'Could not connect to the roster service.'));
-
-        interfaceDiv.classList.remove('hidden');
-    }
-
-    function submitAdviseeOverride() {
-        const sectionIds = Array.from(document.querySelectorAll('.advisee-reg-checkbox:checked')).map(c => c.value);
-        document.getElementById('override-section-ids').value = JSON.stringify(sectionIds);
-        return true;
-    }
-
-    function reloadAttendanceIfReady() {
-        const sectionId = document.getElementById('attendance-section-select').value;
-        if (sectionId) loadAttendanceRoster(sectionId);
-    }
-
-    function loadAttendanceRoster(secId) {
-        currentAttendanceSectionId = secId;
-        const roster = document.getElementById('attendance-roster');
-        const tbody = document.getElementById('attendance-tbody');
-        const summary = document.getElementById('attendance-summary');
-        const date = document.getElementById('attendance-date').value || todayLocalIso();
-
-        if (!secId) {
-            roster.classList.add('hidden');
-            summary.textContent = 'Choose a section to load registered students.';
-            return;
-        }
-
-        summary.textContent = 'Loading roster...';
-        fetch(`/faculty/section-roster/${encodeURIComponent(secId)}?date=${encodeURIComponent(date)}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.status !== 'success') {
-                    showToast('error', data.message || 'Could not load attendance roster.');
-                    return;
-                }
-
                 tbody.innerHTML = '';
                 if (data.students.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-[#94a3b8] py-4">No students are registered in this section yet.</td></tr>';
-                } else {
-                    data.students.forEach(std => {
-                        const status = std.attendance_status || 'present';
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td class="font-mono text-xs">${escapeHtml(std.id)}</td>
-                            <td class="font-medium">${escapeHtml(std.name)}</td>
-                            <td>
-                                <select data-student-id="${escapeHtml(std.id)}" class="attendance-status stitch-input text-xs max-w-[160px]">
-                                    <option value="present" ${status === 'present' ? 'selected' : ''}>Present</option>
-                                    <option value="absent" ${status === 'absent' ? 'selected' : ''}>Absent</option>
-                                    <option value="late" ${status === 'late' ? 'selected' : ''}>Late</option>
-                                    <option value="excused" ${status === 'excused' ? 'selected' : ''}>Excused</option>
-                                </select>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-400">No students enrolled in this section.</td></tr>';
+                    return;
                 }
-
-                summary.textContent = `${data.section.course_code} Sec ${data.section.section_number} | ${data.students.length} registered students`;
-                roster.classList.remove('hidden');
+                data.students.forEach(std => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'workspace-roster-row';
+                    tr.dataset.name = std.name.toLowerCase();
+                    tr.dataset.id = std.id.toLowerCase();
+                    tr.innerHTML = `
+                        <td class="font-mono text-xs">${escapeHtml(std.id)}</td>
+                        <td class="font-bold">${escapeHtml(std.name)}</td>
+                        <td class="text-slate-500">${escapeHtml(std.advisor_name || 'N/A')}</td>
+                        <td>${std.completed_credits || 0.0} CR</td>
+                        <td class="font-mono font-bold">${std.cgpa ? std.cgpa.toFixed(2) : '0.00'}</td>
+                        <td>
+                            <button onclick="viewStudentProfileDetails('${escapeHtml(std.id)}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-[0.62rem] font-bold rounded text-slate-700 dark:text-slate-300">
+                                View Profile
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             })
-            .catch(() => showToast('error', 'Could not connect to the attendance service.'));
+            .catch(() => showToast('error', 'Failed to retrieve roster.'));
     }
 
-    function saveAttendance() {
-        if (!currentAttendanceSectionId) {
-            showToast('error', 'Select a section first.');
-            return;
-        }
+    function filterWorkspaceRoster() {
+        const q = document.getElementById('roster-search-input').value.trim().toLowerCase();
+        document.querySelectorAll('.workspace-roster-row').forEach(row => {
+            const name = row.dataset.name;
+            const id = row.dataset.id;
+            row.classList.toggle('hidden', !(name.includes(q) || id.includes(q)));
+        });
+    }
+
+    function exportRoster() {
+        exportRosterToCSV(currentWorkspaceSectionId);
+    }
+
+    // 2C. Workspace Attendance
+    function loadWorkspaceAttendance() {
+        const tbody = document.getElementById('ws-attendance-tbody');
+        const date = document.getElementById('ws-attendance-date').value;
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4">Loading attendance records...</td></tr>';
+
+        fetch(`/faculty/section-roster/${encodeURIComponent(currentWorkspaceSectionId)}?date=${encodeURIComponent(date)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    showToast('error', data.message);
+                    return;
+                }
+                tbody.innerHTML = '';
+                if (data.students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-slate-400">No registered students.</td></tr>';
+                    return;
+                }
+                data.students.forEach(std => {
+                    const status = std.attendance_status || 'present';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="font-mono text-xs">${escapeHtml(std.id)}</td>
+                        <td class="font-bold">${escapeHtml(std.name)}</td>
+                        <td>
+                            <select data-student-id="${escapeHtml(std.id)}" class="attendance-status stitch-input text-xs max-w-[150px]">
+                                <option value="present" ${status === 'present' ? 'selected' : ''}>Present</option>
+                                <option value="absent" ${status === 'absent' ? 'selected' : ''}>Absent</option>
+                                <option value="late" ${status === 'late' ? 'selected' : ''}>Late</option>
+                                <option value="excused" ${status === 'excused' ? 'selected' : ''}>Excused</option>
+                            </select>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                setupAttendanceKeyboardShortcuts();
+                setupAttendanceAutoSave();
+            })
+            .catch(() => showToast('error', 'Could not fetch attendance roster.'));
+    }
+
+    function markAllPresent() {
+        document.querySelectorAll('.attendance-status').forEach(select => {
+            select.value = 'present';
+        });
+        saveWorkspaceAttendanceSilent();
+    }
+
+    function setupAttendanceKeyboardShortcuts() {
+        const tbody = document.getElementById('ws-attendance-tbody');
+        if (!tbody) return;
+        tbody.removeAttribute('keydown_bound');
+        
+        tbody.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === ' ') {
+                const active = document.activeElement;
+                if (active && active.classList.contains('attendance-status')) {
+                    e.preventDefault();
+                    const row = active.closest('tr');
+                    const nextRow = row.nextElementSibling;
+                    
+                    if (e.key === ' ') {
+                        active.value = (active.value === 'present') ? 'absent' : 'present';
+                        active.dispatchEvent(new Event('change'));
+                    }
+                    
+                    if (nextRow) {
+                        const nextSelect = nextRow.querySelector('.attendance-status');
+                        if (nextSelect) nextSelect.focus();
+                    }
+                }
+            }
+        });
+        tbody.setAttribute('keydown_bound', 'true');
+    }
+
+    function setupAttendanceAutoSave() {
+        document.querySelectorAll('.attendance-status').forEach(select => {
+            select.addEventListener('change', () => {
+                saveWorkspaceAttendanceSilent();
+            });
+        });
+    }
+
+    function saveWorkspaceAttendanceSilent() {
+        const indicator = document.getElementById('attendance-autosave-indicator');
+        if (indicator) indicator.textContent = 'Saving changes...';
 
         const records = Array.from(document.querySelectorAll('.attendance-status')).map(select => ({
             student_id: select.dataset.studentId,
@@ -991,74 +1615,196 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                section_id: currentAttendanceSectionId,
-                date: document.getElementById('attendance-date').value || todayLocalIso(),
+                section_id: currentWorkspaceSectionId,
+                date: document.getElementById('ws-attendance-date').value,
                 records
             })
         })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showToast('success', data.message);
-                } else {
-                    showToast('error', data.message || 'Attendance was not saved.');
-                }
-            })
-            .catch(() => showToast('error', 'Could not save attendance.'));
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (indicator) indicator.textContent = 'Autosaved.';
+                setTimeout(() => { if (indicator) indicator.textContent = ''; }, 2000);
+            } else {
+                if (indicator) indicator.textContent = 'Auto-save failed.';
+            }
+        })
+        .catch(() => {
+            if (indicator) indicator.textContent = 'Connection error.';
+        });
     }
 
-    function loadGradingRoster(secId) {
-        currentGradingSectionId = secId;
-        const roster = document.getElementById('grading-roster');
-        const tbody = document.getElementById('grading-tbody');
-        const summary = document.getElementById('grading-summary');
+    function submitWorkspaceAttendance() {
+        saveWorkspaceAttendanceSilent();
+        showToast('success', 'Attendance record saved.');
+    }
 
-        if (!secId) {
-            roster.classList.add('hidden');
-            summary.textContent = 'Choose a section to load registered students.';
+    // 2D. Workspace Grading & Marks
+    function loadWorkspaceGrading() {
+        // Load scheme and roster
+        fetch(`/faculty/section-roster/${encodeURIComponent(currentWorkspaceSectionId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status !== 'success') return;
+                
+                // Get defined scheme components
+                const schemeInput = document.getElementById('grading-scheme-inputs');
+                schemeInput.innerHTML = '';
+                
+                // Check if grading scheme exists for this section in components
+                let currentScheme = { "Attendance": 10, "Midterm": 30, "Final": 45, "Quiz": 15 }; // defaults
+                // Find in models schemes list
+                const matchedSchemeObj = data.scheme;
+                if (matchedSchemeObj && matchedSchemeObj.components) {
+                    currentScheme = matchedSchemeObj.components;
+                }
+                
+                let sum = 0;
+                Object.keys(currentScheme).forEach(key => {
+                    const weight = currentScheme[key];
+                    sum += weight;
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <label class="block text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider mb-1">${escapeHtml(key)} (%)</label>
+                        <input type="number" min="0" max="100" data-component-name="${escapeHtml(key)}" value="${weight}" oninput="recalculateSchemeSum()" class="scheme-weight-input w-full p-2 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-750 dark:text-white">
+                    `;
+                    schemeInput.appendChild(div);
+                });
+                
+                document.getElementById('scheme-sum-display').textContent = `Total Weight: ${sum}%`;
+
+                // Render grading table header
+                const thead = document.getElementById('ws-grading-thead');
+                thead.innerHTML = '';
+                const headTr = document.createElement('tr');
+                headTr.innerHTML = `
+                    <th>Student ID</th>
+                    <th>Student Name</th>
+                    ${Object.keys(currentScheme).map(key => `<th>${escapeHtml(key)} (Max ${currentScheme[key]})</th>`).join('')}
+                    <th>Total (100)</th>
+                    <th>Grade</th>
+                    <th>GPA</th>
+                `;
+                thead.appendChild(headTr);
+
+                // Render grading student marks rows
+                const tbody = document.getElementById('ws-grading-tbody');
+                tbody.innerHTML = '';
+                
+                data.students.forEach(std => {
+                    // Marks structure: std.marks contains evaluation marks component mappings
+                    const studentMarksObj = std.marks || {};
+                    let studentTotal = 0;
+                    
+                    const inputsHtml = Object.keys(currentScheme).map(key => {
+                        const markVal = studentMarksObj[key] !== undefined ? studentMarksObj[key] : '';
+                        if (markVal !== '') studentTotal += parseFloat(markVal);
+                        return `
+                            <td>
+                                <input type="number" min="0" max="${currentScheme[key]}" step="0.1" value="${markVal}"
+                                    data-component="${escapeHtml(key)}"
+                                    onchange="saveStudentMarkInput(this, '${escapeHtml(std.id)}')"
+                                    class="student-mark-cell w-16 p-1 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded font-mono text-xs">
+                            </td>
+                        `;
+                    }).join('');
+
+                    const finalGrade = std.grade_letter || gradeFromScore(studentTotal);
+                    const finalGPA = std.grade_point !== undefined ? std.grade_point : gradePointFromLetter(finalGrade);
+
+                    const tr = document.createElement('tr');
+                    tr.dataset.studentId = std.id;
+                    tr.innerHTML = `
+                        <td class="font-mono text-xs">${escapeHtml(std.id)}</td>
+                        <td class="font-bold">${escapeHtml(std.name)}</td>
+                        ${inputsHtml}
+                        <td class="font-mono font-bold text-blue-600 dark:text-blue-400 student-total-marks">${studentTotal.toFixed(1)}</td>
+                        <td class="font-bold student-letter-grade">${finalGrade}</td>
+                        <td class="font-mono font-bold student-grade-point">${finalGPA.toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+    }
+
+    function recalculateSchemeSum() {
+        let sum = 0;
+        document.querySelectorAll('.scheme-weight-input').forEach(input => {
+            sum += parseFloat(input.value) || 0;
+        });
+        document.getElementById('scheme-sum-display').textContent = `Total Weight: ${sum}%`;
+    }
+
+    function saveGradingScheme() {
+        const components = {};
+        let sum = 0;
+        document.querySelectorAll('.scheme-weight-input').forEach(input => {
+            const name = input.dataset.componentName;
+            const val = parseFloat(input.value) || 0;
+            components[name] = val;
+            sum += val;
+        });
+        
+        if (Math.abs(sum - 100.0) > 0.01) {
+            showToast('error', `Total weight must sum to 100%. Current: ${sum}%`);
             return;
         }
 
-        summary.textContent = 'Loading roster...';
-        fetch(`/faculty/section-roster/${encodeURIComponent(secId)}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.status !== 'success') {
-                    showToast('error', data.message || 'Could not load grading roster.');
-                    return;
-                }
-
-                tbody.innerHTML = '';
-                if (data.students.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-[#94a3b8] py-4">No students are registered in this section yet.</td></tr>';
-                } else {
-                    data.students.forEach(std => {
-                        const options = gradeLetters.map(letter => {
-                            const label = letter || 'Not set';
-                            return `<option value="${letter}" ${std.grade_letter === letter ? 'selected' : ''}>${label}</option>`;
-                        }).join('');
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td class="font-mono text-xs">${escapeHtml(std.id)}</td>
-                            <td class="font-medium">${escapeHtml(std.name)}</td>
-                            <td>
-                                <input type="number" min="0" max="100" placeholder="e.g. 85" oninput="calculateLetterGrade(this)"
-                                    class="marks-input w-[110px] p-2 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-lg text-xs font-mono">
-                            </td>
-                            <td>
-                                <select data-student-id="${escapeHtml(std.id)}" class="grade-letter stitch-input text-xs max-w-[140px]">
-                                    ${options}
-                                </select>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                }
-
-                summary.textContent = `${data.section.course_code} Sec ${data.section.section_number} | ${data.students.length} registered students`;
-                roster.classList.remove('hidden');
+        fetch('/faculty/course/save-scheme', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                section_id: currentWorkspaceSectionId,
+                components
             })
-            .catch(() => showToast('error', 'Could not connect to the grading service.'));
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('success', 'Grading scheme updated.');
+                loadWorkspaceGrading();
+            } else {
+                showToast('error', data.message);
+            }
+        });
+    }
+
+    function saveStudentMarkInput(input, studentId) {
+        const row = input.closest('tr');
+        const marks = {};
+        row.querySelectorAll('.student-mark-cell').forEach(cell => {
+            const comp = cell.dataset.component;
+            const val = cell.value;
+            if (val !== '') {
+                marks[comp] = parseFloat(val);
+            }
+        });
+
+        // Compute total & recalculate on UI instantly
+        let total = 0;
+        Object.keys(marks).forEach(k => total += marks[k]);
+        const grade = gradeFromScore(total);
+        const gpa = gradePointFromLetter(grade);
+
+        row.querySelector('.student-total-marks').textContent = total.toFixed(1);
+        row.querySelector('.student-letter-grade').textContent = grade;
+        row.querySelector('.student-grade-point').textContent = gpa.toFixed(2);
+
+        fetch('/faculty/course/save-student-marks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                section_id: currentWorkspaceSectionId,
+                student_id: studentId,
+                marks
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status !== 'success') {
+                showToast('error', data.message);
+            }
+        });
     }
 
     function gradeFromScore(score) {
@@ -1075,129 +1821,587 @@
         return 'F';
     }
 
-    function calculateLetterGrade(input) {
-        const score = parseFloat(input.value);
-        const row = input.closest('tr');
-        const select = row.querySelector('.grade-letter');
-        if (Number.isNaN(score)) {
-            select.value = '';
-            return;
-        }
-        select.value = gradeFromScore(Math.max(0, Math.min(100, score)));
+    function gradePointFromLetter(letter) {
+        const mapping = {
+            'A': 4.0, 'A-': 3.7, 'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+            'C+': 2.3, 'C': 2.0, 'C-': 1.7, 'D+': 1.3, 'D': 1.0, 'F': 0.0
+        };
+        return mapping[letter] || 0.0;
     }
 
-    function saveGrades() {
-        if (!currentGradingSectionId) {
-            showToast('error', 'Select a section first.');
-            return;
-        }
-
-        const grades = Array.from(document.querySelectorAll('.grade-letter'))
-            .filter(select => select.value)
-            .map(select => ({
-                student_id: select.dataset.studentId,
-                grade_letter: select.value
-            }));
-
-        if (grades.length === 0) {
-            showToast('error', 'Enter at least one grade before publishing.');
-            return;
-        }
-
-        fetch('/faculty/save-grades', {
+    function publishWorkspaceGrades() {
+        if (!confirm('Are you sure you want to publish and finalize grades for this section? This locks the entries and registers them to transcripts.')) return;
+        
+        fetch('/faculty/course/publish-grades', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                section_id: currentGradingSectionId,
-                grades
-            })
+            body: JSON.stringify({ section_id: currentWorkspaceSectionId })
         })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showToast('success', data.message);
-                    loadGradingRoster(currentGradingSectionId);
-                } else {
-                    showToast('error', data.message || 'Grades were not saved.');
-                }
-            })
-            .catch(() => showToast('error', 'Could not save grades.'));
-    }
-
-    function loadSectionSwapOptions(stdId) {
-        const currentSelect = document.getElementById('swap-current-section');
-        const targetSelect = document.getElementById('swap-target-section');
-        currentSwapSections = [];
-        currentSelect.innerHTML = '<option value="">Loading sections...</option>';
-        targetSelect.innerHTML = '<option value="">Select current section first</option>';
-
-        if (!stdId) {
-            currentSelect.innerHTML = '<option value="">Select a student first</option>';
-            return;
-        }
-
-        fetch(`/faculty/get-student-sections/${encodeURIComponent(stdId)}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.status !== 'success') {
-                    showToast('error', data.message || 'Could not load student sections.');
-                    currentSelect.innerHTML = '<option value="">No sections available</option>';
-                    return;
-                }
-
-                currentSwapSections = data.section_details || [];
-                if (currentSwapSections.length === 0) {
-                    currentSelect.innerHTML = '<option value="">No registered sections</option>';
-                    return;
-                }
-
-                currentSelect.innerHTML = '<option value="">-- Choose Current Section --</option>';
-                currentSwapSections.forEach(sec => {
-                    const option = document.createElement('option');
-                    option.value = sec.id;
-                    option.textContent = `${sec.course_code} Sec ${sec.section_number} (${sec.schedule})`;
-                    currentSelect.appendChild(option);
-                });
-            })
-            .catch(() => {
-                currentSelect.innerHTML = '<option value="">No sections available</option>';
-                showToast('error', 'Could not connect to the section service.');
-            });
-    }
-
-    function populateSwapTargets() {
-        const currentId = document.getElementById('swap-current-section').value;
-        const targetSelect = document.getElementById('swap-target-section');
-        const currentSection = allSections.find(sec => sec.id === currentId);
-
-        targetSelect.innerHTML = '<option value="">-- Choose Target Section --</option>';
-        if (!currentSection) return;
-
-        const baseCode = currentSection.course_code.replace(' Lab', '');
-        const targets = allSections.filter(sec =>
-            sec.id !== currentId &&
-            sec.course_code.replace(' Lab', '') === baseCode
-        );
-
-        if (targets.length === 0) {
-            targetSelect.innerHTML = '<option value="">No alternate sections available</option>';
-            return;
-        }
-
-        targets.forEach(sec => {
-            const option = document.createElement('option');
-            option.value = sec.id;
-            option.textContent = `${sec.course_code} Sec ${sec.section_number} (${sec.schedule}) | ${sec.room} | ${sec.enrolled_count}/${sec.capacity}`;
-            if (sec.enrolled_count >= sec.capacity) option.disabled = true;
-            targetSelect.appendChild(option);
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('success', 'Grades published successfully.');
+                loadWorkspaceGrading();
+            } else {
+                showToast('error', data.message);
+            }
         });
     }
 
-    // REQUEST OVERRIDES & BATCH ACTIONS
+    // 2E. Workspace Course Materials
+    function loadWorkspaceMaterials() {
+        const listDiv = document.getElementById('ws-materials-list');
+        listDiv.innerHTML = '<p class="text-xs text-slate-400">Loading uploaded course files...</p>';
+
+        fetch(`/faculty/section-roster/${encodeURIComponent(currentWorkspaceSectionId)}`)
+            .then(res => res.json())
+            .then(data => {
+                listDiv.innerHTML = '';
+                const mats = data.materials || [];
+                if (mats.length === 0) {
+                    listDiv.innerHTML = '<p class="text-xs text-slate-400">No course materials uploaded yet.</p>';
+                    return;
+                }
+                mats.forEach(mat => {
+                    const row = document.createElement('div');
+                    row.className = 'flex justify-between items-center p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-xs';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-4 h-4 text-blue-500"></i>
+                            <div>
+                                <p class="font-bold text-slate-800 dark:text-white">${escapeHtml(mat.title)}</p>
+                                <span class="text-[0.62rem] text-slate-450 uppercase tracking-wider font-semibold">${escapeHtml(mat.file_type)}</span>
+                            </div>
+                        </div>
+                        <a href="/static/uploads/${escapeHtml(mat.file_path)}" download class="text-blue-600 hover:underline font-bold">Download</a>
+                    `;
+                    listDiv.appendChild(row);
+                });
+                if (window.lucide) lucide.createIcons();
+            });
+    }
+
+    function uploadMaterial(e) {
+        e.preventDefault();
+        const form = document.getElementById('material-upload-form');
+        const formData = new FormData(form);
+        formData.append('section_id', currentWorkspaceSectionId);
+
+        showToast('info', 'Uploading material file...');
+        fetch('/faculty/course/upload-material', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('success', 'Material uploaded successfully.');
+                form.reset();
+                loadWorkspaceMaterials();
+            } else {
+                showToast('error', data.message);
+            }
+        });
+    }
+
+    // 2F. Workspace Notices
+    function loadWorkspaceNotices() {
+        const listDiv = document.getElementById('ws-notices-list');
+        listDiv.innerHTML = '<p class="text-xs text-slate-450">Loading notices...</p>';
+
+        fetch(`/faculty/section-roster/${encodeURIComponent(currentWorkspaceSectionId)}`)
+            .then(res => res.json())
+            .then(data => {
+                listDiv.innerHTML = '';
+                const notices = data.announcements || [];
+                if (notices.length === 0) {
+                    listDiv.innerHTML = '<p class="text-xs text-slate-400">No notices posted for this section.</p>';
+                    return;
+                }
+                notices.forEach(notice => {
+                    const card = document.createElement('div');
+                    card.className = 'p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-xs space-y-1.5';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-slate-800 dark:text-white">${escapeHtml(notice.title)}</h4>
+                            <span class="text-[0.62rem] text-slate-400 font-mono">${escapeHtml(notice.created_at || 'Recently')}</span>
+                        </div>
+                        <p class="text-slate-550 dark:text-slate-400 leading-relaxed">${escapeHtml(notice.content)}</p>
+                    `;
+                    listDiv.appendChild(card);
+                });
+            });
+    }
+
+    function postCourseNotice(e) {
+        e.preventDefault();
+        const form = document.getElementById('notice-post-form');
+        const formData = new FormData(form);
+        formData.append('section_id', currentWorkspaceSectionId);
+
+        fetch('/faculty/course/post-announcement', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('success', 'Notice published successfully.');
+                form.reset();
+                loadWorkspaceNotices();
+            } else {
+                showToast('error', data.message);
+            }
+        });
+    }
+
+    // ================= MANUAL OVERRIDE MODAL ACTIONS =================
+    let currentOverrideStudentId = '';
+    
+    function openOverrideModal(studentId) {
+        currentOverrideStudentId = studentId;
+        const matchedStudent = advisees.find(a => a.id === studentId);
+        
+        document.getElementById('override-modal-student-desc').textContent = matchedStudent 
+            ? `Student: ${matchedStudent.name} (${matchedStudent.id}) | CGPA: ${matchedStudent.cgpa.toFixed(2)} | Credits: ${matchedStudent.completed_credits}`
+            : `Student ID: ${studentId}`;
+            
+        document.getElementById('override-register-modal').classList.remove('hidden');
+        loadOverrideCurrentRegistrations();
+        loadOverrideAvailableSections();
+    }
+
+    function closeOverrideModal() {
+        document.getElementById('override-register-modal').classList.add('hidden');
+        currentOverrideStudentId = '';
+    }
+
+    function loadOverrideCurrentRegistrations() {
+        const tbody = document.getElementById('override-current-regs-tbody');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-2">Loading current registrations...</td></tr>';
+        
+        fetch(`/faculty/get-student-sections/${encodeURIComponent(currentOverrideStudentId)}`)
+            .then(res => res.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                if (data.status !== 'success' || !data.section_details || data.section_details.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-2 text-slate-400">No registered courses.</td></tr>';
+                    return;
+                }
+                
+                let creditsTotal = 0;
+                data.section_details.forEach(sec => {
+                    creditsTotal += sec.credits || 3.0;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="font-bold">${escapeHtml(sec.course_code)}</td>
+                        <td>Sec ${escapeHtml(sec.section_number)}</td>
+                        <td>${sec.credits || 3.0} CR</td>
+                        <td class="font-mono text-[0.68rem]">${escapeHtml(sec.schedule)}</td>
+                        <td>
+                            <button onclick="dropStudentCourseOverride('${escapeHtml(sec.id)}')" class="px-2 py-0.5 bg-red-100 hover:bg-red-200 text-red-750 font-bold rounded">
+                                Drop
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                document.getElementById('override-balance-indicator').textContent = `Total Credits Registered: ${creditsTotal.toFixed(1)} CR`;
+            });
+    }
+
+    function loadOverrideAvailableSections() {
+        const tbody = document.getElementById('override-available-sections-tbody');
+        tbody.innerHTML = '';
+        
+        allSections.forEach(sec => {
+            const tr = document.createElement('tr');
+            tr.className = 'override-avail-row';
+            tr.dataset.code = sec.course_code.toLowerCase();
+            tr.dataset.title = sec.course_title.toLowerCase();
+            tr.innerHTML = `
+                <td class="font-bold">${escapeHtml(sec.course_code)} <span class="text-[0.62rem] text-slate-450 block font-normal">${escapeHtml(sec.course_title)}</span></td>
+                <td>Sec ${escapeHtml(sec.section_number)}</td>
+                <td>${sec.credits || 3.0} CR</td>
+                <td class="font-mono text-[0.68rem]">${escapeHtml(sec.schedule)}</td>
+                <td>Room ${escapeHtml(sec.room)}</td>
+                <td>${sec.enrolled_count}/${sec.capacity}</td>
+                <td>
+                    <button onclick="addStudentCourseOverride('${escapeHtml(sec.id)}')" class="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded">
+                        Add
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filterOverrideSections() {
+        const q = document.getElementById('override-search-filter').value.trim().toLowerCase();
+        document.querySelectorAll('.override-avail-row').forEach(row => {
+            const code = row.dataset.code;
+            const title = row.dataset.title;
+            row.classList.toggle('hidden', !(code.includes(q) || title.includes(q)));
+        });
+    }
+
+    function addStudentCourseOverride(sectionId) {
+        showToast('info', 'Adding section override...');
+        fetch('/faculty/register-advisee-override', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `student_id=${encodeURIComponent(currentOverrideStudentId)}&section_ids=${encodeURIComponent(JSON.stringify([sectionId]))}`
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('success', 'Section registered successfully.');
+                loadOverrideCurrentRegistrations();
+            } else {
+                showToast('error', data.message);
+            }
+        });
+    }
+
+    function dropStudentCourseOverride(sectionId) {
+        if (!confirm('Are you sure you want to drop this registered course section?')) return;
+        showToast('info', 'Dropping section override...');
+        // Override drop using advice-student endpoint
+        fetch('/faculty/advise-student', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `student_id=${encodeURIComponent(currentOverrideStudentId)}&action=drop&section_id=${encodeURIComponent(sectionId)}`
+        })
+        .then(res => {
+            // Check redirect or json
+            showToast('success', 'Section dropped successfully.');
+            loadOverrideCurrentRegistrations();
+        })
+        .catch(() => showToast('error', 'Could not drop course section.'));
+    }
+
+    // ================= BROADCAST ANNOUNCEMENTS =================
+    function broadcastSystemNotice(e) {
+        e.preventDefault();
+        const form = document.getElementById('announcement-broadcast-form');
+        const formData = new FormData(form);
+
+        fetch('/admin/announcements/create', { // reusing admin announcement dispatcher
+            method: 'POST',
+            body: formData
+        })
+        .then(res => {
+            showToast('success', 'Announcement notice broadcasted successfully.');
+            form.reset();
+            setTimeout(() => window.location.reload(), 1000);
+        })
+        .catch(() => showToast('error', 'Failed to broadcast announcement.'));
+    }
+
+    // ================= MESSAGING ACTIONS =================
+    function loadMessagingThreads() {
+        const listDiv = document.getElementById('messaging-threads-list');
+        listDiv.innerHTML = '<p class="text-xs text-slate-400">Loading active chats...</p>';
+
+        fetch('/faculty/messages/get')
+            .then(res => res.json())
+            .then(data => {
+                listDiv.innerHTML = '';
+                if (data.status !== 'success') return;
+                
+                // Consolidation threads
+                const directThreads = {};
+                data.dms.forEach(m => {
+                    const peerId = (m.sender_id === '{{ current_user.id }}') ? m.receiver_id : m.sender_id;
+                    const peerName = (m.sender_id === '{{ current_user.id }}') ? m.receiver_name : m.sender_name;
+                    
+                    if (!directThreads[peerId]) {
+                        directThreads[peerId] = {
+                            id: peerId,
+                            name: peerName,
+                            type: 'dm',
+                            last_msg: m.content,
+                            time: m.created_at
+                        };
+                    }
+                });
+
+                // Chat groups
+                const chatGroups = {};
+                data.chats.forEach(m => {
+                    const sec = facultySections.find(s => s.id === m.section_id);
+                    const label = sec ? `${sec.course_code} Sec ${sec.section_number}` : 'Course Chat';
+                    
+                    if (!chatGroups[m.section_id]) {
+                        chatGroups[m.section_id] = {
+                            id: `course_chat_${m.section_id}`,
+                            name: label,
+                            type: 'chat',
+                            last_msg: `${m.sender_name}: ${m.content}`,
+                            time: m.created_at
+                        };
+                    }
+                });
+
+                const allThreads = [...Object.values(directThreads), ...Object.values(chatGroups)];
+                if (allThreads.length === 0) {
+                    listDiv.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No active conversations.</p>';
+                    return;
+                }
+
+                allThreads.forEach(th => {
+                    const btn = document.createElement('button');
+                    btn.onclick = () => selectActiveConversation(th.id, th.name, th.type);
+                    btn.className = 'w-full text-left p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors space-y-1 block';
+                    btn.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <span class="font-extrabold text-xs text-slate-850 dark:text-white">${escapeHtml(th.name)}</span>
+                            <span class="text-[0.62rem] text-slate-400 font-mono">${escapeHtml(th.time.slice(11))}</span>
+                        </div>
+                        <p class="text-[0.68rem] text-slate-500 dark:text-slate-400 truncate">${escapeHtml(th.last_msg)}</p>
+                    `;
+                    listDiv.appendChild(btn);
+                });
+            });
+    }
+
+    function selectActiveConversation(id, name, type) {
+        currentActiveChatId = id;
+        document.getElementById('active-chat-title').textContent = name;
+        document.getElementById('active-chat-subtitle').textContent = (type === 'dm') ? 'Direct Message Chat' : 'Course Group Chat Room';
+        document.getElementById('chat-receiver-option').value = id;
+
+        loadConversationMessages();
+    }
+
+    function loadConversationMessages() {
+        const container = document.getElementById('chat-messages-container');
+        container.innerHTML = '<p class="text-xs text-slate-400 text-center">Loading message logs...</p>';
+
+        fetch('/faculty/messages/get')
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = '';
+                let messages = [];
+
+                if (currentActiveChatId.startsWith('course_chat_')) {
+                    const secId = currentActiveChatId.replace('course_chat_', '');
+                    messages = data.chats.filter(c => c.section_id === secId);
+                } else {
+                    // Direct messages
+                    messages = data.dms.filter(d => 
+                        (d.sender_id === '{{ current_user.id }}' && d.receiver_id === currentActiveChatId) ||
+                        (d.receiver_id === '{{ current_user.id }}' && d.sender_id === currentActiveChatId)
+                    );
+                }
+
+                // Sort messages chronologically
+                messages.sort((a,b) => a.created_at.localeCompare(b.created_at));
+                
+                if (messages.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No messages yet. Send a message to start.</p>';
+                    return;
+                }
+
+                messages.forEach(m => {
+                    const isSelf = m.sender_id === '{{ current_user.id }}';
+                    const div = document.createElement('div');
+                    div.className = `flex ${isSelf ? 'justify-end' : 'justify-start'} w-full`;
+                    div.innerHTML = `
+                        <div class="max-w-[70%] p-3 rounded-2xl text-xs space-y-1 ${isSelf ? 'bg-blue-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-slate-800 text-slate-850 dark:text-white rounded-bl-none'}">
+                            <span class="block text-[0.62rem] font-bold opacity-75">${escapeHtml(m.sender_name)}</span>
+                            <p class="leading-relaxed break-words">${escapeHtml(m.content)}</p>
+                            ${m.attachment ? `<a href="/static/uploads/${escapeHtml(m.attachment)}" download class="block text-[0.68rem] font-black underline mt-1 text-sky-200">Attachment Download</a>` : ''}
+                            <span class="block text-[0.55rem] text-right font-mono opacity-60">${escapeHtml(m.created_at)}</span>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+                
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+            });
+    }
+
+    function sendChatMessage(e) {
+        e.preventDefault();
+        const form = document.getElementById('chat-send-form');
+        const formData = new FormData(form);
+
+        fetch('/faculty/messages/send', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                form.querySelector('input[name="content"]').value = '';
+                loadConversationMessages();
+                loadMessagingThreads();
+            } else {
+                showToast('error', data.message);
+            }
+        });
+    }
+
+    function openNewMessageModal() {
+        document.getElementById('new-message-modal').classList.remove('hidden');
+    }
+
+    function closeNewMessageModal() {
+        document.getElementById('new-message-modal').classList.add('hidden');
+    }
+
+    function createNewConversation(e) {
+        e.preventDefault();
+        const form = document.getElementById('new-conversation-form');
+        const formData = new FormData(form);
+
+        fetch('/faculty/messages/send', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('success', 'Message sent successfully.');
+                closeNewMessageModal();
+                form.reset();
+                loadMessagingThreads();
+            } else {
+                showToast('error', data.message);
+            }
+        });
+    }
+
+    // ================= REPORTS ACTIONS =================
+    function loadReportsData() {
+        fetch('/faculty/reports/get')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status !== 'success') return;
+
+                // Grade Distribution Rendering
+                const distContainer = document.getElementById('reports-grade-dist-container');
+                distContainer.innerHTML = '';
+                
+                Object.keys(data.grade_distribution).forEach(secId => {
+                    const item = data.grade_distribution[secId];
+                    const distObj = item.distribution;
+                    const totalStudents = Object.values(distObj).reduce((a,b)=>a+b, 0);
+
+                    const div = document.createElement('div');
+                    div.className = 'space-y-2';
+                    div.innerHTML = `
+                        <h4 class="font-extrabold text-xs text-slate-800 dark:text-slate-200">${escapeHtml(item.course)}</h4>
+                        <div class="grid grid-cols-11 gap-1 items-end h-24 pt-4 px-2 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800">
+                            ${Object.keys(distObj).map(grade => {
+                                const count = distObj[grade];
+                                const percent = totalStudents > 0 ? (count / totalStudents) * 100 : 0;
+                                return `
+                                    <div class="flex flex-col items-center group relative h-full justify-end">
+                                        <div class="absolute bottom-full mb-1 bg-slate-950 text-white text-[0.55rem] font-bold px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                            ${count} Std (${percent.toFixed(0)}%)
+                                        </div>
+                                        <div class="w-full bg-blue-500 rounded-t" style="height: ${Math.max(4, percent)}%;"></div>
+                                        <span class="text-[0.55rem] font-bold text-slate-400 mt-1">${grade}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                    distContainer.appendChild(div);
+                });
+
+                // Attendance trends trajectory
+                const attnContainer = document.getElementById('reports-attendance-container');
+                attnContainer.innerHTML = '';
+                
+                Object.keys(data.attendance_trends).forEach(secId => {
+                    const item = data.attendance_trends[secId];
+                    const recordsList = item.data || [];
+
+                    const div = document.createElement('div');
+                    div.className = 'space-y-2';
+                    
+                    let sparklinesHtml = '<p class="text-[0.68rem] text-slate-400">No attendance sessions registered yet.</p>';
+                    if (recordsList.length > 0) {
+                        sparklinesHtml = `
+                            <div class="flex gap-2 items-center overflow-x-auto py-2">
+                                ${recordsList.map(r => `
+                                    <div class="flex flex-col items-center flex-shrink-0">
+                                        <div class="w-4 h-12 bg-slate-150 dark:bg-slate-800 rounded-lg relative overflow-hidden">
+                                            <div class="absolute bottom-0 left-0 right-0 bg-emerald-500" style="height: ${r.attendance_rate}%;"></div>
+                                        </div>
+                                        <span class="text-[0.55rem] font-mono text-slate-400 mt-1">${r.date.slice(5)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
+                    div.innerHTML = `
+                        <h4 class="font-extrabold text-xs text-slate-800 dark:text-slate-200">${escapeHtml(item.course)}</h4>
+                        ${sparklinesHtml}
+                    `;
+                    attnContainer.appendChild(div);
+                });
+
+                // At risk student roster
+                const atRiskTbody = document.getElementById('reports-at-risk-tbody');
+                atRiskTbody.innerHTML = '';
+                if (data.at_risk_students.length === 0) {
+                    atRiskTbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-450">No students are currently marked as at-risk. Good job!</td></tr>';
+                    return;
+                }
+
+                data.at_risk_students.forEach(std => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <p class="font-bold text-xs">${escapeHtml(std.student_name)}</p>
+                            <span class="text-[0.62rem] text-slate-400 font-mono">${escapeHtml(std.student_id)}</span>
+                        </td>
+                        <td class="font-bold text-xs">${escapeHtml(std.course_code)} Sec ${escapeHtml(std.section_number)}</td>
+                        <td class="font-mono text-xs">${std.marks.toFixed(1)} (${std.grade_letter})</td>
+                        <td class="font-mono text-xs font-bold ${std.attendance_rate < 75 ? 'text-red-500' : 'text-slate-700'}">${std.attendance_rate}%</td>
+                        <td>
+                            <span class="px-2 py-0.5 rounded text-[0.58rem] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                                ${escapeHtml(std.risk_reason)}
+                            </span>
+                        </td>
+                    `;
+                    atRiskTbody.appendChild(tr);
+                });
+            });
+    }
+
+    // ================= PROFILE ACTIONS =================
+    function updateFacultyProfile(e) {
+        e.preventDefault();
+        const form = document.getElementById('profile-edit-form');
+        const formData = new FormData(form);
+
+        showToast('info', 'Updating profile details...');
+        fetch('/faculty/profile/update', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showToast('success', 'Profile updated successfully.');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast('error', data.message);
+            }
+        });
+    }
+
+    // ================= SYSTEM REQUEST OVERRIDES & BATCH ACTIONS =================
     function filterFacultyRequests() {
         const query = document.getElementById('requests-search').value.trim().toLowerCase();
-        const cards = document.querySelectorAll('.faculty-request-card');
-        cards.forEach(card => {
+        document.querySelectorAll('.faculty-request-card').forEach(card => {
             const studentId = card.getAttribute('data-student-id') || '';
             const studentName = card.getAttribute('data-student-name') || '';
             const courseId = card.getAttribute('data-course-id') || '';
@@ -1237,13 +2441,14 @@
         }
         const note = document.getElementById('batch-advisor-note').value.trim();
         if (!note) {
-            alert('Advisor justification/comments are mandatory for batch resolution.');
+            alert('Advisor justification comments are mandatory for batch resolution.');
             return;
         }
         const requestIds = checked.map(cb => cb.value);
-        if (!confirm(`Are you sure you want to batch ${status} ${requestIds.length} request(s)?`)) {
+        if (!confirm(`Are you sure you want to batch resolve ${requestIds.length} request(s) as ${status}?`)) {
             return;
         }
+
         showToast('info', 'Processing batch requests...');
         fetch('/faculty/resolve-requests-batch', {
             method: 'POST',
@@ -1260,47 +2465,36 @@
         .then(data => {
             if (data.status === 'success') {
                 showToast('success', 'Batch requests resolved successfully.');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                setTimeout(() => window.location.reload(), 1000);
             } else {
                 showToast('error', data.message || 'Error processing batch requests.');
             }
         })
-        .catch(err => {
-            showToast('error', 'Network error. Please try again.');
-        });
+        .catch(() => showToast('error', 'Network error. Please try again.'));
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const style = document.createElement('style');
-        style.innerHTML = `
-            @keyframes pulse-blue {
-                0%, 100% { border-color: rgba(59, 130, 246, 1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-                50% { border-color: rgba(99, 102, 241, 1); box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+    // Client-side CSV Exporter
+    function exportRosterToCSV(sectionId) {
+        const table = document.querySelector('#workspace-student-table');
+        if (!table) return;
+        let csv = [];
+        const rows = table.querySelectorAll('tr');
+        for (let i = 0; i < rows.length; i++) {
+            const row = [], cols = rows[i].querySelectorAll('td, th');
+            for (let j = 0; j < cols.length - 1; j++) { // Skip actions column
+                let text = cols[j].innerText.replace(/"/g, '""');
+                row.push('"' + text + '"');
             }
-        `;
-        document.head.appendChild(style);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetStudent = urlParams.get('target_student');
-        if (targetStudent) {
-            switchTab('requests');
-            const searchInput = document.getElementById('requests-search');
-            if (searchInput) {
-                searchInput.value = targetStudent;
-                filterFacultyRequests();
-                setTimeout(() => {
-                    const cards = document.querySelectorAll(`.faculty-request-card[data-student-id="${targetStudent}"]`);
-                    cards.forEach(card => {
-                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        card.classList.remove('border-slate-200', 'dark:border-slate-800');
-                        card.classList.add('border-blue-500');
-                        card.style.animation = 'pulse-blue 1.5s infinite';
-                    });
-                }, 500);
-            }
+            csv.push(row.join(','));
         }
-    });
+        const csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `roster_${sectionId}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 </script>
 {% endblock %}

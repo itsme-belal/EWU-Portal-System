@@ -5,174 +5,269 @@
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-/* ── Admin Nav Items ────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════
+   ADMIN PORTAL — COMPREHENSIVE THEME FIX
+   All hardcoded Tailwind text/bg colors inside main are overridden here
+   so every element is visible in Light, Dark, Cosmic, and Image themes.
+══════════════════════════════════════════════════════════════════════ */
+
+/* ── Sidebar Nav (admin uses .adm-nav-item) ───────────────────────────── */
 .adm-nav-item {
-  display:flex; align-items:center; gap:10px; width:100%;
-  padding:9px 12px; border-radius:10px; font-size:.82rem; font-weight:500; color:#64748b;
-  transition:all .2s cubic-bezier(.4,0,.2,1); cursor:pointer; border:none; background:none; text-align:left;
-  position:relative; overflow:hidden;
+  display: flex; align-items: center; gap: .65rem; width: 100%;
+  padding: .55rem .9rem; border-radius: 8px; font-size: .82rem; font-weight: 600;
+  color: rgba(255,255,255,.75);
+  cursor: pointer; border: none; background: transparent; text-align: left;
+  transition: background .15s, color .15s; position: relative;
 }
-.adm-nav-item:hover { background:rgba(16,185,129,.08); color:#e2e8f0; }
+.adm-nav-item:hover { background: rgba(255,255,255,.09); color: #fff; }
 .adm-nav-item.active {
-  background:linear-gradient(135deg,rgba(16,185,129,.16),rgba(59,130,246,.08));
-  color:#34d399; border:1px solid rgba(16,185,129,.25); box-shadow:0 0 16px rgba(16,185,129,.07);
+  background: rgba(99,102,241,.22); color: #a5b4fc;
+  border-left: 2.5px solid #6366F1; padding-left: calc(.9rem - 2.5px); font-weight: 700;
 }
 .adm-sub-item {
-  display:flex; align-items:center; gap:8px; width:100%; padding:7px 10px 7px 34px;
-  border-radius:8px; font-size:.76rem; font-weight:500; color:#4b5563;
-  transition:all .18s ease; cursor:pointer; border:none; background:none; text-align:left; font-family:inherit;
+  display: flex; align-items: center; gap: .5rem; width: 100%;
+  padding: .42rem .75rem .42rem 2rem; border: 0; border-radius: 8px;
+  background: transparent; color: rgba(255,255,255,.42);
+  cursor: pointer; font-size: .78rem; font-weight: 500;
+  text-align: left; transition: all .15s; font-family: inherit;
 }
-.adm-sub-item:hover { background:rgba(255,255,255,.05); color:#cbd5e1; }
-.adm-sub-item.active { color:#34d399; background:rgba(16,185,129,.09); border-left:2px solid rgba(16,185,129,.45); }
-
-/* ── Stat Cards ─────────────────────────────────── */
-.stat-card {
-  background:linear-gradient(140deg,rgba(11,17,32,.97) 0%,rgba(17,26,50,.92) 100%);
-  border:1px solid rgba(255,255,255,.07); border-radius:20px; padding:22px;
-  position:relative; overflow:hidden;
-  transition:transform .28s cubic-bezier(.34,1.56,.64,1), box-shadow .28s ease, border-color .28s ease;
-}
-.stat-card:hover { transform:translateY(-6px) scale(1.01); box-shadow:0 28px 70px rgba(0,0,0,.55); }
-.stat-card::before {
-  content:''; position:absolute; top:-40px; right:-40px; width:140px; height:140px;
-  border-radius:50%; opacity:.06; transition:opacity .3s, transform .3s;
-}
-.stat-card:hover::before { opacity:.15; transform:scale(1.2); }
-.stat-card::after {
-  content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
-  opacity:0; transition:opacity .3s; border-radius:0 0 20px 20px;
-}
-.stat-card:hover::after { opacity:1; }
-.stat-card.emerald::before { background:radial-gradient(circle,#10b981,transparent); }
-.stat-card.emerald::after  { background:linear-gradient(90deg,#10b981,rgba(16,185,129,0)); }
-.stat-card.emerald:hover   { border-color:rgba(16,185,129,.3); box-shadow:0 28px 70px rgba(0,0,0,.55),0 0 40px rgba(16,185,129,.07); }
-.stat-card.violet::before  { background:radial-gradient(circle,#8b5cf6,transparent); }
-.stat-card.violet::after   { background:linear-gradient(90deg,#8b5cf6,rgba(139,92,246,0)); }
-.stat-card.violet:hover    { border-color:rgba(139,92,246,.3); }
-.stat-card.amber::before   { background:radial-gradient(circle,#f59e0b,transparent); }
-.stat-card.amber::after    { background:linear-gradient(90deg,#f59e0b,rgba(245,158,11,0)); }
-.stat-card.amber:hover     { border-color:rgba(245,158,11,.3); }
-.stat-card.blue::before    { background:radial-gradient(circle,#3b82f6,transparent); }
-.stat-card.blue::after     { background:linear-gradient(90deg,#3b82f6,rgba(59,130,246,0)); }
-.stat-card.blue:hover      { border-color:rgba(59,130,246,.3); }
-
-/* ── Chart Cards ────────────────────────────────── */
-.chart-card {
-  background:linear-gradient(140deg,rgba(11,17,32,.96) 0%,rgba(15,22,42,.92) 100%);
-  border:1px solid rgba(255,255,255,.07); border-radius:20px; padding:24px; transition:border-color .25s;
-}
-.chart-card:hover { border-color:rgba(255,255,255,.11); }
-.glass-card { background:rgba(255,255,255,.03); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.07); border-radius:20px; }
-
-/* ── Status Pills ────────────────────────────────── */
-.status-on  { background:rgba(16,185,129,.12); color:#34d399; border:1px solid rgba(16,185,129,.22); }
-.status-off { background:rgba(239,68,68,.1);   color:#f87171; border:1px solid rgba(239,68,68,.2); }
-
-/* ── Animations ─────────────────────────────────── */
-@keyframes pulse-ring { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.6);opacity:.3} }
-.pulse-dot { animation:pulse-ring 2.2s ease infinite; }
-@keyframes countPop { from{opacity:0;transform:translateY(8px) scale(.85)} to{opacity:1;transform:none} }
-.counter-animate { animation:countPop .65s cubic-bezier(.34,1.56,.64,1) both; }
-@keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
-.fade-up { animation:fadeUp .5s ease both; }
-.fade-up:nth-child(1){animation-delay:.05s} .fade-up:nth-child(2){animation-delay:.12s}
-.fade-up:nth-child(3){animation-delay:.19s} .fade-up:nth-child(4){animation-delay:.26s}
-.tab-content { display:none; }
-.tab-content:not(.hidden) { display:block; animation:fadeUp .3s ease both; }
-@keyframes modalPop { from{opacity:0;transform:scale(.94)} to{opacity:1;transform:scale(1)} }
-#report-modal-content { animation:modalPop .28s cubic-bezier(.34,1.56,.64,1) both; }
-@keyframes progressFill { from{width:0} }
-.bar-fill { animation:progressFill .9s cubic-bezier(.4,0,.2,1) both; }
-
-/* ── Activity feed ───────────────────────────────── */
-.activity-row { padding:10px 0; border-bottom:1px solid rgba(255,255,255,.04); }
-.activity-row:last-child { border-bottom:none; }
-
-/* ── Quick action rows ───────────────────────────── */
-.quick-action {
-  display:flex; align-items:center; gap:.6rem; width:100%; text-align:left;
-  padding:.6rem .9rem; border-radius:10px; background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.06); color:#94a3b8; font-size:.76rem;
-  font-weight:600; cursor:pointer; transition:all .18s; font-family:inherit;
-}
-.quick-action:hover { background:rgba(255,255,255,.07); color:#e2e8f0; border-color:rgba(255,255,255,.12); transform:translateX(3px); }
-
-/* ── Toggle row ──────────────────────────────────── */
-.toggle-row {
-  background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06);
-  border-radius:14px; padding:1rem 1.1rem; transition:border-color .2s, background .2s;
-}
-.toggle-row:hover { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); }
-
-/* ── Filter bar ──────────────────────────────────── */
-.filter-bar {
-  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem;
-  background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06);
-  border-radius:16px; padding:1rem 1.25rem;
+.adm-sub-item:hover { background: rgba(255,255,255,.08); color: rgba(255,255,255,.9); }
+.adm-sub-item.active {
+  background: rgba(99,102,241,.15); color: #a5b4fc;
+  border-left: 2px solid rgba(99,102,241,.6); font-weight: 600;
 }
 
-/* ── Tab header gradient text ────────────────────── */
+/* ── Animations ───────────────────────────────────────────────────────── */
+@keyframes countPop {
+  from { opacity: 0; transform: translateY(8px) scale(.85); }
+  to   { opacity: 1; transform: none; }
+}
+.counter-animate { animation: countPop .6s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes progressFill { from { width: 0; } }
+.bar-fill { animation: progressFill .9s cubic-bezier(.4,0,.2,1) both; }
+
+/* ── Modal animation ──────────────────────────────────────────────────── */
+#report-modal-content { animation: modalPop .28s cubic-bezier(.34,1.56,.64,1) both; }
+
+/* ── Scrollbar in modals ──────────────────────────────────────────────── */
+.modal-scroll::-webkit-scrollbar { width: 4px; }
+.modal-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* ── Activity Feed ────────────────────────────────────────────────────── */
+.activity-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
+.activity-row:last-child { border-bottom: none; }
+
+/* ── Form Labels ──────────────────────────────────────────────────────── */
+.glass-card form label, .card form label, .stitch-card form label,
+.glass-card label, .card label, .stitch-card label {
+  display: block; font-size: .72rem !important; font-weight: 700 !important;
+  color: var(--text-3) !important; text-transform: uppercase;
+  letter-spacing: .07em; margin-bottom: .4rem !important;
+}
+
+/* ── Medium inputs ────────────────────────────────────────────────────── */
+.glass-card input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+.card input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+.stitch-card input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+.glass-card select, .card select, .stitch-card select,
+.glass-card textarea, .card textarea, .stitch-card textarea {
+  min-height: 2.6rem !important; padding: .58rem .92rem !important;
+  font-size: .875rem !important; border-radius: 8px !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MAIN CONTENT AREA TEXT & BACKGROUND OVERRIDES
+   Target: main > * (everything OUTSIDE sidebar/header)
+══════════════════════════════════════════════════════════════════════ */
+
+/* ── Core text colors inside main content ─────────────────────────────── */
+main .text-white,
+main .text-slate-900,
+main [class*="text-slate-900"],
+main [class*="dark:text-white"] {
+  color: var(--text-1) !important;
+}
+main .text-slate-800,
+main [class*="text-slate-800"] {
+  color: var(--text-1) !important;
+}
+main .text-slate-700,
+main [class*="text-slate-700"] {
+  color: var(--text-2) !important;
+}
+main .text-slate-600,
+main [class*="text-slate-600"] {
+  color: var(--text-2) !important;
+}
+main .text-slate-500,
+main [class*="text-slate-500"] {
+  color: var(--text-3) !important;
+}
+main .text-slate-400,
+main [class*="text-slate-400"] {
+  color: var(--text-3) !important;
+}
+main .text-slate-300,
+main [class*="text-slate-300"] {
+  color: var(--text-2) !important;
+}
+
+/* ── Override dark: prefix utility classes ────────────────────────────── */
+main [class*="dark:text-white"] { color: var(--text-1) !important; }
+main [class*="dark:text-slate"] { color: var(--text-2) !important; }
+
+/* ── Card heading (h3 inside chart/glass/stat cards) ─────────────────── */
+main .chart-card h3,
+main .glass-card h3,
+main .stat-card h3,
+main .card h3,
+main .stitch-card h3 {
+  color: var(--text-1) !important;
+}
+main .chart-card p,
+main .glass-card p,
+main .stat-card p,
+main .card p {
+  color: var(--text-2);
+}
+
+/* ── Stat card counters ───────────────────────────────────────────────── */
+main .stat-card .counter-animate,
+main .stat-card [class*="text-2xl"],
+main .stat-card [class*="text-3xl"] {
+  color: var(--text-1) !important;
+  font-weight: 900;
+}
+
+/* ── Tab titles ───────────────────────────────────────────────────────── */
 .tab-title {
-  font-size:1.55rem; font-weight:900; letter-spacing:-.03em;
-  background:linear-gradient(135deg,#f0f6ff 0%,#94a3b8 100%);
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-}
-.modal-scroll::-webkit-scrollbar { width:4px; }
-.modal-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:99px; }
-
-/* ── Admin Input & Button Overrides (Improvement Requirement #3) ── */
-.glass-card form:not(table *) select,
-.glass-card form:not(table *) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-.glass-card form:not(table *) textarea,
-.input:not(table *),
-input[type="text"]:not(table *),
-input[type="email"]:not(table *),
-input[type="number"]:not(table *),
-input[type="password"]:not(table *),
-input[type="datetime-local"]:not(table *),
-select:not(table *) {
-  font-size: 0.875rem !important;
-  height: 2.85rem !important;
-  padding: 0.65rem 0.95rem !important;
-  border-radius: 8px !important;
-  line-height: 1.25 !important;
+  font-size: 1.2rem; font-weight: 800; letter-spacing: -.025em;
+  color: var(--text-1) !important;
 }
 
-/* Adjust file input padding/height slightly so it doesn't get squished */
-input[type="file"] {
-  height: auto !important;
-  font-size: 0.875rem !important;
-  padding: 0.5rem 0 !important;
+/* ── Section label/caption ────────────────────────────────────────────── */
+main [class*="text-xs"],
+main [class*="text-sm"] {
+  /* Don't override — too broad. Use targeted rules below */
+}
+main .font-mono { color: var(--text-2) !important; }
+
+/* ── Toggle row text ──────────────────────────────────────────────────── */
+.toggle-row .text-slate-300,
+.toggle-row span { color: var(--text-2); }
+.toggle-row [class*="text-xs"] { color: var(--text-2); }
+
+/* ── Quick action text ────────────────────────────────────────────────── */
+.quick-action span { color: var(--text-2); }
+
+/* ── Section header: p, span, small text ─────────────────────────────── */
+main .section-header p,
+main .section-header span { color: var(--text-3) !important; }
+
+/* ── Dark bg classes inside main (cards sometimes get bg-white) ────────── */
+main .bg-white { background: var(--s0) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LIGHT THEME EXPLICIT FIXES (most important — light has worst contrast)
+═══════════════════════════════════════════════════════════════════════ */
+[data-theme="light"] main .text-white,
+[data-theme="light"] main [class*="dark:text-white"] {
+  color: #0f172a !important;
+}
+[data-theme="light"] main .text-slate-300 { color: #374151 !important; }
+[data-theme="light"] main .text-slate-400 { color: #4B5563 !important; }
+[data-theme="light"] main .text-slate-500 { color: #6B7280 !important; }
+[data-theme="light"] main .text-slate-600 { color: #374151 !important; }
+[data-theme="light"] main .chart-card h3 { color: #0f172a !important; }
+[data-theme="light"] main .chart-card p  { color: #374151 !important; }
+[data-theme="light"] main .font-mono     { color: #374151 !important; }
+[data-theme="light"] main .quick-action span { color: #374151 !important; }
+[data-theme="light"] main .toggle-row span { color: #374151 !important; }
+/* Light: borders inside cards */
+[data-theme="light"] main [class*="border-white"] { border-color: #e2e8f0 !important; }
+/* Light: transparent bg classes that expose white — fine */
+/* Light: emerald text accents — keep them */
+[data-theme="light"] main .text-emerald-500 { color: #059669 !important; }
+[data-theme="light"] main .text-emerald-400 { color: #059669 !important; }
+[data-theme="light"] main .text-amber-400   { color: #D97706 !important; }
+[data-theme="light"] main .text-amber-300   { color: #B45309 !important; }
+[data-theme="light"] main .text-violet-400  { color: #7C3AED !important; }
+[data-theme="light"] main .text-blue-400    { color: #2563EB !important; }
+/* Light: stat card number */
+[data-theme="light"] main .stat-card .counter-animate,
+[data-theme="light"] main .stat-card [class*="text-2xl"] { color: #0f172a !important; }
+/* Light: dashboard hero heading */
+[data-theme="light"] main h1[class*="text-"] { color: #0f172a !important; }
+/* Light: progress bar track */
+[data-theme="light"] [class*="bg-white/5"] { background: rgba(0,0,0,.05) !important; }
+[data-theme="light"] [class*="bg-white/10"] { background: rgba(0,0,0,.06) !important; }
+[data-theme="light"] [class*="border-white/5"] { border-color: #e2e8f0 !important; }
+[data-theme="light"] [class*="border-white/10"] { border-color: #e2e8f0 !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DARK / COSMIC / IMAGE THEMES — keep text-white as white
+═══════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] main .text-white { color: #F1F5F9 !important; }
+[data-theme="dark"] main .text-slate-300 { color: #CBD5E1 !important; }
+[data-theme="dark"] main .text-slate-400 { color: #94A3B8 !important; }
+[data-theme="dark"] main .text-slate-500 { color: #64748B !important; }
+[data-theme="dark"] main .text-slate-600 { color: #94A3B8 !important; }
+[data-theme="dark"] main .font-mono { color: #CBD5E1 !important; }
+
+[data-theme="cosmic"] main .text-white { color: #E0E7FF !important; }
+[data-theme="cosmic"] main .text-slate-300 { color: #C7D2FE !important; }
+[data-theme="cosmic"] main .text-slate-400 { color: #A5B4FC !important; }
+[data-theme="cosmic"] main .text-slate-500 { color: #818CF8 !important; }
+[data-theme="cosmic"] main .text-slate-600 { color: #A5B4FC !important; }
+[data-theme="cosmic"] main .font-mono { color: #C7D2FE !important; }
+
+[data-theme="image"] main .text-white { color: #F0F6FF !important; }
+[data-theme="image"] main .text-slate-300 { color: #CBD5E1 !important; }
+[data-theme="image"] main .text-slate-400 { color: #94A3B8 !important; }
+[data-theme="image"] main .text-slate-600 { color: #94A3B8 !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   STAT CARD BADGE REDESIGN — use colored dots instead of big badges
+═══════════════════════════════════════════════════════════════════════ */
+.stat-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: .18rem .55rem; border-radius: 99px;
+  font-size: .6rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+}
+.stat-badge.emerald { background: rgba(16,185,129,.12); color: #059669; border: 1px solid rgba(16,185,129,.25); }
+.dark .stat-badge.emerald, [data-theme="dark"] .stat-badge.emerald,
+[data-theme="cosmic"] .stat-badge.emerald, [data-theme="image"] .stat-badge.emerald { color: #34d399; }
+.stat-badge.violet  { background: rgba(139,92,246,.12); color: #7C3AED; border: 1px solid rgba(139,92,246,.25); }
+.dark .stat-badge.violet, [data-theme="dark"] .stat-badge.violet,
+[data-theme="cosmic"] .stat-badge.violet, [data-theme="image"] .stat-badge.violet { color: #a78bfa; }
+.stat-badge.amber   { background: rgba(245,158,11,.12); color: #D97706; border: 1px solid rgba(245,158,11,.25); }
+.dark .stat-badge.amber, [data-theme="dark"] .stat-badge.amber,
+[data-theme="cosmic"] .stat-badge.amber, [data-theme="image"] .stat-badge.amber { color: #fbbf24; }
+.stat-badge.blue    { background: rgba(59,130,246,.12); color: #2563EB; border: 1px solid rgba(59,130,246,.25); }
+.dark .stat-badge.blue, [data-theme="dark"] .stat-badge.blue,
+[data-theme="cosmic"] .stat-badge.blue, [data-theme="image"] .stat-badge.blue { color: #60a5fa; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CARD INNER CAPTIONS & LABELS (theme-adaptive text-xs/text-sm)
+═══════════════════════════════════════════════════════════════════════ */
+.stat-card .stat-label {
+  font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-3); margin-top: .3rem;
+}
+.card-caption { font-size: .72rem; color: var(--text-3); margin-top: .25rem; }
+.card-heading {
+  font-size: .875rem; font-weight: 700; color: var(--text-1);
+  display: flex; align-items: center; gap: .5rem;
 }
 
-/* Make form grid layouts and spacing larger */
-.glass-card form .grid {
-  gap: 1.5rem !important;
-  margin-bottom: 1.25rem !important;
-}
-.glass-card form label {
-  font-size: 0.825rem !important;
-  color: #cbd5e1 !important;
-  margin-bottom: 0.6rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.05em !important;
-  display: block;
-}
-.dark .glass-card form label {
-  color: #cbd5e1 !important;
+/* ── Course demand bar bg ────────────────────────────────────────────── */
+.demand-track {
+  flex: 1; height: 6px; border-radius: 99px;
+  background: var(--s3);
 }
 
-/* Make buttons larger and easier to click */
-.btn-primary,
-.glass-card form:not(table *) button[type="submit"] {
-  font-size: 0.875rem !important;
-  padding: 0.8rem 1.6rem !important;
-  height: auto !important;
-  border-radius: 8px !important;
-  font-weight: 700 !important;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-}
+/* ── Chart.js canvas area ───────────────────────────────────────────── */
+main canvas { color: var(--text-1); }
 </style>
 
 {% endblock %}
@@ -286,16 +381,16 @@ input[type="file"] {
           <i data-lucide="layout-dashboard" class="w-5 h-5 text-white"></i>
         </div>
         <div>
-          <h1 class="text-2xl font-black tracking-tight" style="background:linear-gradient(135deg,#f0f6ff 0%,#34d399 60%,#60a5fa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">University Administration Portal</h1>
-          <p class="text-xs text-slate-500 mt-0.5">Central control hub — <span class="text-emerald-400 font-bold">{{ current_semester }}</span></p>
+          <h1 class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">University Administration Portal</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Central control hub — <span class="text-emerald-500 dark:text-emerald-400 font-bold">{{ current_semester }}</span></p>
         </div>
       </div>
     </div>
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
         <span class="pulse-dot w-2 h-2 bg-emerald-400 rounded-full inline-block"></span>
-        <span class="text-[0.72rem] font-bold text-emerald-400">Live</span>
-        <span id="live-time" class="font-mono text-[0.72rem] font-bold text-slate-300"></span>
+        <span class="text-[0.72rem] font-bold text-emerald-500 dark:text-emerald-400">Live</span>
+        <span id="live-time" class="font-mono text-[0.72rem] font-bold text-slate-600 dark:text-slate-300"></span>
       </div>
     </div>
   </div>
@@ -304,52 +399,74 @@ input[type="file"] {
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
     <!-- Students -->
     <div class="stat-card emerald fade-up">
-      <div class="flex justify-between items-start mb-4">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center">
-          <i data-lucide="graduation-cap" class="w-5 h-5 text-emerald-400"></i>
+      <div class="flex justify-between items-start mb-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 flex items-center justify-center">
+          <i data-lucide="graduation-cap" class="w-4 h-4 text-emerald-500 dark:text-emerald-400"></i>
         </div>
-        <span class="text-[0.6rem] font-black px-2.5 py-1 rounded-full status-on tracking-widest">ENROLLED</span>
+        <span class="text-[0.58rem] font-black px-2 py-0.5 rounded-full status-on tracking-widest">ENROLLED</span>
       </div>
-      <p class="text-4xl font-black text-white counter-animate" data-target="{{ students | length }}">0</p>
-      <p class="text-[0.72rem] text-slate-500 mt-1.5 font-semibold uppercase tracking-wider">Total Students</p>
-      <div class="mt-3 h-px bg-gradient-to-r from-emerald-500/30 to-transparent"></div>
+      <p class="text-2xl font-black text-slate-900 dark:text-white counter-animate" data-target="{{ students | length }}">0</p>
+      <p class="text-[0.68rem] text-slate-500 mt-1 font-semibold uppercase tracking-wider">Total Students</p>
+      <div class="mt-2.5 h-px bg-gradient-to-r from-emerald-500/30 to-transparent"></div>
     </div>
     <!-- Faculty -->
     <div class="stat-card violet fade-up">
-      <div class="flex justify-between items-start mb-4">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20 flex items-center justify-center">
-          <i data-lucide="users-round" class="w-5 h-5 text-violet-400"></i>
+      <div class="flex justify-between items-start mb-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-600/10 border border-violet-500/20 flex items-center justify-center">
+          <i data-lucide="users-round" class="w-4 h-4 text-violet-500 dark:text-violet-400"></i>
         </div>
-        <span class="text-[0.6rem] font-black px-2.5 py-1 rounded-full bg-violet-500/12 text-violet-300 border border-violet-500/25 tracking-widest">FACULTY</span>
+        <span class="text-[0.58rem] font-black px-2 py-0.5 rounded-full bg-violet-500/12 text-violet-600 dark:text-violet-300 border border-violet-500/25 tracking-widest">FACULTY</span>
       </div>
-      <p class="text-4xl font-black text-white counter-animate" data-target="{{ faculties | length }}">0</p>
-      <p class="text-[0.72rem] text-slate-500 mt-1.5 font-semibold uppercase tracking-wider">Faculty Members</p>
-      <div class="mt-3 h-px bg-gradient-to-r from-violet-500/30 to-transparent"></div>
+      <p class="text-2xl font-black text-slate-900 dark:text-white counter-animate" data-target="{{ faculties | length }}">0</p>
+      <p class="text-[0.68rem] text-slate-500 mt-1 font-semibold uppercase tracking-wider">Faculty Members</p>
+      <div class="mt-2.5 h-px bg-gradient-to-r from-violet-500/30 to-transparent"></div>
     </div>
     <!-- Courses -->
     <div class="stat-card amber fade-up">
-      <div class="flex justify-between items-start mb-4">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20 flex items-center justify-center">
-          <i data-lucide="book-open" class="w-5 h-5 text-amber-400"></i>
+      <div class="flex justify-between items-start mb-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20 flex items-center justify-center">
+          <i data-lucide="book-open" class="w-4 h-4 text-amber-500 dark:text-amber-400"></i>
         </div>
-        <span class="text-[0.6rem] font-black px-2.5 py-1 rounded-full bg-amber-500/12 text-amber-300 border border-amber-500/25 tracking-widest">CATALOG</span>
+        <span class="text-[0.58rem] font-black px-2 py-0.5 rounded-full bg-amber-500/12 text-amber-600 dark:text-amber-300 border border-amber-500/25 tracking-widest">CATALOG</span>
       </div>
-      <p class="text-4xl font-black text-white counter-animate" data-target="{{ pre_courses | length }}">0</p>
-      <p class="text-[0.72rem] text-slate-500 mt-1.5 font-semibold uppercase tracking-wider">Registered Courses</p>
-      <div class="mt-3 h-px bg-gradient-to-r from-amber-500/30 to-transparent"></div>
+      <p class="text-2xl font-black text-slate-900 dark:text-white counter-animate" data-target="{{ pre_courses | length }}">0</p>
+      <p class="text-[0.68rem] text-slate-500 mt-1 font-semibold uppercase tracking-wider">Registered Courses</p>
+      <div class="mt-2.5 h-px bg-gradient-to-r from-amber-500/30 to-transparent"></div>
     </div>
     <!-- Windows -->
     <div class="stat-card blue fade-up">
-      <div class="flex justify-between items-start mb-4">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20 flex items-center justify-center">
-          <i data-lucide="calendar-clock" class="w-5 h-5 text-blue-400"></i>
+      <div class="flex justify-between items-start mb-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20 flex items-center justify-center">
+          <i data-lucide="calendar-clock" class="w-4 h-4 text-blue-500 dark:text-blue-400"></i>
         </div>
-        <span class="text-[0.6rem] font-black px-2.5 py-1 rounded-full bg-blue-500/12 text-blue-300 border border-blue-500/25 tracking-widest">WINDOWS</span>
+        <span class="text-[0.58rem] font-black px-2 py-0.5 rounded-full bg-blue-500/12 text-blue-600 dark:text-blue-300 border border-blue-500/25 tracking-widest">WINDOWS</span>
       </div>
-      <p class="text-4xl font-black text-white counter-animate" data-target="{{ windows | length }}">0</p>
-      <p class="text-[0.72rem] text-slate-500 mt-1.5 font-semibold uppercase tracking-wider">Advising Windows</p>
-      <div class="mt-3 h-px bg-gradient-to-r from-blue-500/30 to-transparent"></div>
+      <p class="text-2xl font-black text-slate-900 dark:text-white counter-animate" data-target="{{ windows | length }}">0</p>
+      <p class="text-[0.68rem] text-slate-500 mt-1 font-semibold uppercase tracking-wider">Advising Windows</p>
+      <div class="mt-2.5 h-px bg-gradient-to-r from-blue-500/30 to-transparent"></div>
     </div>
+  </div>
+
+  <!-- ── BATCH MULTI-EXCEL UPLOAD CARD ─────────────────────────────────── -->
+  <div class="glass-card p-5 space-y-3 border border-emerald-500/20 bg-emerald-950/10 dark:bg-emerald-950/20">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-emerald-500/15 pb-3">
+      <div>
+        <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i>
+          Batch Multi-Excel Ingestion (Students, Faculty & Schedules)
+        </h3>
+        <p class="text-[0.7rem] text-slate-500 dark:text-slate-400 mt-0.5">
+          Select multiple Excel files at once (e.g. <code>Student_Records.xlsx</code>, <code>Faculty_Records.xlsx</code>, <code>Non_Departmental_Schedule.xlsx</code>). The system automatically detects file schemas and imports all records in one batch.
+        </p>
+      </div>
+      <span class="px-2.5 py-1 text-[0.62rem] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Auto-Detect Schemas</span>
+    </div>
+    <form action="/admin/upload-multi-excel" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row items-center gap-3">
+      <input type="file" name="excel_files" multiple accept=".xlsx" required class="w-full text-xs text-slate-600 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 file:cursor-pointer">
+      <button type="submit" class="w-full sm:w-auto text-xs px-5 py-2 font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 flex-shrink-0 shadow font-semibold">
+        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload & Import Batch
+      </button>
+    </form>
   </div>
 
   <!-- ── MAIN GRID: Chart + System Status ──────────────────── -->
@@ -679,11 +796,16 @@ input[type="file"] {
                             {% endif %}
                         </td>
                         <td class="py-3 px-4 text-right">
-                            <form action="{{ url_for('delete_section_offering', sec_id=sec.id) }}" method="POST" class="inline-block">
-                                <button type="submit" class="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 transition-all flex items-center justify-center cursor-pointer ml-auto">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <div class="flex items-center justify-end gap-1.5">
+                                <button type="button" onclick="openAdminEditSectionModal('{{ sec.id }}', '{{ sec.course_code }}', '{{ sec.course_title or '' }}', '{{ sec.section_number }}', '{{ sec.schedule }}', '{{ sec.credits }}', '{{ sec.capacity }}', '{{ sec.room }}', '{{ sec.dedicated_departments | join(',') if sec.dedicated_departments else '' }}', '{{ sec.prerequisites or '' }}', '{{ sec.linked_section_id or '' }}', '{{ sec.completed_credit_requirement or 0 }}', '{{ sec.faculty_id or '' }}')" class="w-7 h-7 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 transition-all flex items-center justify-center cursor-pointer" title="Edit Section Details">
+                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                                 </button>
-                            </form>
+                                <form action="{{ url_for('delete_section_offering', sec_id=sec.id) }}" method="POST" class="inline-block" onsubmit="return confirm('Delete section {{ sec.course_code }} Sec {{ sec.section_number }}? This cannot be undone.')">
+                                    <button type="submit" class="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 transition-all flex items-center justify-center cursor-pointer" title="Delete Section">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% else %}
@@ -1276,7 +1398,7 @@ input[type="file"] {
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
             <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Enrolled Students Roster ({{ students | length }} total)</h3>
             <div class="relative w-full sm:w-72">
-                <input type="text" id="admin-student-search-input" oninput="filterAdminStudents()" placeholder="Search Student ID or Name..." class="pl-9 pr-4 py-1.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs w-full focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-200">
+                <input type="text" id="admin-student-search-input" oninput="filterAdminStudents()" placeholder="Search Student ID or Name..." class="pl-9 pr-4 py-1.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs w-full focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-200">
                 <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
             </div>
         </div>
@@ -1345,7 +1467,8 @@ input[type="file"] {
                                 </button>
                             </form>
                             {% endif %}
-                            <form action="{{ url_for('delete_student', std_id=std.id) }}" method="POST" onsubmit="return confirm('Delete student {{ std.id }}? This cannot be undone.')">
+                            <button onclick="openAdminEditStudentModal('{{ std.id }}')" class="text-[0.65rem] px-2 py-1 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm">Edit</button>
+                            <form action="{{ url_for('admin_delete_student', std_id=std.id) }}" method="POST" onsubmit="return confirm('Delete student {{ std.id }}? This cannot be undone.')">
                                 <button type="submit" class="text-[0.65rem] px-2 py-1 font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded">Delete</button>
                             </form>
                         </td>
@@ -1511,7 +1634,7 @@ input[type="file"] {
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-3">
             <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8]">Faculty Members Roster ({{ faculties | length }} total)</h3>
             <div class="relative w-full sm:w-72">
-                <input type="text" id="admin-faculty-search-input" oninput="filterAdminFaculty()" placeholder="Search Faculty ID or Name..." class="pl-9 pr-4 py-1.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs w-full focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-200">
+                <input type="text" id="admin-faculty-search-input" oninput="filterAdminFaculty()" placeholder="Search Faculty ID or Name..." class="pl-9 pr-4 py-1.5 bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs w-full focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-200">
                 <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
             </div>
         </div>
@@ -1593,7 +1716,8 @@ input[type="file"] {
                                 </button>
                             </form>
                             {% endif %}
-                            <form action="{{ url_for('delete_faculty', fac_id=fac.id) }}" method="POST" onsubmit="return confirm('Delete faculty {{ fac.id }}? This cannot be undone.')">
+                            <button onclick="openAdminEditFacultyModal('{{ fac.id }}')" class="text-[0.65rem] px-2 py-1 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm">Edit</button>
+                            <form action="{{ url_for('admin_delete_faculty', fac_id=fac.id) }}" method="POST" onsubmit="return confirm('Delete faculty {{ fac.id }}? This cannot be undone.')">
                                 <button type="submit" class="text-[0.65rem] px-2 py-1 font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded">Delete</button>
                             </form>
                         </td>
@@ -2025,22 +2149,21 @@ input[type="file"] {
                 <div class="flex items-center gap-2">
                     <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Type:</label>
                     <select id="request-type-filter" onchange="filterCourseRequests()" class="px-2.5 py-1.5 bg-white/5 border border-white/8 rounded-xl text-[0.7rem] text-slate-200 outline-none focus:border-emerald-500/50 transition-all">
-                        <option value="all" class="bg-[#0f172a]">All Types</option>
-                        <option value="add_course" class="bg-[#0f172a]">Add Course</option>
-                        <option value="change_section" class="bg-[#0f172a]">Section Swap</option>
-                        <option value="seat_increase" class="bg-[#0f172a]">Seat Increase</option>
-                        <option value="drop_course" class="bg-[#0f172a]">Drop Course</option>
-                        <option value="withdraw_course" class="bg-[#0f172a]">Withdraw Course</option>
+                        <option value="all" >All Types</option>
+                        <option value="add_course" >Add Course</option>
+                        <option value="change_section" >Section Swap</option>
+                        <option value="seat_increase" >Seat Increase</option>
+                        <option value="drop_course" >Drop Course</option>
                     </select>
                 </div>
                 <div class="flex items-center gap-2">
                     <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Status:</label>
                     <select id="request-status-filter" onchange="filterCourseRequests()" class="px-2.5 py-1.5 bg-white/5 border border-white/8 rounded-xl text-[0.7rem] text-slate-200 outline-none focus:border-emerald-500/50 transition-all">
-                        <option value="all" class="bg-[#0f172a]">All Statuses</option>
-                        <option value="pending_advisor" class="bg-[#0f172a]">Pending Advisor</option>
-                        <option value="pending_admin" class="bg-[#0f172a]">Pending Admin</option>
-                        <option value="approved" class="bg-[#0f172a]">Approved</option>
-                        <option value="rejected" class="bg-[#0f172a]">Rejected</option>
+                        <option value="all" >All Statuses</option>
+                        <option value="pending_advisor" >Pending Advisor</option>
+                        <option value="pending_admin" >Pending Admin</option>
+                        <option value="approved" >Approved</option>
+                        <option value="rejected" >Rejected</option>
                     </select>
                 </div>
             </div>
@@ -2166,9 +2289,9 @@ input[type="file"] {
         <div class="flex items-center gap-3">
             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Department:</label>
             <select id="student-dept-filter" onchange="filterAcademicRecords()" class="px-3 py-2 bg-white/5 border border-white/8 rounded-xl text-xs text-slate-200 outline-none focus:border-emerald-500/50 transition-all min-w-[150px]">
-                <option value="all" class="bg-[#0f172a]">All Departments</option>
+                <option value="all" >All Departments</option>
                 {% for dept in departments %}
-                <option value="{{ dept.id }}" class="bg-[#0f172a]">{{ dept.id }} - {{ dept.name }}</option>
+                <option value="{{ dept.id }}" >{{ dept.id }} - {{ dept.name }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -2734,6 +2857,229 @@ input[type="file"] {
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ADMIN EDIT FACULTY MODAL -->
+<div id="admin-edit-faculty-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" onclick="if(event.target===this) this.classList.add('hidden')">
+    <div class="glass-card w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 relative space-y-4" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center border-b border-white/10 pb-3">
+            <h3 class="font-extrabold text-sm text-white">Edit Faculty Profile (Admin Management)</h3>
+            <button onclick="document.getElementById('admin-edit-faculty-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form id="admin-edit-faculty-form" method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Faculty ID</label>
+                    <input type="text" id="edit-fac-id" readonly class="input bg-slate-900/50 text-slate-400">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
+                    <input type="text" id="edit-fac-name" name="name" required class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Department</label>
+                    <select id="edit-fac-dept" name="department_id" class="input">
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Designation / Post</label>
+                    <input type="text" id="edit-fac-post" name="post" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Office Room</label>
+                    <input type="text" id="edit-fac-office" name="office" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
+                    <input type="text" id="edit-fac-phone" name="phone" class="input">
+                </div>
+            </div>
+            <div>
+                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Research Interests</label>
+                <input type="text" id="edit-fac-research" name="research_interests" class="input">
+            </div>
+            <div>
+                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Academic Bio / About</label>
+                <textarea id="edit-fac-about" name="about" rows="3" class="input"></textarea>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Present Address</label>
+                    <input type="text" id="edit-fac-present" name="present_address" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Permanent Address</label>
+                    <input type="text" id="edit-fac-permanent" name="permanent_address" class="input">
+                </div>
+            </div>
+            <div>
+                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Update Profile Picture (Optional)</label>
+                <input type="file" name="profile_pic" accept="image/*" class="input text-xs text-slate-400">
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button type="button" onclick="document.getElementById('admin-edit-faculty-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 font-bold rounded-lg">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ADMIN EDIT STUDENT MODAL -->
+<div id="admin-edit-student-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" onclick="if(event.target===this) this.classList.add('hidden')">
+    <div class="glass-card w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 relative space-y-4" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center border-b border-white/10 pb-3">
+            <h3 class="font-extrabold text-sm text-white">Edit Student Profile (Admin Management)</h3>
+            <button onclick="document.getElementById('admin-edit-student-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form id="admin-edit-student-form" method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Student ID</label>
+                    <input type="text" id="edit-std-id" readonly class="input bg-slate-900/50 text-slate-400">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
+                    <input type="text" id="edit-std-name" name="name" required class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Department</label>
+                    <select id="edit-std-dept" name="department_id" class="input">
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
+                    <input type="text" id="edit-std-phone" name="phone_number" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">CGPA</label>
+                    <input type="number" step="0.01" min="0" max="4" id="edit-std-cgpa" name="cgpa" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Completed Credits</label>
+                    <input type="number" step="0.5" id="edit-std-credits" name="completed_credits" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Outstanding Balance (BDT)</label>
+                    <input type="number" id="edit-std-balance" name="outstanding_balance" class="input">
+                </div>
+                <div class="flex items-center gap-2 pt-6">
+                    <input type="checkbox" id="edit-std-cleared" name="financial_cleared" class="w-4 h-4 rounded text-blue-600">
+                    <label for="edit-std-cleared" class="font-bold text-slate-300">Financial Cleared</label>
+                </div>
+            </div>
+            <div>
+                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Biography / Notes</label>
+                <textarea id="edit-std-about" name="about" rows="3" class="input"></textarea>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Present Address</label>
+                    <input type="text" id="edit-std-present" name="present_address" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Permanent Address</label>
+                    <input type="text" id="edit-std-permanent" name="permanent_address" class="input">
+                </div>
+            </div>
+            <div>
+                <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Update Profile Picture (Optional)</label>
+                <input type="file" name="profile_pic" accept="image/*" class="input text-xs text-slate-400">
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button type="button" onclick="document.getElementById('admin-edit-student-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 font-bold rounded-lg">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ADMIN EDIT SECTION OFFERING MODAL -->
+<div id="admin-edit-section-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" onclick="if(event.target===this) this.classList.add('hidden')">
+    <div class="glass-card w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 relative space-y-4" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center border-b border-white/10 pb-3">
+            <h3 class="font-extrabold text-sm text-white">Edit Course Section Offering (Admin Management)</h3>
+            <button onclick="document.getElementById('admin-edit-section-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form id="admin-edit-section-form" method="POST" class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Course Code</label>
+                    <input type="text" id="edit-sec-code" name="course_code" required class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Course Title</label>
+                    <input type="text" id="edit-sec-title" name="course_title" placeholder="e.g. Financial Accounting" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Section Number</label>
+                    <input type="number" id="edit-sec-num" name="section_number" required class="input">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Schedule / Timing</label>
+                    <input type="text" id="edit-sec-sched" name="schedule" required class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Credits</label>
+                    <input type="number" step="0.5" id="edit-sec-credits" name="credits" required class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Building & Room</label>
+                    <input type="text" id="edit-sec-room" name="room" required class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Seat Capacity</label>
+                    <input type="number" id="edit-sec-cap" name="capacity" required class="input">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Dedicated Department(s)</label>
+                    <input type="text" id="edit-sec-dept" name="dedicated_dept" placeholder="e.g. CSE,ICE,EEE" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Prerequisites</label>
+                    <input type="text" id="edit-sec-prereq" name="prerequisite" placeholder="e.g. CSE103" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Min Credit Requirement</label>
+                    <input type="number" step="0.5" id="edit-sec-min-credit" name="min_credit_req" class="input">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Linked Course ID (Optional)</label>
+                    <input type="text" id="edit-sec-linked" name="linked_course_id" placeholder="e.g. None" class="input">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-400 uppercase tracking-wider mb-1">Assigned Faculty ID</label>
+                    <select id="edit-sec-faculty" name="faculty_id" class="input">
+                        <option value="">-- Unassigned --</option>
+                        {% for fac in faculties %}
+                        <option value="{{ fac.id }}">{{ fac.name }} ({{ fac.id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button type="button" onclick="document.getElementById('admin-edit-section-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 text-slate-300 font-bold rounded-lg">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow">Save Section Changes</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -3550,6 +3896,73 @@ input[type="file"] {
         if (event === null || event.target === document.getElementById('faculty-profile-modal')) {
             document.getElementById('faculty-profile-modal').classList.add('hidden');
         }
+    }
+
+    function openAdminEditFacultyModal(facId) {
+        fetch(`/admin/faculty-details/${facId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('edit-fac-id').value = data.id;
+                    document.getElementById('edit-fac-name').value = data.name;
+                    document.getElementById('edit-fac-dept').value = data.department_id;
+                    document.getElementById('edit-fac-post').value = data.post || '';
+                    document.getElementById('edit-fac-office').value = data.office || '';
+                    document.getElementById('edit-fac-phone').value = data.phone || '';
+                    document.getElementById('edit-fac-research').value = data.research_interests || '';
+                    document.getElementById('edit-fac-about').value = data.about || '';
+                    document.getElementById('edit-fac-present').value = data.present_address || '';
+                    document.getElementById('edit-fac-permanent').value = data.permanent_address || '';
+                    
+                    document.getElementById('admin-edit-faculty-form').action = `/admin/edit-faculty/${data.id}`;
+                    document.getElementById('admin-edit-faculty-modal').classList.remove('hidden');
+                } else {
+                    alert(data.message || 'Error fetching faculty details.');
+                }
+            });
+    }
+
+    function openAdminEditStudentModal(stdId) {
+        fetch(`/admin/student-details/${stdId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('edit-std-id').value = data.id;
+                    document.getElementById('edit-std-name').value = data.name;
+                    document.getElementById('edit-std-dept').value = data.department_id;
+                    document.getElementById('edit-std-phone').value = data.phone_number || '';
+                    document.getElementById('edit-std-cgpa').value = data.cgpa || 0;
+                    document.getElementById('edit-std-credits').value = data.completed_credits || 0;
+                    document.getElementById('edit-std-balance').value = data.outstanding_balance || 0;
+                    document.getElementById('edit-std-cleared').checked = !!data.financial_cleared;
+                    document.getElementById('edit-std-about').value = data.about || '';
+                    document.getElementById('edit-std-present').value = data.present_address || '';
+                    document.getElementById('edit-std-permanent').value = data.permanent_address || '';
+                    
+                    document.getElementById('admin-edit-student-form').action = `/admin/edit-student/${data.id}`;
+                    document.getElementById('admin-edit-student-modal').classList.remove('hidden');
+                } else {
+                    alert(data.message || 'Error fetching student details.');
+                }
+            });
+    }
+
+    function openAdminEditSectionModal(id, code, title, num, sched, credits, cap, room, dept, prereq, linked, minCredit, facId) {
+        document.getElementById('edit-sec-code').value = code || '';
+        document.getElementById('edit-sec-title').value = title || '';
+        document.getElementById('edit-sec-num').value = num || 1;
+        document.getElementById('edit-sec-sched').value = sched || '';
+        document.getElementById('edit-sec-credits').value = credits || 3.0;
+        document.getElementById('edit-sec-cap').value = cap || 30;
+        document.getElementById('edit-sec-room').value = room || '';
+        document.getElementById('edit-sec-dept').value = dept || '';
+        document.getElementById('edit-sec-prereq').value = prereq || '';
+        document.getElementById('edit-sec-linked').value = linked || '';
+        document.getElementById('edit-sec-min-credit').value = minCredit || 0.0;
+        document.getElementById('edit-sec-faculty').value = facId || '';
+        
+        document.getElementById('admin-edit-section-form').action = `/admin/edit-section/${id}`;
+        document.getElementById('admin-edit-section-modal').classList.remove('hidden');
     }
 
     function filterSections() {

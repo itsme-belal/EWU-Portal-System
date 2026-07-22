@@ -12,7 +12,8 @@ from werkzeug.utils import secure_filename
 from models import (
     db, User, Department, Faculty, Student, Admin,
     PreAdvisingCourse, SectionOffering, AdvisingWindow, AdvisingPlan, Registration,
-    SemesterDropRequest, AttendanceRecord, AdvisingRequest, Grade, LedgerEntry, Installment, Announcement, SystemSetting, Notification
+    SemesterDropRequest, AttendanceRecord, AdvisingRequest, Grade, LedgerEntry, Installment, Announcement, SystemSetting, Notification,
+    CourseMaterial, CourseAnnouncement, Message, GradingScheme, StudentMark
 )
 
 @event.listens_for(Engine, "connect")
@@ -48,12 +49,12 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'demo-sender@gmail
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'demo-password')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'demo-sender@gmail.com')
 
-from flask_mail import Mail, Message
+from flask_mail import Mail, Message as MailMessage
 mail = Mail(app)
 
 def send_email_safe(subject, recipients, body):
     try:
-        msg = Message(subject=subject, recipients=recipients, body=body)
+        msg = MailMessage(subject=subject, recipients=recipients, body=body)
         mail.send(msg)
         print(f"Flask-Mail: Email sent successfully to {recipients}")
         return True
@@ -89,7 +90,10 @@ def ensure_runtime_schema():
             'about': 'VARCHAR(500)',
             'post': 'VARCHAR(100)',
             'present_address': 'VARCHAR(255)',
-            'permanent_address': 'VARCHAR(255)'
+            'permanent_address': 'VARCHAR(255)',
+            'office': 'VARCHAR(100)',
+            'phone': 'VARCHAR(50)',
+            'research_interests': 'VARCHAR(500)'
         },
         'pre_advising_courses': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
         'section_offerings': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
@@ -1529,12 +1533,12 @@ def submit_override_request():
         flash('Legacy single course request endpoints are decommissioned. Please use the modular batch request forms.', 'error')
         return redirect('/advising')
 
-    if request_type not in ['drop_course', 'withdraw_course']:
-        flash('Invalid request type for this endpoint.', 'error')
+    if request_type != 'drop_course':
+        flash('Invalid request type for this endpoint. Only course drop requests are supported.', 'error')
         return redirect('/advising')
 
     active_setting = SystemSetting.query.filter_by(key='drop_withdraw_active').first()
-    phase_name = "Course Drop & Withdraw"
+    phase_name = "Course Drop"
         
     if not active_setting or active_setting.value != 'true':
         flash(f"{phase_name} request phase is currently closed by the Administrator.", 'error')
@@ -1646,9 +1650,7 @@ def faculty_dashboard():
      .filter(AdvisingRequest.advisor_id == faculty.id, AdvisingRequest.semester_id == get_next_semester())\
      .order_by(AdvisingRequest.created_at.asc()).all()
      
-    all_sections = SectionOffering.query.filter_by(
-        semester_id=get_next_semester()
-    ).order_by(SectionOffering.course_code.asc(), SectionOffering.section_number.asc()).all()
+    all_sections = SectionOffering.query.order_by(SectionOffering.course_code.asc(), SectionOffering.section_number.asc()).all()
     dept_students = Student.query.filter_by(department_id=faculty.department_id).all()
      
     # Class Schedules
@@ -1675,6 +1677,15 @@ def faculty_dashboard():
     ).all() if advisee_ids else []
     plan_student_ids = {p.student_id for p in advisee_plans}
 
+    section_ids = [s.id for s in sections]
+    materials = CourseMaterial.query.filter(CourseMaterial.section_id.in_(section_ids)).all() if section_ids else []
+    course_announcements = CourseAnnouncement.query.filter(CourseAnnouncement.section_id.in_(section_ids)).all() if section_ids else []
+    schemes = GradingScheme.query.filter(GradingScheme.section_id.in_(section_ids)).all() if section_ids else []
+    student_marks = StudentMark.query.filter(StudentMark.section_id.in_(section_ids)).all() if section_ids else []
+    system_announcements = Announcement.query.filter(
+        (Announcement.target_role == 'faculty') | (Announcement.target_role == 'all')
+    ).order_by(Announcement.created_at.desc()).all()
+
     schedule_items = []
     for section in sections:
         schedule_items.extend(expand_section_schedule(section))
@@ -1700,7 +1711,12 @@ def faculty_dashboard():
         schedule_items=schedule_items,
         sections_json=sections_json,
         all_sections_json=all_sections_json,
-        active_semester=get_current_semester()
+        active_semester=get_current_semester(),
+        materials=materials,
+        course_announcements=course_announcements,
+        schemes=schemes,
+        student_marks=student_marks,
+        system_announcements=system_announcements
     )
 
 # Faculty manually adds/drops courses for ANY student in department (All Student Advising)
@@ -2087,6 +2103,10 @@ def execute_request_resolution(req, status, advisor_note, faculty_id):
         req.status = 'rejected'
         req.advisor_note = advisor_note
         return True, "Request rejected."
+    if status == 'returned':
+        req.status = 'returned'
+        req.advisor_note = advisor_note
+        return True, "Request returned for correction."
 
     if req.type == 'add_course':
         regs = Registration.query.filter_by(student_id=student.id, semester_id=req.semester_id).all()
@@ -2210,7 +2230,7 @@ def resolve_request(req_id):
     advisor_note = request.form.get('advisor_note', '').strip()
     req = AdvisingRequest.query.get(req_id)
     faculty = current_faculty_profile()
-    if status not in ['approved', 'rejected']:
+    if status not in ['approved', 'rejected', 'returned']:
         flash("Invalid request decision.", "error")
         return redirect(url_for('faculty_dashboard'))
     if not req or not faculty or req.advisor_id != faculty.id:
@@ -2308,7 +2328,7 @@ def resolve_requests_batch():
     request_ids = data.get('request_ids', [])
     status = data.get('status')
     advisor_note = data.get('advisor_note', '').strip()
-    if status not in ['approved', 'rejected']:
+    if status not in ['approved', 'rejected', 'returned']:
         return jsonify({'status': 'error', 'message': 'Invalid status decision.'}), 400
     if not advisor_note:
         return jsonify({'status': 'error', 'message': 'Advisor comments are mandatory.'}), 400
@@ -2691,6 +2711,462 @@ def faculty_view_student_requests(student_id):
     if current_user.role != 'faculty':
         return redirect(url_for('home'))
     return redirect(url_for('faculty_dashboard') + f'?target_student={student_id}')
+
+# --- NEW FACULTY PORTAL ENDPOINTS ---
+
+def calculate_grade_details(score):
+    if score >= 90: return 'A', 4.0
+    if score >= 85: return 'A-', 3.7
+    if score >= 80: return 'B+', 3.3
+    if score >= 75: return 'B', 3.0
+    if score >= 70: return 'B-', 2.7
+    if score >= 65: return 'C+', 2.3
+    if score >= 60: return 'C', 2.0
+    if score >= 57: return 'C-', 1.7
+    if score >= 55: return 'D+', 1.3
+    if score >= 50: return 'D', 1.0
+    return 'F', 0.0
+
+@app.route('/faculty/course/upload-material', methods=['POST'])
+@login_required
+def faculty_upload_material():
+    if current_user.role != 'faculty':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+    section_id = request.form.get('section_id')
+    title = request.form.get('title', '').strip()
+    file_type = request.form.get('file_type', 'slide')
+    
+    if not section_id or not title:
+        return jsonify({'status': 'error', 'message': 'Section ID and Title are required.'}), 400
+        
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({'status': 'error', 'message': 'No file uploaded.'}), 400
+        
+    filename = secure_filename(file.filename)
+    unique_fn = f"mat_{int(datetime.utcnow().timestamp())}_{filename}"
+    upload_path = os.path.join(app.root_path, 'static', 'uploads', unique_fn)
+    os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+    file.save(upload_path)
+    
+    mat = CourseMaterial(
+        id=f"MAT-{int(datetime.utcnow().timestamp())}-{random.randint(100,999)}",
+        section_id=section_id,
+        title=title,
+        file_path=unique_fn,
+        file_type=file_type
+    )
+    db.session.add(mat)
+    db.session.commit()
+    
+    return jsonify({'status': 'success', 'message': 'Material uploaded successfully.'})
+
+@app.route('/faculty/course/post-announcement', methods=['POST'])
+@login_required
+def faculty_post_course_announcement():
+    if current_user.role != 'faculty':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+    section_id = request.form.get('section_id')
+    title = request.form.get('title', '').strip()
+    content = request.form.get('content', '').strip()
+    
+    if not section_id or not title or not content:
+        return jsonify({'status': 'error', 'message': 'All fields are required.'}), 400
+        
+    ann = CourseAnnouncement(
+        id=f"CANN-{int(datetime.utcnow().timestamp())}-{random.randint(100,999)}",
+        section_id=section_id,
+        title=title,
+        content=content
+    )
+    db.session.add(ann)
+    db.session.commit()
+    
+    return jsonify({'status': 'success', 'message': 'Announcement posted successfully.'})
+
+@app.route('/faculty/course/save-scheme', methods=['POST'])
+@login_required
+def faculty_save_scheme():
+    if current_user.role != 'faculty':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+    data = request.get_json() or {}
+    section_id = data.get('section_id')
+    components = data.get('components', {})
+    
+    if not section_id:
+        return jsonify({'status': 'error', 'message': 'Section ID is required.'}), 400
+        
+    try:
+        total_sum = sum(float(v) for v in components.values())
+        if abs(total_sum - 100.0) > 0.01:
+            return jsonify({'status': 'error', 'message': f'Total grading scheme components must sum to 100%. Current sum: {total_sum}%'}), 400
+    except ValueError:
+        return jsonify({'status': 'error', 'message': 'Invalid component values.'}), 400
+        
+    scheme = GradingScheme.query.filter_by(section_id=section_id).first()
+    if not scheme:
+        scheme = GradingScheme(
+            id=f"SCHEME-{section_id}",
+            section_id=section_id
+        )
+        db.session.add(scheme)
+    
+    scheme.components = components
+    db.session.commit()
+    
+    return jsonify({'status': 'success', 'message': 'Grading scheme saved successfully.'})
+
+@app.route('/faculty/course/save-student-marks', methods=['POST'])
+@login_required
+def faculty_save_student_marks():
+    if current_user.role != 'faculty':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+    data = request.get_json() or {}
+    section_id = data.get('section_id')
+    student_id = data.get('student_id')
+    marks = data.get('marks', {})
+    
+    if not section_id or not student_id:
+        return jsonify({'status': 'error', 'message': 'Section ID and Student ID are required.'}), 400
+        
+    scheme = GradingScheme.query.filter_by(section_id=section_id).first()
+    if not scheme:
+        return jsonify({'status': 'error', 'message': 'Please define a grading scheme first.'}), 400
+        
+    total = 0.0
+    scheme_dict = scheme.components
+    for comp_name, max_val in scheme_dict.items():
+        val = marks.get(comp_name)
+        if val is not None:
+            try:
+                total += float(val)
+            except ValueError:
+                pass
+                
+    percentage = total
+    grade_letter, grade_point = calculate_grade_details(percentage)
+    
+    sm = StudentMark.query.filter_by(student_id=student_id, section_id=section_id).first()
+    if not sm:
+        sm = StudentMark(
+            id=f"MARK-{student_id}-{section_id}",
+            student_id=student_id,
+            section_id=section_id
+        )
+        db.session.add(sm)
+        
+    sm.marks = marks
+    sm.total_marks = total
+    sm.percentage = percentage
+    sm.grade_letter = grade_letter
+    sm.grade_point = grade_point
+    db.session.commit()
+    
+    return jsonify({
+        'status': 'success', 
+        'message': 'Marks updated.',
+        'total': total,
+        'grade_letter': grade_letter,
+        'grade_point': grade_point
+    })
+
+@app.route('/faculty/course/publish-grades', methods=['POST'])
+@login_required
+def faculty_publish_grades():
+    if current_user.role != 'faculty':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+    data = request.get_json() or {}
+    section_id = data.get('section_id')
+    
+    if not section_id:
+        return jsonify({'status': 'error', 'message': 'Section ID is required.'}), 400
+        
+    student_marks = StudentMark.query.filter_by(section_id=section_id).all()
+    if not student_marks:
+        return jsonify({'status': 'error', 'message': 'No grades entered for this section.'}), 400
+        
+    for sm in student_marks:
+        sm.is_published = True
+        
+        grade_id = f"GRD-{sm.student_id}-{section_id}"
+        g = Grade.query.get(grade_id)
+        if not g:
+            g = Grade(
+                id=grade_id,
+                student_id=sm.student_id,
+                section_id=section_id,
+                semester_id=get_current_semester()
+            )
+            db.session.add(g)
+        g.grade_letter = sm.grade_letter or 'F'
+        g.grade_point = sm.grade_point or 0.0
+        
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'All grades published and finalized.'})
+
+@app.route('/faculty/messages/send', methods=['POST'])
+@login_required
+def faculty_send_message():
+    if current_user.role != 'faculty':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+        
+    receiver_option = request.form.get('receiver_option')
+    content = request.form.get('content', '').strip()
+    
+    if not content:
+        return jsonify({'status': 'error', 'message': 'Message content is required.'}), 400
+        
+    faculty = current_faculty_profile()
+    if not faculty:
+        return jsonify({'status': 'error', 'message': 'Faculty profile not found.'}), 404
+        
+    file = request.files.get('file')
+    attachment_fn = None
+    if file and file.filename != '':
+        filename = secure_filename(file.filename)
+        attachment_fn = f"msg_{int(datetime.utcnow().timestamp())}_{filename}"
+        file.save(os.path.join(app.root_path, 'static', 'uploads', attachment_fn))
+        
+    send_count = 0
+    
+    if receiver_option == 'all_advisees':
+        advisees = Student.query.filter_by(advisor_id=faculty.id).all()
+        for adv in advisees:
+            msg = Message(
+                id=f"MSG-{int(datetime.utcnow().timestamp())}-{random.randint(100,999)}",
+                sender_id=current_user.id,
+                receiver_id=adv.user_id,
+                content=content,
+                attachment_path=attachment_fn
+            )
+            db.session.add(msg)
+            send_count += 1
+            
+    elif receiver_option.startswith('all_students_sec_'):
+        sec_id = receiver_option.replace('all_students_sec_', '')
+        regs = Registration.query.filter_by(section_id=sec_id).all()
+        for reg in regs:
+            student = Student.query.get(reg.student_id)
+            if student:
+                msg = Message(
+                    id=f"MSG-{int(datetime.utcnow().timestamp())}-{random.randint(100,999)}",
+                    sender_id=current_user.id,
+                    receiver_id=student.user_id,
+                    content=content,
+                    attachment_path=attachment_fn
+                )
+                db.session.add(msg)
+                send_count += 1
+                
+    elif receiver_option.startswith('course_chat_'):
+        sec_id = receiver_option.replace('course_chat_', '')
+        msg = Message(
+            id=f"MSG-{int(datetime.utcnow().timestamp())}-{random.randint(100,999)}",
+            sender_id=current_user.id,
+            content=content,
+            attachment_path=attachment_fn,
+            course_chat_section_id=sec_id
+        )
+        db.session.add(msg)
+        send_count += 1
+        
+    else:
+        receiver_id = receiver_option
+        msg = Message(
+            id=f"MSG-{int(datetime.utcnow().timestamp())}-{random.randint(100,999)}",
+            sender_id=current_user.id,
+            receiver_id=receiver_id,
+            content=content,
+            attachment_path=attachment_fn
+        )
+        db.session.add(msg)
+        send_count += 1
+        
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': f'Message sent successfully.'})
+
+@app.route('/faculty/messages/get', methods=['GET'])
+@login_required
+def faculty_get_messages():
+    if current_user.role != 'faculty':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+        
+    dms = Message.query.filter(
+        (Message.sender_id == current_user.id) | (Message.receiver_id == current_user.id)
+    ).order_by(Message.created_at.desc()).all()
+    
+    faculty = current_faculty_profile()
+    sections = SectionOffering.query.filter_by(faculty_id=faculty.id, semester_id=get_current_semester()).all()
+    sec_ids = [s.id for s in sections]
+    
+    chat_msgs = Message.query.filter(
+        Message.course_chat_section_id.in_(sec_ids)
+    ).order_by(Message.created_at.desc()).all() if sec_ids else []
+    
+    user_names = {}
+    all_user_ids = {m.sender_id for m in dms + chat_msgs} | {m.receiver_id for m in dms if m.receiver_id}
+    for uid in all_user_ids:
+        u = User.query.get(uid)
+        if not u:
+            user_names[uid] = "System"
+            continue
+        if u.role == 'student':
+            s = Student.query.filter_by(user_id=uid).first()
+            user_names[uid] = s.name if s else "Student"
+        elif u.role == 'faculty':
+            f = Faculty.query.filter_by(user_id=uid).first()
+            user_names[uid] = f.name if f else "Faculty"
+        else:
+            user_names[uid] = "Admin"
+            
+    dms_json = []
+    for m in dms:
+        dms_json.append({
+            'id': m.id,
+            'sender_id': m.sender_id,
+            'sender_name': user_names.get(m.sender_id, "Unknown"),
+            'receiver_id': m.receiver_id,
+            'receiver_name': user_names.get(m.receiver_id, "Unknown"),
+            'content': m.content,
+            'attachment': m.attachment_path,
+            'created_at': m.created_at.strftime('%Y-%m-%d %H:%M'),
+            'is_read': m.is_read
+        })
+        
+    chats_json = []
+    for m in chat_msgs:
+        chats_json.append({
+            'id': m.id,
+            'sender_id': m.sender_id,
+            'sender_name': user_names.get(m.sender_id, "Unknown"),
+            'content': m.content,
+            'attachment': m.attachment_path,
+            'created_at': m.created_at.strftime('%Y-%m-%d %H:%M'),
+            'section_id': m.course_chat_section_id
+        })
+        
+    return jsonify({
+        'status': 'success',
+        'dms': dms_json,
+        'chats': chats_json
+    })
+
+@app.route('/faculty/reports/get', methods=['GET'])
+@login_required
+def faculty_get_reports():
+    if current_user.role != 'faculty':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+        
+    faculty = current_faculty_profile()
+    sections = SectionOffering.query.filter_by(faculty_id=faculty.id, semester_id=get_current_semester()).all()
+    
+    grade_distribution = {}
+    attendance_trends = {}
+    at_risk_students = []
+    
+    for sec in sections:
+        marks = StudentMark.query.filter_by(section_id=sec.id).all()
+        grades_count = {'A': 0, 'A-': 0, 'B+': 0, 'B': 0, 'B-': 0, 'C+': 0, 'C': 0, 'C-': 0, 'D+': 0, 'D': 0, 'F': 0}
+        for m in marks:
+            if m.grade_letter in grades_count:
+                grades_count[m.grade_letter] += 1
+        grade_distribution[sec.id] = {
+            'course': f"{sec.course_code} Sec {sec.section_number}",
+            'distribution': grades_count
+        }
+        
+        attn_records = AttendanceRecord.query.filter_by(section_id=sec.id).all()
+        date_counts = {}
+        for r in attn_records:
+            date_counts.setdefault(r.date, {'present': 0, 'absent': 0, 'total': 0})
+            if r.status == 'present':
+                date_counts[r.date]['present'] += 1
+            else:
+                date_counts[r.date]['absent'] += 1
+            date_counts[r.date]['total'] += 1
+            
+        attendance_trends[sec.id] = {
+            'course': f"{sec.course_code} Sec {sec.section_number}",
+            'data': [{'date': d, 'attendance_rate': round((v['present'] / max(1, v['total'])) * 100, 1)} for d, v in sorted(date_counts.items())]
+        }
+        
+        student_registrations = Registration.query.filter_by(section_id=sec.id).all()
+        for reg in student_registrations:
+            student = Student.query.get(reg.student_id)
+            if not student:
+                continue
+                
+            student_mark = StudentMark.query.filter_by(student_id=student.id, section_id=sec.id).first()
+            current_total = student_mark.total_marks if student_mark else 0.0
+            
+            std_attn = AttendanceRecord.query.filter_by(student_id=student.id, section_id=sec.id).all()
+            total_days = len(std_attn)
+            present_days = sum(1 for r in std_attn if r.status == 'present')
+            attn_rate = (present_days / max(1, total_days)) * 100 if total_days > 0 else 100.0
+            
+            if (student_mark and current_total < 55.0) or attn_rate < 75.0:
+                at_risk_students.append({
+                    'student_id': student.id,
+                    'student_name': student.name,
+                    'course_code': sec.course_code,
+                    'section_number': sec.section_number,
+                    'marks': current_total,
+                    'grade_letter': student_mark.grade_letter if student_mark else 'N/A',
+                    'attendance_rate': round(attn_rate, 1),
+                    'risk_reason': "Low Marks (<55)" if (student_mark and current_total < 55.0) else "Low Attendance (<75%)"
+                })
+                
+    return jsonify({
+        'status': 'success',
+        'grade_distribution': grade_distribution,
+        'attendance_trends': attendance_trends,
+        'at_risk_students': at_risk_students
+    })
+
+@app.route('/faculty/profile/update', methods=['POST'])
+@login_required
+def faculty_update_profile():
+    if current_user.role != 'admin':
+        return jsonify({'status': 'error', 'message': 'Faculty profile information is read-only. Profile modifications must be performed by the Administrator.'}), 403
+        
+    faculty = current_faculty_profile()
+    if not faculty:
+        return jsonify({'status': 'error', 'message': 'Faculty profile not found.'}), 404
+        
+    name = request.form.get('name', '').strip()
+    about = request.form.get('about', '').strip()
+    office = request.form.get('office', '').strip()
+    phone = request.form.get('phone', '').strip()
+    research_interests = request.form.get('research_interests', '').strip()
+    present_address = request.form.get('present_address', '').strip()
+    permanent_address = request.form.get('permanent_address', '').strip()
+    password = request.form.get('password', '').strip()
+    
+    if not name:
+        return jsonify({'status': 'error', 'message': 'Name is required.'}), 400
+        
+    faculty.name = name
+    faculty.about = about
+    faculty.office = office
+    faculty.phone = phone
+    faculty.research_interests = research_interests
+    faculty.present_address = present_address
+    faculty.permanent_address = permanent_address
+    
+    file = request.files.get('profile_pic')
+    if file and file.filename != '':
+        if file.filename.split('.')[-1].lower() in ALLOWED_PROFILE_IMAGE_EXTENSIONS:
+            filename = secure_filename(file.filename)
+            unique_fn = f"fac_{faculty.id}_{int(datetime.utcnow().timestamp())}_{filename}"
+            file.save(os.path.join(app.root_path, 'static', 'uploads', unique_fn))
+            faculty.profile_pic = unique_fn
+            
+    if password:
+        user = User.query.get(current_user.id)
+        user.password_hash = generate_password_hash(password)
+        
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Profile updated successfully.'})
 
 # ADMIN VIEWS
 @app.route('/admin')
@@ -3537,6 +4013,131 @@ def create_faculty():
     
     flash('Faculty account created successfully! Advise faculty to activate using their email.', 'success')
     return redirect(url_for('admin_dashboard') + '?tab=faculty')
+
+@app.route('/admin/edit-faculty/<fac_id>', methods=['POST'])
+@login_required
+def admin_edit_faculty(fac_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    fac = Faculty.query.get(fac_id)
+    if not fac:
+        flash('Faculty member not found.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
+        
+    name = request.form.get('name', '').strip()
+    dept = request.form.get('department_id', '').strip()
+    office = request.form.get('office', '').strip()
+    phone = request.form.get('phone', '').strip()
+    post = request.form.get('post', '').strip()
+    about = request.form.get('about', '').strip()
+    research_interests = request.form.get('research_interests', '').strip()
+    present_address = request.form.get('present_address', '').strip()
+    permanent_address = request.form.get('permanent_address', '').strip()
+    
+    if name: fac.name = name
+    if dept: fac.department_id = dept
+    fac.office = office
+    fac.phone = phone
+    fac.post = post
+    fac.about = about
+    fac.research_interests = research_interests
+    fac.present_address = present_address
+    fac.permanent_address = permanent_address
+    
+    pic = request.files.get('profile_pic')
+    if pic and pic.filename != '':
+        try:
+            fac.profile_pic = save_profile_pic_upload(pic, f"faculty_{fac_id}")
+        except Exception:
+            pass
+            
+    db.session.commit()
+    flash(f"Faculty profile for '{fac.name}' updated successfully by Admin.", 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=faculty')
+
+@app.route('/admin/delete-faculty/<fac_id>', methods=['POST'])
+@login_required
+def admin_delete_faculty(fac_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    fac = Faculty.query.get(fac_id)
+    if fac:
+        user = User.query.get(fac.user_id)
+        db.session.delete(fac)
+        if user:
+            db.session.delete(user)
+        db.session.commit()
+        flash(f"Faculty record '{fac_id}' removed.", 'success')
+    else:
+        flash('Faculty member not found.', 'error')
+    return redirect(url_for('admin_dashboard') + '?tab=faculty')
+
+@app.route('/admin/edit-student/<std_id>', methods=['POST'])
+@login_required
+def admin_edit_student(std_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    std = Student.query.get(std_id)
+    if not std:
+        flash('Student record not found.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=students')
+        
+    name = request.form.get('name', '').strip()
+    dept = request.form.get('department_id', '').strip()
+    cgpa = float(request.form.get('cgpa', std.cgpa or 0.0))
+    credits = float(request.form.get('completed_credits', std.completed_credits or 0.0))
+    balance = int(request.form.get('outstanding_balance', std.outstanding_balance or 0))
+    cleared = (request.form.get('financial_cleared') == 'on') or (request.form.get('financial_cleared') == 'true')
+    phone = request.form.get('phone_number', '').strip()
+    about = request.form.get('about', '').strip()
+    present_address = request.form.get('present_address', '').strip()
+    permanent_address = request.form.get('permanent_address', '').strip()
+    
+    if name: std.name = name
+    if dept: std.department_id = dept
+    std.cgpa = cgpa
+    std.completed_credits = credits
+    std.outstanding_balance = balance
+    std.financial_cleared = cleared
+    std.phone_number = phone
+    std.about = about
+    std.present_address = present_address
+    std.permanent_address = permanent_address
+    
+    pic = request.files.get('profile_pic')
+    if pic and pic.filename != '':
+        try:
+            std.profile_pic = save_profile_pic_upload(pic, f"student_{std_id}")
+        except Exception:
+            pass
+            
+    db.session.commit()
+    flash(f"Student profile for '{std.name}' updated successfully by Admin.", 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=students')
+
+@app.route('/admin/delete-student/<std_id>', methods=['POST'])
+@login_required
+def admin_delete_student(std_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    std = Student.query.get(std_id)
+    if std:
+        user = User.query.get(std.user_id)
+        # Remove student registrations and requests
+        Registration.query.filter_by(student_id=std.id).delete()
+        AdvisingRequest.query.filter_by(student_id=std.id).delete()
+        db.session.delete(std)
+        if user:
+            db.session.delete(user)
+        db.session.commit()
+        flash(f"Student record '{std_id}' removed.", 'success')
+    else:
+        flash('Student record not found.', 'error')
+    return redirect(url_for('admin_dashboard') + '?tab=students')
 
 @app.route('/admin/edit-capacity/<sec_id>', methods=['POST'])
 @login_required
@@ -4534,6 +5135,87 @@ def upload_schedule():
     except Exception as e:
         flash(f'Error importing schedule: {str(e)}', 'error')
         
+@app.route('/admin/upload-multi-excel', methods=['POST'])
+@login_required
+def upload_multi_excel():
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    uploaded_files = request.files.getlist('excel_files')
+    if not uploaded_files or all(f.filename == '' for f in uploaded_files):
+        flash('No Excel files selected for batch import.', 'error')
+        return redirect(url_for('admin_dashboard'))
+        
+    imported_summary = []
+    
+    import openpyxl
+    for file in uploaded_files:
+        if not file or not file.filename.endswith('.xlsx'):
+            continue
+        try:
+            wb = openpyxl.load_workbook(file, data_only=True)
+            sheet = wb.active
+            headers = [str(cell.value or '').strip() for cell in sheet[1]] if sheet.max_row > 0 else []
+            file.seek(0)
+            
+            # Identify file type by header signatures
+            if any('Faculty Initial' in h for h in headers) and any('Email' in h for h in headers) and not any('Student ID' in h for h in headers):
+                c = import_excel_faculty(file)
+                imported_summary.append(f"Faculty File ({file.filename}): {c} records")
+            elif any('Student ID' in h for h in headers) or any('Student Email' in h for h in headers):
+                c = import_excel_students(file)
+                imported_summary.append(f"Student File ({file.filename}): {c} records")
+            elif any('Course Code' in h for h in headers) or any('Date & Time' in h for h in headers) or any('Section' in h for h in headers):
+                import_excel_schedule(file)
+                imported_summary.append(f"Schedule File ({file.filename}): Schedule sections imported")
+            else:
+                imported_summary.append(f"Skipped ({file.filename}): Unrecognized Excel format")
+        except Exception as e:
+            imported_summary.append(f"Failed ({file.filename}): {str(e)}")
+            
+    if imported_summary:
+        flash("Batch Excel Results: " + " | ".join(imported_summary), "info")
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/edit-section/<sec_id>', methods=['POST'])
+@login_required
+def admin_edit_section(sec_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('home'))
+        
+    sec = SectionOffering.query.get(sec_id)
+    if not sec:
+        flash('Section offering not found.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=course-management')
+        
+    course_code = request.form.get('course_code', '').strip()
+    course_title = request.form.get('course_title', '').strip()
+    section_number = int(request.form.get('section_number', sec.section_number or 1))
+    schedule = request.form.get('schedule', '').strip()
+    credits = float(request.form.get('credits', sec.credits or 3.0))
+    capacity = int(request.form.get('capacity', sec.capacity or 30))
+    room = request.form.get('room', '').strip()
+    dedicated_dept = request.form.get('dedicated_dept', '').strip()
+    prereq = request.form.get('prerequisite', '').strip()
+    linked_id = request.form.get('linked_course_id', '').strip()
+    min_credit_req = float(request.form.get('min_credit_req', sec.min_credit_req or 0.0))
+    faculty_id = request.form.get('faculty_id', '').strip()
+    
+    if course_code: sec.course_code = course_code
+    if course_title: sec.course_title = course_title
+    sec.section_number = section_number
+    if schedule: sec.schedule = schedule
+    sec.credits = credits
+    sec.capacity = capacity
+    if room: sec.room = room
+    sec.dedicated_dept = dedicated_dept
+    sec.prerequisite = prereq
+    sec.linked_course_id = linked_id
+    sec.min_credit_req = min_credit_req
+    sec.faculty_id = faculty_id if faculty_id else None
+    
+    db.session.commit()
+    flash(f"Section offering '{sec.course_code} Sec {sec.section_number}' updated successfully.", 'success')
     return redirect(url_for('admin_dashboard') + '?tab=course-management')
 
 @app.route('/admin/assign-faculty-section', methods=['POST'])
