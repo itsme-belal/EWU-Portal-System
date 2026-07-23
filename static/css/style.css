@@ -849,10 +849,328 @@ tbody tr:hover td { background: var(--s2); }
     url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=1400') center/cover fixed !important;
 }
 
-/* Portal readability guardrails.  Some older templates use utility shades
+/* Portal readability guardrails. Some older templates use utility shades
    Tailwind does not define (such as slate-850); these fallbacks keep copy
    visible in every theme without changing semantic status colours. */
 main [class*="text-slate-"],
+main [class*="dark:text-slate"] { color: var(--text-2); }
+main [class*="text-slate-400"],
+main [class*="text-slate-500"],
+main [class*="text-slate-600"] { color: var(--text-3); }
+main h1[class*="text-slate-"],
+main h2[class*="text-slate-"],
+main h3[class*="text-slate-"],
+main h4[class*="text-slate-"] { color: var(--text-1); }
+
+.dark { --text-2: #d5dfec; --text-3: #a9b8cb; --text-4: #8191a6; }
+
+main { max-width: 100%; padding: clamp(1.25rem, 2.5vw, 2rem); }
+
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(99,102,241,.45);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  header { padding-inline: 1rem !important; }
+  main { padding: 1rem; }
+  .card, .stitch-card, .stat-card, .chart-card { padding: 1rem; }
+  .modal-content, [role="dialog"] { max-width: calc(100vw - 1.5rem); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   ERP DESIGN SYSTEM TOKENS & HIGH-CONTRAST MULTI-THEME OVERRIDES
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Light Mode Overrides for Hardcoded Dark Utility Classes inside Cards & Modals */
+[data-theme="light"] .glass-card,
+[data-theme="light"] .card,
+[data-theme="light"] .modal-content,
+[data-theme="light"] #admin-edit-section-modal .glass-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme="light"] .glass-card td.text-white,
+[data-theme="light"] .glass-card th,
+[data-theme="light"] .glass-card .text-white,
+[data-theme="light"] table td.text-white,
+[data-theme="light"] .font-mono.text-white {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .divide-white\/5 {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] .border-white\/5,
+[data-theme="light"] .border-white\/10 {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] .bg-slate-900\/60,
+[data-theme="light"] .bg-slate-800,
+[data-theme="light"] .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]) {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Modal Backdrop High Contrast Fix */
+#admin-edit-section-modal,
+#admin-edit-student-modal,
+#admin-edit-faculty-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#admin-edit-section-modal.hidden,
+#admin-edit-student-modal.hidden,
+#admin-edit-faculty-modal.hidden,
+.modal.hidden,
+.modal-overlay.hidden {
+  display: none !important;
+}
+
+#admin-edit-section-modal .glass-card,
+#admin-edit-student-modal .glass-card,
+#admin-edit-faculty-modal .glass-card {
+  position: relative !important;
+  z-index: 100000 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-theme="light"] #admin-edit-section-modal .glass-card,
+[data-theme="light"] #admin-edit-student-modal .glass-card,
+[data-theme="light"] #admin-edit-faculty-modal .glass-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+/* Unified Cohesive Capacity Stepper Pill System */
+.capacity-stepper-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  min-width: 8.5rem;
+}
+
+[data-theme="light"] .capacity-stepper-pill {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .capacity-stepper-pill,
+[data-theme="cosmic"] .capacity-stepper-pill,
+[data-theme="image"] .capacity-stepper-pill {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.capacity-btn-minus,
+.capacity-btn-plus {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.5rem;
+  font-weight: 900;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  border: none;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.capacity-btn-minus {
+  background: rgba(244, 63, 94, 0.12);
+  color: #f43f5e;
+}
+.capacity-btn-minus:hover {
+  background: #f43f5e;
+  color: #ffffff;
+  transform: scale(1.06);
+}
+.capacity-btn-minus:active {
+  transform: scale(0.95);
+}
+
+.capacity-btn-plus {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+.capacity-btn-plus:hover {
+  background: #10b981;
+  color: #ffffff;
+  transform: scale(1.06);
+}
+.capacity-btn-plus:active {
+  transform: scale(0.95);
+}
+
+.capacity-readout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0 0.25rem;
+  font-weight: 800;
+  font-size: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  flex-grow: 1;
+}
+
+.enrolled-number {
+  font-weight: 900;
+}
+[data-theme="light"] .enrolled-number {
+  color: #0f172a;
+}
+[data-theme="dark"] .enrolled-number,
+[data-theme="cosmic"] .enrolled-number,
+[data-theme="image"] .enrolled-number {
+  color: #ffffff;
+}
+
+.divider {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.capacity-pill-input {
+  width: 3.5rem !important;
+  min-width: 3.5rem !important;
+  height: 1.75rem !important;
+  text-align: center !important;
+  font-weight: 900 !important;
+  font-size: 0.88rem !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 0.375rem !important;
+  padding: 0 2px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: textfield !important;
+  appearance: none !important;
+  transition: all 0.15s ease;
+  font-family: inherit !important;
+}
+
+[data-theme="light"] .capacity-pill-input {
+  color: #4f46e5 !important;
+}
+[data-theme="dark"] .capacity-pill-input,
+[data-theme="cosmic"] .capacity-pill-input,
+[data-theme="image"] .capacity-pill-input {
+  color: #818cf8 !important;
+}
+
+.capacity-pill-input:focus,
+.capacity-pill-input:hover {
+  background: rgba(99, 102, 241, 0.1) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  outline: none !important;
+}
+
+.capacity-pill-input::-webkit-outer-spin-button,
+.capacity-pill-input::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+/* Visual Capacity Progress Bar */
+.capacity-progress-track {
+  width: 100%;
+  height: 0.375rem;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+[data-theme="light"] .capacity-progress-track {
+  background-color: #e2e8f0;
+}
+[data-theme="dark"] .capacity-progress-track,
+[data-theme="cosmic"] .capacity-progress-track,
+[data-theme="image"] .capacity-progress-track {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.capacity-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sticky Filter Toolbar */
+.sticky-filter-toolbar {
+  position: sticky;
+  top: 4.25rem;
+  z-index: 25;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+[data-theme="light"] .sticky-filter-toolbar {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+[data-theme="dark"] .sticky-filter-toolbar {
+  background: rgba(26, 34, 54, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+[data-theme="cosmic"] .sticky-filter-toolbar {
+  background: rgba(14, 12, 48, 0.88);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+[data-theme="image"] .sticky-filter-toolbar {
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* View Switcher Active Styles */
+.view-btn.active {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4f46e5 !important;
+}
+
+/* Animations */
+@keyframes erpProgressFill {
+  from { width: 0%; }
+}
+.animate-progress {
+  animation: erpProgressFill 0.6s ease-out forwards;
+}
+"],
 main [class*="dark:text-slate"] { color: var(--text-2); }
 main [class*="text-slate-400"],
 main [class*="text-slate-500"],

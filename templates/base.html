@@ -27,18 +27,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}EWU Portal System{% endblock %}</title>
-    <!-- Tailwind CSS (via Play CDN for rapid styling) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class'
-        }
-    </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=portal-v4-20260722">
-    <!-- Fonts: Inter + Plus Jakarta Sans -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Tailwind CSS — compiled locally (no CDN, instant load) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.output.css') }}?v=1">
+    <!-- Custom Design System -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=portal-v4-20260723">
+    <!-- Lucide Icons — self-hosted -->
+    <script src="{{ url_for('static', filename='js/lucide.min.js') }}"></script>
     <style>
         body { font-family: 'Inter', 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
         :root { --sidebar-w: 260px; }
@@ -426,6 +421,24 @@
                 icon.setAttribute('data-lucide', 'check-circle-2');
                 title.textContent = 'Success';
                 title.style.color = '#10B981';
+            } else if (type === 'info' || type === 'notice') {
+                border.style.borderLeftColor = '#0EA5E9';
+                border.style.borderLeftWidth = '4px';
+                border.style.borderLeftStyle = 'solid';
+                icon.className = 'w-5 h-5 mt-0.5';
+                icon.style.color = '#0EA5E9';
+                icon.setAttribute('data-lucide', 'info');
+                title.textContent = msg && msg.startsWith('Batch Excel Results') ? 'Batch Ingestion Summary' : 'Notice';
+                title.style.color = '#0EA5E9';
+            } else if (type === 'warning') {
+                border.style.borderLeftColor = '#F59E0B';
+                border.style.borderLeftWidth = '4px';
+                border.style.borderLeftStyle = 'solid';
+                icon.className = 'w-5 h-5 mt-0.5';
+                icon.style.color = '#F59E0B';
+                icon.setAttribute('data-lucide', 'alert-triangle');
+                title.textContent = 'Warning';
+                title.style.color = '#F59E0B';
             } else {
                 border.style.borderLeftColor = '#EF4444';
                 border.style.borderLeftWidth = '4px';

@@ -28,16 +28,29 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'ewu_secret_key_123')
 
-# Database URI — defaults to SQLite (zero setup). Set DATABASE_URL env var for PostgreSQL.
+# Database URI — defaults to SQLite (zero setup). Set DATABASE_URL env var for PostgreSQL (Supabase / Render).
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///ewu_portal.db')
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# Prevent disk I/O errors: disable connection pool for SQLite (each request gets its own connection)
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'connect_args': {'check_same_thread': False, 'timeout': 30},
-    'pool_recycle': 300,
-    'pool_pre_ping': True,
-}
+
+# Apply connection options based on database type
+if DATABASE_URL.startswith('sqlite'):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'connect_args': {'check_same_thread': False, 'timeout': 30},
+        'pool_recycle': 300,
+        'pool_pre_ping': True,
+    }
+else:
+    # PostgreSQL / Supabase options
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_size': 5,
+        'max_overflow': 10,
+        'pool_recycle': 300,
+        'pool_pre_ping': True,
+    }
 
 db.init_app(app)
 
@@ -1552,10 +1565,10 @@ def submit_override_request():
         flash('Please select a course before submitting the request.', 'error')
         return redirect('/advising')
     
-    # Check max 2 requests
+    # Check max 5 requests
     req_count = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_next_semester()).count()
-    if req_count >= 2:
-        flash('Maximum request limit reached (Max 2 requests allowed).', 'error')
+    if req_count >= 5:
+        flash('Maximum request limit reached (Max 5 requests allowed).', 'error')
         return redirect('/advising')
         
     if not student.advisor_id:
