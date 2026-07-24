@@ -1321,27 +1321,78 @@
         <!-- History / Roster (Right 1 col) -->
         <div class="stitch-card space-y-4 h-fit">
             <h3 class="font-bold text-xs uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">Request History</h3>
-            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+            <div class="space-y-3 max-h-[480px] overflow-y-auto pr-1">
                 {% for req in requests %}
-                <div class="p-3 bg-[#f8fafc] dark:bg-[#1e293b]/40 border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold text-blue-600">{{ req.course_id }}</span>
-                        <span class="badge {{ 'badge-success' if req.status == 'approved' else 'badge-danger' if req.status == 'rejected' else 'badge-warning' }} text-[0.62rem]">
-                            {{ req.status.replace('_', ' ') | upper }}
+                <div class="p-3.5 bg-white dark:bg-[#0c101d] border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl text-xs space-y-2.5 shadow-sm hover:border-blue-500/30 transition-all">
+                    <!-- Header: Course Code & Status Badge -->
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="font-extrabold text-sm text-blue-600 dark:text-blue-400 block">{{ req.course_id }}</span>
+                            <span class="text-[0.62rem] text-slate-400 font-medium">Submitted {{ req.created_at }}</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[0.6rem] font-black uppercase tracking-wider
+                            {% if req.status == 'approved' %}
+                                bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-500/20
+                            {% elif req.status == 'rejected' %}
+                                bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-500/20
+                            {% elif req.status == 'returned' %}
+                                bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-500/20
+                            {% elif req.status == 'pending_admin' %}
+                                bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-400 border border-cyan-500/20
+                            {% else %}
+                                bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-500/20
+                            {% endif %}">
+                            {{ req.status.replace('_', ' ') }}
                         </span>
                     </div>
-                    <div class="text-[0.65rem] text-[#94a3b8]">
-                        Type: <span class="font-semibold capitalize text-[#475569] dark:text-[#e2e8f0]">{{ req.type.replace('_', ' ') }}</span>
+
+                    <!-- Type Tag -->
+                    <div class="flex items-center gap-1.5 text-[0.68rem] text-slate-500 dark:text-slate-400 font-semibold">
+                        <i data-lucide="tag" class="w-3 h-3 text-slate-400"></i>
+                        <span>Type: <strong class="capitalize text-slate-700 dark:text-slate-200">{{ req.type.replace('_', ' ') }}</strong></span>
                     </div>
-                    <p class="italic text-[0.68rem] text-slate-500">"{{ req.comments }}"</p>
+
+                    <!-- Section Details & Schedules -->
+                    {% if req.type == 'change_section' and req.cur_sec and req.sec %}
+                    <div class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[0.68rem] space-y-1">
+                        <div class="text-slate-600 dark:text-slate-300 font-medium">
+                            <span class="line-through text-rose-500">Sec {{ req.cur_sec.section_number }} ({{ req.cur_sec.schedule }})</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1 text-slate-400"></i>
+                            <span class="font-bold text-emerald-600 dark:text-emerald-400">Sec {{ req.sec.section_number }} ({{ req.sec.schedule }})</span>
+                        </div>
+                        {% if req.linked_sec %}
+                        <div class="text-blue-500 text-[0.62rem] font-semibold">
+                            + Linked Lab: Sec {{ req.linked_sec.section_number }} ({{ req.linked_sec.schedule }})
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% elif req.sec %}
+                    <div class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[0.68rem] space-y-1">
+                        <div class="font-semibold text-slate-700 dark:text-slate-300">
+                            Requested: Sec {{ req.sec.section_number }} ({{ req.sec.schedule }}) • Room {{ req.sec.room }}
+                        </div>
+                        {% if req.linked_sec %}
+                        <div class="text-blue-500 text-[0.62rem] font-semibold">
+                            + Linked Lab: Sec {{ req.linked_sec.section_number }} ({{ req.linked_sec.schedule }})
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Student Justification -->
+                    <div class="text-[0.68rem] text-slate-600 dark:text-slate-300 italic bg-slate-100/60 dark:bg-slate-800/40 p-2 rounded-lg">
+                        "{{ req.comments }}"
+                    </div>
+
+                    <!-- Advisor Note -->
                     {% if req.advisor_note %}
-                    <div class="pt-2 border-t border-slate-800 text-[0.68rem] text-blue-500">
-                        <strong>Advisor note:</strong> "{{ req.advisor_note }}"
+                    <div class="pt-2 border-t border-slate-200 dark:border-slate-800 text-[0.68rem] text-blue-600 dark:text-blue-400 font-medium">
+                        <strong>Advisor Note:</strong> "{{ req.advisor_note }}"
                     </div>
                     {% endif %}
                 </div>
                 {% else %}
-                <p class="text-xs text-[#94a3b8] text-center">No request history found.</p>
+                <p class="text-xs text-slate-400 text-center py-6">No request history found.</p>
                 {% endfor %}
             </div>
         </div>
@@ -2102,23 +2153,47 @@
     }
 
     function parseSchedule(scheduleStr) {
-        if (!scheduleStr || !scheduleStr.includes(':')) return [];
-        const idx = scheduleStr.indexOf(':');
-        const daysPart = scheduleStr.substring(0, idx).trim();
-        const timePart = scheduleStr.substring(idx + 1).trim();
-        const days = Array.from(daysPart);
-        const [startStr, endStr] = timePart.split('-');
-        
-        const toMin = (t) => {
-            const clean = t.trim().replace(':', '.');
-            const pts = clean.split('.');
-            const h = parseInt(pts[0]);
-            const m = pts[1] ? parseInt(pts[1]) : 0;
-            return h * 60 + m;
-        };
-        const startMin = toMin(startStr);
-        const endMin = toMin(endStr);
-        return days.map(d => ({ day: d, start: startMin, end: endMin }));
+        if (!scheduleStr) return [];
+        try {
+            const s = String(scheduleStr).trim();
+            let match = s.match(/^([A-Za-z]+)[:\s]*([\d\.:]+)\s*(?:AM|PM)?\s*-\s*([\d\.:]+)\s*(AM|PM)?/i);
+            let daysStr, startStr, endStr;
+            if (match) {
+                daysStr = match[1];
+                startStr = match[2];
+                endStr = match[3];
+            } else {
+                match = s.match(/([A-Za-z]+).*?(\d{1,2}[\.\:]\d{2}).*?(\d{1,2}[\.\:]\d{2})/);
+                if (!match) return [];
+                daysStr = match[1];
+                startStr = match[2];
+                endStr = match[3];
+            }
+            const days = Array.from(daysStr.toUpperCase());
+            const toMin = (tStr) => {
+                let clean = tStr.trim().replace('.', ':');
+                const isPm = /PM/i.test(tStr);
+                const isAm = /AM/i.test(tStr);
+                clean = clean.replace(/[^\d:]/g, '');
+                const pts = clean.split(':');
+                let h = parseInt(pts[0]) || 0;
+                let m = pts[1] ? parseInt(pts[1]) : 0;
+                if (isPm && h < 12) h += 12;
+                else if (isAm && h === 12) h = 0;
+                else if (!isPm && !isAm) {
+                    if (h < 8) h += 12;
+                }
+                return h * 60 + m;
+            };
+            let startMin = toMin(startStr);
+            let endMin = toMin(endStr);
+            if (endMin <= startMin) {
+                endMin += 12 * 60;
+            }
+            return days.map(d => ({ day: d, start: startMin, end: endMin }));
+        } catch (e) {
+            return [];
+        }
     }
 
     function checkOverlap(s1, s2) {
@@ -2134,6 +2209,24 @@
             }
         }
         return false;
+    }
+
+    function getLinkedSection(sec) {
+        if (!sec) return null;
+        if (sec.linked_section_id) {
+            const linked = sectionsData.find(s => s.id === sec.linked_section_id);
+            if (linked) return linked;
+        }
+        const reverse = sectionsData.find(s => s.linked_section_id === sec.id);
+        if (reverse) return reverse;
+        const isLab = sec.is_lab || sec.course_code.endsWith(' Lab');
+        if (isLab) {
+            const baseCode = sec.course_code.replace(' Lab', '').trim();
+            return sectionsData.find(s => s.course_code === baseCode && s.section_number === sec.section_number && s.id !== sec.id);
+        } else {
+            const labCode = sec.course_code.trim() + ' Lab';
+            return sectionsData.find(s => s.course_code === labCode && s.section_number === sec.section_number && s.id !== sec.id);
+        }
     }
 
     // ADD COURSE REQUEST CART LOGIC
@@ -2198,10 +2291,28 @@
         }
 
         filtered.forEach(sec => {
-            const isSelected = addRequestCart.includes(sec.id);
-            const isFull = sec.enrolled_count >= sec.capacity;
+            const linkedSec = getLinkedSection(sec);
+            const isSelected = addRequestCart.includes(sec.id) || (linkedSec && addRequestCart.includes(linkedSec.id));
+            const isFull = (sec.enrolled_count >= sec.capacity) || (linkedSec && linkedSec.enrolled_count >= linkedSec.capacity);
             const isRestricted = sec.dedicated_departments && sec.dedicated_departments.length > 0 && !sec.dedicated_departments.includes('None') && !sec.dedicated_departments.includes('{{ student.department_id }}');
             
+            let hasConflict = false;
+            if (!isSelected) {
+                for (let regId of registrationsList) {
+                    const regSec = sectionsData.find(s => s.id === regId);
+                    if (regSec) {
+                        if (checkOverlap(regSec.schedule, sec.schedule)) {
+                            hasConflict = true;
+                            break;
+                        }
+                        if (linkedSec && checkOverlap(regSec.schedule, linkedSec.schedule)) {
+                            hasConflict = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
             // Decide color coding border and classes
             let borderClass = "border-[#e2e8f0] dark:border-[#1e293b] bg-white dark:bg-[#0a0f1e]/40 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/10";
             let statusBadge = '';
@@ -2214,6 +2325,9 @@
             } else if (isRestricted) {
                 borderClass = "border-slate-200 dark:border-[#1e293b] bg-slate-100/50 dark:bg-[#0a0f1e]/20 text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed";
                 statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400">Restricted</span>`;
+            } else if (hasConflict) {
+                borderClass = "border-red-500 bg-red-50/50 text-red-800 dark:border-orange-400 dark:bg-orange-950/20 dark:text-orange-400";
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-red-100 text-red-800 dark:bg-orange-400/20 dark:text-orange-400">Conflict</span>`;
             } else if (isFull) {
                 borderClass = "border-sky-400 bg-sky-50/50 text-sky-800 dark:border-yellow-400 dark:bg-yellow-950/20 dark:text-yellow-400";
                 statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-sky-100 text-sky-800 dark:bg-yellow-400/20 dark:text-yellow-400">Full</span>`;
@@ -2283,27 +2397,68 @@
         const sec = sectionsData.find(s => s.id === secId);
         if (!sec) return;
 
-        const isSelected = addRequestCart.includes(secId);
+        const linkedSec = getLinkedSection(sec);
+        const isSelected = addRequestCart.includes(secId) || (linkedSec && addRequestCart.includes(linkedSec.id));
+
         if (isSelected) {
-            addRequestCart = addRequestCart.filter(id => id !== secId);
+            addRequestCart = addRequestCart.filter(id => id !== secId && (!linkedSec || id !== linkedSec.id));
         } else {
-            // Check if course already added (prevent adding multiple sections of same course)
+            const cleanCode = sec.course_code.replace(' Lab', '').trim();
             const alreadyHasCourse = addRequestCart.some(id => {
                 const s = sectionsData.find(x => x.id === id);
-                return s && s.course_code === sec.course_code;
+                return s && s.course_code.replace(' Lab', '').trim() === cleanCode;
             });
             if (alreadyHasCourse) {
-                showToast('error', 'You have already selected a section for ' + sec.course_code + '.');
+                showToast('error', 'You have already selected a section for ' + cleanCode + '.');
                 return;
             }
 
-            // Check max 3 course request limit
-            if (addRequestCart.length >= 3) {
+            // Conflict check against enrolled courses
+            for (let regId of registrationsList) {
+                const regSec = sectionsData.find(s => s.id === regId);
+                if (regSec) {
+                    if (checkOverlap(regSec.schedule, sec.schedule)) {
+                        showToast('error', `Schedule conflict between ${sec.course_code} (${sec.schedule}) and enrolled ${regSec.course_code} (${regSec.schedule}).`);
+                        return;
+                    }
+                    if (linkedSec && checkOverlap(regSec.schedule, linkedSec.schedule)) {
+                        showToast('error', `Schedule conflict between linked ${linkedSec.course_code} (${linkedSec.schedule}) and enrolled ${regSec.course_code} (${regSec.schedule}).`);
+                        return;
+                    }
+                }
+            }
+
+            // Conflict check against items already in addRequestCart
+            for (let cartId of addRequestCart) {
+                const cartSec = sectionsData.find(s => s.id === cartId);
+                if (cartSec) {
+                    if (checkOverlap(cartSec.schedule, sec.schedule)) {
+                        showToast('error', `Schedule conflict between ${sec.course_code} (${sec.schedule}) and selected ${cartSec.course_code} (${cartSec.schedule}).`);
+                        return;
+                    }
+                    if (linkedSec && checkOverlap(cartSec.schedule, linkedSec.schedule)) {
+                        showToast('error', `Schedule conflict between linked ${linkedSec.course_code} (${linkedSec.schedule}) and selected ${cartSec.course_code} (${cartSec.schedule}).`);
+                        return;
+                    }
+                }
+            }
+
+            // Count unique base courses in request cart
+            const currentUniqueCourses = new Set(addRequestCart.map(id => {
+                const s = sectionsData.find(x => x.id === id);
+                return s ? s.course_code.replace(' Lab', '').trim() : '';
+            }));
+            currentUniqueCourses.add(cleanCode);
+
+            if (currentUniqueCourses.size > 3) {
                 showToast('error', 'You can request a maximum of three (3) courses.');
                 return;
             }
 
             addRequestCart.push(secId);
+            if (linkedSec && !addRequestCart.includes(linkedSec.id)) {
+                addRequestCart.push(linkedSec.id);
+            }
         }
 
         loadReqAddSections();
@@ -2317,12 +2472,13 @@
         const countEl = document.getElementById('req-add-cart-count');
         if (!container || !hiddenInput || !creditsEl || !countEl) return;
 
-        // Serialize course codes from the selected sections
-        const courseCodes = addRequestCart.map(id => {
+        // Group selected sections by base course so count shows unique courses (1 for theory+lab)
+        const uniqueBaseCourses = new Set(addRequestCart.map(id => {
             const sec = sectionsData.find(s => s.id === id);
-            return sec ? sec.course_code : '';
-        }).filter(code => code !== '');
+            return sec ? sec.course_code.replace(' Lab', '').trim() : '';
+        }).filter(Boolean));
 
+        const courseCodes = Array.from(uniqueBaseCourses);
         hiddenInput.value = JSON.stringify(courseCodes);
 
         let totalCredits = 0;
@@ -2355,7 +2511,7 @@
 
         container.innerHTML = html;
         creditsEl.textContent = totalCredits.toFixed(1) + ' CR';
-        countEl.textContent = `${addRequestCart.length} / 3`;
+        countEl.textContent = `${uniqueBaseCourses.size} / 3`;
 
         // Initialize icons
         if (typeof lucide !== 'undefined') {
@@ -2394,10 +2550,8 @@
         if (!cardsContainer) return;
         cardsContainer.innerHTML = '';
 
-        // Filter sectionsData based on category
         let filtered = sectionsData;
 
-        // Exclude courses already registered in advising
         const registeredSeatCodes = registrationsList.map(id => {
             const s = sectionsData.find(sec => sec.id === id);
             return s ? s.course_code.replace(' Lab', '') : '';
@@ -2414,7 +2568,6 @@
             filtered = filtered.filter(sec => passedCodes.includes(sec.course_code.replace(' Lab', '')));
         }
 
-        // Apply search query filter if present
         if (reqSeatSearchQuery) {
             filtered = filtered.filter(sec => sec.course_code.toUpperCase().includes(reqSeatSearchQuery));
         }
@@ -2425,11 +2578,24 @@
         }
 
         filtered.forEach(sec => {
-            const isSelected = seatRequestCart.includes(sec.id);
-            const isFull = sec.enrolled_count >= sec.capacity;
+            const linkedSec = getLinkedSection(sec);
+            const isSelected = seatRequestCart.includes(sec.id) || (linkedSec && seatRequestCart.includes(linkedSec.id));
+            const isFull = (sec.enrolled_count >= sec.capacity) || (linkedSec && linkedSec.enrolled_count >= linkedSec.capacity);
             const isRestricted = sec.dedicated_departments && sec.dedicated_departments.length > 0 && !sec.dedicated_departments.includes('None') && !sec.dedicated_departments.includes('{{ student.department_id }}');
             
-            // Decide color coding border and classes
+            let hasConflict = false;
+            if (!isSelected) {
+                for (let regId of registrationsList) {
+                    const regSec = sectionsData.find(s => s.id === regId);
+                    if (regSec) {
+                        if (checkOverlap(regSec.schedule, sec.schedule) || (linkedSec && checkOverlap(regSec.schedule, linkedSec.schedule))) {
+                            hasConflict = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
             let borderClass = "border-[#e2e8f0] dark:border-[#1e293b] bg-white dark:bg-[#0a0f1e]/40 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900/10";
             let statusBadge = '';
             let checkBadgeStyle = 'opacity-0 scale-75';
@@ -2441,6 +2607,9 @@
             } else if (isRestricted) {
                 borderClass = "border-slate-200 dark:border-[#1e293b] bg-slate-100/50 dark:bg-[#0a0f1e]/20 text-slate-400 dark:text-slate-500 opacity-60 cursor-not-allowed";
                 statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-400">Restricted</span>`;
+            } else if (hasConflict) {
+                borderClass = "border-red-500 bg-red-50/50 text-red-800 dark:border-orange-400 dark:bg-orange-950/20 dark:text-orange-400";
+                statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-red-100 text-red-800 dark:bg-orange-400/20 dark:text-orange-400">Conflict</span>`;
             } else if (isFull) {
                 borderClass = "border-sky-400 bg-sky-50/50 text-sky-800 dark:border-yellow-400 dark:bg-yellow-950/20 dark:text-yellow-400";
                 statusBadge = `<span class="px-2 py-0.5 rounded-full text-[0.6rem] font-bold bg-sky-100 text-sky-800 dark:bg-yellow-400/20 dark:text-yellow-400">Full</span>`;
@@ -2500,7 +2669,6 @@
             cardsContainer.appendChild(card);
         });
 
-        // Initialize icons
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
@@ -2510,27 +2678,65 @@
         const sec = sectionsData.find(s => s.id === secId);
         if (!sec) return;
 
-        const isSelected = seatRequestCart.includes(secId);
+        const linkedSec = getLinkedSection(sec);
+        const isSelected = seatRequestCart.includes(secId) || (linkedSec && seatRequestCart.includes(linkedSec.id));
+
         if (isSelected) {
-            seatRequestCart = seatRequestCart.filter(id => id !== secId);
+            seatRequestCart = seatRequestCart.filter(id => id !== secId && (!linkedSec || id !== linkedSec.id));
         } else {
-            // Check if course already added (prevent adding multiple sections of same course)
+            const cleanCode = sec.course_code.replace(' Lab', '').trim();
             const alreadyHasCourse = seatRequestCart.some(id => {
                 const s = sectionsData.find(x => x.id === id);
-                return s && s.course_code === sec.course_code;
+                return s && s.course_code.replace(' Lab', '').trim() === cleanCode;
             });
             if (alreadyHasCourse) {
-                showToast('error', 'You have already selected a section for ' + sec.course_code + '.');
+                showToast('error', 'You have already selected a section for ' + cleanCode + '.');
                 return;
             }
 
-            // Check max 2 course request limit
-            if (seatRequestCart.length >= 2) {
+            for (let regId of registrationsList) {
+                const regSec = sectionsData.find(s => s.id === regId);
+                if (regSec) {
+                    if (checkOverlap(regSec.schedule, sec.schedule)) {
+                        showToast('error', `Schedule conflict between ${sec.course_code} (${sec.schedule}) and enrolled ${regSec.course_code} (${regSec.schedule}).`);
+                        return;
+                    }
+                    if (linkedSec && checkOverlap(regSec.schedule, linkedSec.schedule)) {
+                        showToast('error', `Schedule conflict between linked ${linkedSec.course_code} (${linkedSec.schedule}) and enrolled ${regSec.course_code} (${regSec.schedule}).`);
+                        return;
+                    }
+                }
+            }
+
+            for (let cartId of seatRequestCart) {
+                const cartSec = sectionsData.find(s => s.id === cartId);
+                if (cartSec) {
+                    if (checkOverlap(cartSec.schedule, sec.schedule)) {
+                        showToast('error', `Schedule conflict between ${sec.course_code} (${sec.schedule}) and selected ${cartSec.course_code} (${cartSec.schedule}).`);
+                        return;
+                    }
+                    if (linkedSec && checkOverlap(cartSec.schedule, linkedSec.schedule)) {
+                        showToast('error', `Schedule conflict between linked ${linkedSec.course_code} (${linkedSec.schedule}) and selected ${cartSec.course_code} (${cartSec.schedule}).`);
+                        return;
+                    }
+                }
+            }
+
+            const currentUniqueCourses = new Set(seatRequestCart.map(id => {
+                const s = sectionsData.find(x => x.id === id);
+                return s ? s.course_code.replace(' Lab', '').trim() : '';
+            }));
+            currentUniqueCourses.add(cleanCode);
+
+            if (currentUniqueCourses.size > 2) {
                 showToast('error', 'You can request seat increases for a maximum of two (2) courses.');
                 return;
             }
 
             seatRequestCart.push(secId);
+            if (linkedSec && !seatRequestCart.includes(linkedSec.id)) {
+                seatRequestCart.push(linkedSec.id);
+            }
         }
 
         loadReqSeatSections();
@@ -2543,6 +2749,11 @@
         const creditsEl = document.getElementById('req-seat-cart-credits');
         const countEl = document.getElementById('req-seat-cart-count');
         if (!container || !hiddenInput || !creditsEl || !countEl) return;
+
+        const uniqueBaseCourses = new Set(seatRequestCart.map(id => {
+            const sec = sectionsData.find(s => s.id === id);
+            return sec ? sec.course_code.replace(' Lab', '').trim() : '';
+        }).filter(Boolean));
 
         hiddenInput.value = JSON.stringify(seatRequestCart);
 
@@ -2576,7 +2787,7 @@
 
         container.innerHTML = html;
         creditsEl.textContent = totalCredits.toFixed(1) + ' CR';
-        countEl.textContent = `${seatRequestCart.length} / 2`;
+        countEl.textContent = `${uniqueBaseCourses.size} / 2`;
 
         // Initialize icons
         if (typeof lucide !== 'undefined') {
@@ -2623,29 +2834,40 @@
             const currentSec = sectionsData.find(s => s.id === currentSecId);
             if (!currentSec) return;
 
-            // Find alternatives of same course code (excluding labs, backend registers labs automatically)
-            const alternatives = sectionsData.filter(s => s.course_code === currentSec.course_code && s.id !== currentSec.id && !s.is_lab);
+            const currentLinkedSec = getLinkedSection(currentSec);
+
+            // Find alternatives of same base course code
+            const baseCode = currentSec.course_code.replace(' Lab', '').trim();
+            const alternatives = sectionsData.filter(s => s.course_code === baseCode && s.id !== currentSec.id && !s.is_lab);
 
             let optionsHtml = '';
             if (alternatives.length === 0) {
                 optionsHtml = '<p class="text-[0.68rem] text-slate-500 italic">No alternative sections offered for this course.</p>';
             } else {
                 alternatives.forEach(targetSec => {
-                    const isFull = targetSec.enrolled_count >= targetSec.capacity;
+                    const targetLinkedSec = getLinkedSection(targetSec);
+                    const isSelfFull = targetSec.enrolled_count >= targetSec.capacity;
+                    const isLinkedFull = targetLinkedSec ? (targetLinkedSec.enrolled_count >= targetLinkedSec.capacity) : false;
+                    const isFull = isSelfFull || isLinkedFull;
                     
-                    // Conflict check against student's registrations
+                    // Conflict check against student's registrations (excluding current course being swapped)
                     let isConflicted = false;
                     let conflictCourse = '';
                     
                     for (let regId of registrationsList) {
+                        if (regId === currentSec.id || (currentLinkedSec && regId === currentLinkedSec.id)) {
+                            continue;
+                        }
                         const regSec = sectionsData.find(s => s.id === regId);
                         if (regSec) {
-                            if (regSec.course_code === currentSec.course_code || regSec.course_code === currentSec.course_code + ' Lab') {
-                                continue;
-                            }
                             if (checkOverlap(regSec.schedule, targetSec.schedule)) {
                                 isConflicted = true;
                                 conflictCourse = regSec.course_code;
+                                break;
+                            }
+                            if (targetLinkedSec && checkOverlap(regSec.schedule, targetLinkedSec.schedule)) {
+                                isConflicted = true;
+                                conflictCourse = `Linked Lab ${targetLinkedSec.course_code}`;
                                 break;
                             }
                         }
@@ -2662,13 +2884,16 @@
                         badgeHtml += `<span class="px-1.5 py-0.5 rounded text-[0.6rem] font-bold bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400">Available</span>`;
                     }
 
+                    let labInfoStr = targetLinkedSec ? ` • <span class="text-blue-400 font-bold">Lab: Sec ${targetLinkedSec.section_number} (${targetLinkedSec.schedule})</span>` : '';
+
                     optionsHtml += `
                         <label class="flex items-center justify-between p-2.5 rounded-lg border border-[#e2e8f0] dark:border-[#1e293b] hover:bg-slate-50 dark:hover:bg-slate-900/10 cursor-pointer">
                             <div class="flex items-center gap-2">
                                 <input type="radio" name="target_section_${currentSec.id}" value="${targetSec.id}" class="w-3.5 h-3.5 text-blue-600 border-slate-300">
                                 <div>
                                     <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Sec ${targetSec.section_number}</span>
-                                    <span class="text-[0.65rem] text-slate-500 font-mono ml-1">${targetSec.schedule}</span>
+                                    <span class="text-[0.65rem] text-slate-500 font-mono ml-1">Theory: ${targetSec.schedule}</span>
+                                    ${labInfoStr}
                                     <span class="text-[0.65rem] text-slate-400 ml-1">Room: ${targetSec.room}</span>
                                     <span class="text-[0.65rem] text-slate-400 ml-1">Seats: ${targetSec.enrolled_count}/${targetSec.capacity}</span>
                                 </div>
@@ -2681,11 +2906,13 @@
                 });
             }
 
+            let curLabStr = currentLinkedSec ? ` + Lab Sec ${currentLinkedSec.section_number} (${currentLinkedSec.schedule})` : '';
+
             html += `
                 <div class="p-3.5 rounded-xl border border-[#e2e8f0] dark:border-[#1e293b] bg-white dark:bg-[#0c101d] space-y-2.5" data-current-sec-id="${currentSec.id}">
                     <div class="flex justify-between items-center border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
                         <span class="text-xs font-black text-slate-800 dark:text-slate-200">${currentSec.course_code}</span>
-                        <span class="text-[0.65rem] text-slate-400">Current: Sec ${currentSec.section_number} (${currentSec.schedule})</span>
+                        <span class="text-[0.65rem] text-slate-400">Current: Sec ${currentSec.section_number} (${currentSec.schedule})${curLabStr}</span>
                     </div>
                     <div class="space-y-2">
                         ${optionsHtml}
@@ -2882,10 +3109,8 @@
         const isSelected = registrationsList.includes(secId);
         if (action === 'add') {
             if (isSelected) {
-                // If already selected, clicking it again does nothing
-                return;
-            }
-            if (isFull || hasConflict) {
+                action = 'remove';
+            } else if (isFull || hasConflict) {
                 showToast('error', isFull ? 'Section is full.' : 'Schedule conflict detected.');
                 return;
             }

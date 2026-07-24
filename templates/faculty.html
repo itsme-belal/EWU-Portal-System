@@ -581,8 +581,11 @@
                     {% for std in advisees %}
                     <tr class="advisee-row-item" data-id="{{ std.id }}" data-name="{{ std.name | lower }}">
                         <td>
-                            <p class="font-bold text-xs">{{ std.name }}</p>
-                            <p class="text-[0.65rem] text-slate-400 font-mono">{{ std.id }}</p>
+                            <a href="/faculty/view-student-profile/{{ std.id }}" class="font-bold text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                                <span>{{ std.name }}</span>
+                                <i data-lucide="user-check" class="w-3 h-3 opacity-60"></i>
+                            </a>
+                            <a href="/faculty/view-student-profile/{{ std.id }}" class="text-[0.65rem] text-slate-400 font-mono hover:underline">{{ std.id }}</a>
                         </td>
                         <td class="font-mono font-bold text-xs">{{ "%.2f"|format(std.cgpa) }}</td>
                         <td>{{ std.completed_credits }} CR</td>
@@ -599,9 +602,9 @@
                             {% endif %}
                         </td>
                         <td>
-                            <button onclick="openOverrideModal('{{ std.id }}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[0.65rem] font-black rounded transition-colors">
-                                Override Register
-                            </button>
+                            <a href="/faculty/view-student-profile/{{ std.id }}" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm shadow-blue-500/20">
+                                <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Action
+                            </a>
                         </td>
                     </tr>
                     {% else %}
@@ -653,14 +656,18 @@
                         <th>Completed Credits</th>
                         <th>Hold Status</th>
                         <th>Advising Window</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="dept-list-tbody">
                     {% for std in dept_students %}
                     <tr class="dept-row-item" data-id="{{ std.id }}" data-name="{{ std.name | lower }}">
                         <td>
-                            <p class="font-bold text-xs">{{ std.name }}</p>
-                            <p class="text-[0.65rem] text-slate-400 font-mono">{{ std.id }}</p>
+                            <a href="/faculty/view-student-profile/{{ std.id }}" class="font-bold text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                                <span>{{ std.name }}</span>
+                                <i data-lucide="user-check" class="w-3 h-3 opacity-60"></i>
+                            </a>
+                            <a href="/faculty/view-student-profile/{{ std.id }}" class="text-[0.65rem] text-slate-400 font-mono hover:underline">{{ std.id }}</a>
                         </td>
                         <td class="font-mono text-xs">{{ "%.2f"|format(std.cgpa) }}</td>
                         <td>{{ std.completed_credits }} CR</td>
@@ -674,10 +681,15 @@
                         <td class="text-xs text-slate-500 font-medium">
                             Group: {{ std.completed_credits // 10 }} ({{ (std.completed_credits // 10)*10 }} - {{ ((std.completed_credits // 10)*10) + 10 }} CR)
                         </td>
+                        <td>
+                            <a href="/faculty/view-student-profile/{{ std.id }}" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm shadow-blue-500/20">
+                                <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Action
+                            </a>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center text-slate-500 py-4">No department student records.</td>
+                        <td colspan="6" class="text-center text-slate-500 py-4">No department student records.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -760,7 +772,7 @@
                             {% endif %}
                         </h3>
                         <p class="text-xs text-slate-400 mt-0.5">
-                            Student ID: <strong>{{ req.student_id }}</strong> ({{ req.student_name }})
+                            Student: <a href="/faculty/view-student-profile/{{ req.student_id }}" class="font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1">{{ req.student_id }} ({{ req.student_name }}) <i data-lucide="user-check" class="w-3 h-3 opacity-70"></i></a>
                         </p>
                     </div>
                 </div>
@@ -769,11 +781,43 @@
                 </div>
             </div>
 
+            <!-- Unified Theory + Linked Lab Request Block -->
             <div class="text-xs space-y-2 py-1 text-slate-700 dark:text-slate-300">
-                <p>Course Requested: <strong class="text-blue-600 dark:text-blue-400">{{ req.course_id }}</strong></p>
-                {% if req.section_id %}
-                <p>Target Section / Swap: <strong>{{ req.section_id }}</strong></p>
-                {% endif %}
+                <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="font-extrabold text-sm text-blue-600 dark:text-blue-400">{{ req.course_id }}</span>
+                            {% if req.sec %}
+                            <span class="ml-2 font-mono font-bold text-slate-800 dark:text-slate-200">Sec {{ req.sec.section_number }}</span>
+                            <span class="ml-2 text-slate-500 font-mono text-[0.68rem]">({{ req.sec.schedule }})</span>
+                            <span class="ml-2 text-slate-400 text-[0.65rem]">Room: {{ req.sec.room }}</span>
+                            {% endif %}
+                        </div>
+                        {% if req.sec %}
+                        <span class="text-[0.68rem] text-slate-400 font-mono">Seats: {{ req.sec.enrolled_count }}/{{ req.sec.capacity }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% if req.linked_sec %}
+                    <div class="p-2 rounded bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/40 text-[0.68rem] flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-blue-700 dark:text-blue-300">Linked Lab: {{ req.linked_sec.course_code }} Sec {{ req.linked_sec.section_number }}</span>
+                            <span class="ml-2 font-mono text-blue-600 dark:text-blue-400">({{ req.linked_sec.schedule }})</span>
+                            <span class="ml-2 text-slate-400">Room: {{ req.linked_sec.room }}</span>
+                        </div>
+                        <span class="font-mono text-slate-400">Seats: {{ req.linked_sec.enrolled_count }}/{{ req.linked_sec.capacity }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if req.type == 'change_section' and req.cur_sec %}
+                    <div class="text-[0.68rem] text-slate-500 font-medium pt-1 border-t border-slate-200 dark:border-slate-800">
+                        <span class="line-through text-rose-500">Current: Sec {{ req.cur_sec.section_number }} ({{ req.cur_sec.schedule }}){% if req.cur_linked_sec %} + Lab Sec {{ req.cur_linked_sec.section_number }}{% endif %}</span>
+                        <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1.5 text-slate-400"></i>
+                        <span class="font-bold text-emerald-600 dark:text-emerald-400">Target Swap: Sec {{ req.sec.section_number }} ({{ req.sec.schedule }}){% if req.linked_sec %} + Lab Sec {{ req.linked_sec.section_number }}{% endif %}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
                 <p class="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border italic border-slate-200 dark:border-slate-800">
                     "{{ req.comments }}"
                 </p>

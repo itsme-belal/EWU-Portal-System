@@ -1,0 +1,650 @@
+{% extends "base.html" %}
+
+{% block title %}Student Advising Workspace - {{ student.name }} ({{ student.id }}){% endblock %}
+
+{% block sidebar_nav %}
+{% if current_user.role == 'student' %}
+<a href="{{ url_for('student_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Student Portal
+</a>
+{% elif current_user.role == 'faculty' %}
+<a href="{{ url_for('faculty_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Faculty Advising
+</a>
+{% elif current_user.role == 'admin' %}
+<a href="{{ url_for('admin_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Admin Portal
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6 pb-12">
+    <!-- Header Bar -->
+    <div class="flex justify-between items-center flex-wrap gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div class="flex items-center gap-3">
+            <a href="{{ url_for('faculty_dashboard') if current_user.role == 'faculty' else url_for('admin_dashboard') }}" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                Back to Dashboard
+            </a>
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight">Academic Advising Panel</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Manage student course selections and enroll in live class sections</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-500/20">
+                Semester: {{ next_semester }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Student Summary Card -->
+    <div class="stitch-card p-6 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
+        <div class="flex items-start justify-between flex-wrap gap-6 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-extrabold text-2xl shadow-lg shadow-blue-500/20">
+                    {{ student.name[0] | upper }}
+                </div>
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-extrabold text-slate-900 dark:text-slate-100">{{ student.name }}</h2>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-mono">{{ student.id }}</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-3">
+                        <span>Department: <strong class="text-slate-800 dark:text-slate-200">{{ student.department_id }}</strong></span>
+                        <span>•</span>
+                        <span>Assigned Advisor: <strong class="text-slate-800 dark:text-slate-200">{{ advisor.name if advisor else 'Not Assigned' }}</strong></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">CGPA</span>
+                    <span class="text-lg font-black text-blue-600 dark:text-blue-400 font-mono">{{ "%.2f"|format(student.cgpa) }}</span>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Earned Credits</span>
+                    <span class="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">{{ student.completed_credits }} CR</span>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Credit Limit</span>
+                    <span class="text-lg font-black text-purple-600 dark:text-purple-400 font-mono">{{ student.credit_limit }} CR</span>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Dues Status</span>
+                    {% if student.outstanding_balance > 0 %}
+                    <span class="text-xs font-black text-rose-500 font-mono block">BDT {{ student.outstanding_balance }}</span>
+                    {% else %}
+                    <span class="text-xs font-black text-emerald-500 block">Cleared</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Advising Subnav Workspace Tabs -->
+        <div class="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex-wrap">
+            <button onclick="switchProfileTab('add')" id="tab-btn-add" class="profile-tab-btn px-4 py-2 text-xs font-black rounded-lg transition-all flex items-center gap-1.5 bg-blue-600 text-white shadow-sm">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Course Add & Advising
+            </button>
+            <button onclick="switchProfileTab('swap')" id="tab-btn-swap" class="profile-tab-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                <i data-lucide="repeat" class="w-3.5 h-3.5"></i> Section Change
+            </button>
+            {% if current_user.role == 'admin' %}
+            <button onclick="switchProfileTab('seat')" id="tab-btn-seat" class="profile-tab-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Seat Increase
+            </button>
+            {% endif %}
+            <button onclick="switchProfileTab('history')" id="tab-btn-history" class="profile-tab-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
+                <i data-lucide="history" class="w-3.5 h-3.5"></i> Organized History Timeline ({{ requests | length }})
+            </button>
+        </div>
+    </div>
+
+    <!-- 1. COURSE ADD & ADVISING TAB (Identical Format to Student Portal Final Advising) -->
+    <div id="tab-content-add" class="profile-tab-content space-y-6">
+        <div class="flex justify-between items-center flex-wrap gap-4 border-b border-slate-100 dark:border-slate-800 pb-3">
+            <!-- Filter Pills -->
+            <div class="flex gap-2 flex-wrap text-xs">
+                <button onclick="setAddFilter('recommended')" id="filter-btn-recommended" class="add-filter-btn px-3.5 py-1.5 rounded-lg font-bold transition-all bg-blue-600 text-white">Recommended Courses</button>
+                <button onclick="setAddFilter('retakeable')" id="filter-btn-retakeable" class="add-filter-btn px-3.5 py-1.5 rounded-lg font-semibold transition-all bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">Retakeable Courses</button>
+                <button onclick="setAddFilter('d')" id="filter-btn-d" class="add-filter-btn px-3.5 py-1.5 rounded-lg font-semibold transition-all bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">D/D+ Courses</button>
+                <button onclick="setAddFilter('f')" id="filter-btn-f" class="add-filter-btn px-3.5 py-1.5 rounded-lg font-semibold transition-all bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">F Courses</button>
+            </div>
+
+            <!-- Search Box -->
+            <div class="relative w-64">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                </span>
+                <input type="text" id="add-search-input" oninput="renderAddCards()" placeholder="Search course code..." class="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-lg text-xs outline-none text-slate-800 dark:text-slate-100">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Cards Grid (Left 2 Columns) -->
+            <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[640px] overflow-y-auto pr-1" id="add-cards-grid">
+                <!-- JS Populated -->
+            </div>
+
+            <!-- Right Panel: LIVE CART (Auto-Saved Registered Schedule) -->
+            <div class="space-y-4">
+                <div class="stitch-card p-5 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <h3 class="text-xs font-black uppercase tracking-wider text-slate-400">LIVE CART</h3>
+                        <span class="px-2.5 py-1 rounded-full text-[0.62rem] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-500/20">
+                            Auto-Saved
+                        </span>
+                    </div>
+
+                    <div class="space-y-2.5 text-xs max-h-[420px] overflow-y-auto pr-1">
+                        {% set active_registered = [] %}
+                        {% for item in registered_sections %}
+                            {% if not item.sec.is_lab %}
+                                {% set _ = active_registered.append(item) %}
+                                <div class="p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-between items-center gap-2">
+                                    <div class="space-y-1 min-w-0 flex-1">
+                                        <div class="font-extrabold text-blue-600 dark:text-blue-400 truncate">
+                                            {{ item.sec.course_code }} Sec {{ item.sec.section_number }}
+                                        </div>
+                                        <div class="text-[0.68rem] text-slate-400 font-mono">
+                                            Theory: {{ item.sec.schedule }} • {{ item.sec.credits }} CR
+                                        </div>
+                                        {% if item.linked_lab %}
+                                        <div class="text-[0.68rem] text-blue-500 font-mono font-semibold pt-0.5">
+                                            + {{ item.linked_lab.course_code }} Sec {{ item.linked_lab.section_number }} (Lab: {{ item.linked_lab.schedule }})
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Delete / Drop Icon Button -->
+                                    <form action="/faculty/student-profile-drop-section" method="POST" class="inline flex-shrink-0">
+                                        <input type="hidden" name="student_id" value="{{ student.id }}">
+                                        <input type="hidden" name="section_id" value="{{ item.sec.id }}">
+                                        <button type="submit" onclick="return confirm('Are you sure you want to drop {{ item.sec.course_code }} Sec {{ item.sec.section_number }} for {{ student.name }}?')" 
+                                                class="p-2 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-lg transition-colors" title="Drop Course">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if active_registered | length == 0 %}
+                        <p class="text-xs text-slate-400 italic text-center py-8">No sections selected</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Bottom Registered Stats -->
+                    <div class="border-t border-slate-100 dark:border-slate-800 pt-3 text-xs space-y-1 font-mono">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400 font-bold">Total Registered:</span>
+                            <span class="font-bold text-blue-500">{{ "%.1f"|format(total_registered_credits) }} CR</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400 font-bold">Course Count:</span>
+                            <span class="font-bold text-slate-200">{{ active_registered | length }} / 5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Form for 1-Click Auto Add -->
+    <form id="auto-add-form" action="/faculty/student-profile-add-section" method="POST" class="hidden">
+        <input type="hidden" name="student_id" value="{{ student.id }}">
+        <input type="hidden" name="section_id" id="auto-add-sec-id">
+        <input type="hidden" name="comments" value="Manual Advising Auto Add">
+    </form>
+
+    <!-- 2. SECTION CHANGE TAB (Matching Screenshot 2) -->
+    <div id="tab-content-swap" class="profile-tab-content hidden space-y-6">
+        <div class="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h2 class="text-lg font-extrabold text-amber-500">Execute Section Change</h2>
+            <p class="text-xs text-slate-500">Swap registered sections directly for {{ student.name }}. Alternative sections display schedule conflicts and Theory + Linked Lab availability.</p>
+        </div>
+
+        {% if registered_sections %}
+        <form action="/faculty/student-profile-swap-section" method="POST" class="space-y-6">
+            <input type="hidden" name="student_id" value="{{ student.id }}">
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left Column: SELECT REGISTERED COURSE(S) -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-400">SELECT REGISTERED COURSE(S) (MAXIMUM 2)</h3>
+                    <div class="space-y-2">
+                        {% for item in registered_sections %}
+                        {% if not item.sec.is_lab %}
+                        <label class="block cursor-pointer">
+                            <input type="radio" name="current_section_id" value="{{ item.sec.id }}" onchange="loadAlternativeSections('{{ item.sec.course_code }}', '{{ item.sec.id }}')" class="peer sr-only">
+                            <div class="p-4 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-500/5 transition-all space-y-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-extrabold text-sm text-blue-600 dark:text-blue-400">{{ item.sec.course_code }} Sec {{ item.sec.section_number }}</span>
+                                    <span class="px-2 py-0.5 rounded text-[0.6rem] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">Registered</span>
+                                </div>
+                                <div class="text-xs text-slate-400 font-mono">{{ item.sec.schedule }} • Room {{ item.sec.room }}</div>
+                            </div>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Right Column: AVAILABLE ALTERNATIVE SECTIONS -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-400">AVAILABLE ALTERNATIVE SECTIONS</h3>
+                    <div class="stitch-card p-4 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl min-h-[220px] space-y-3" id="alternative-sections-container">
+                        <p class="text-xs text-slate-400 italic text-center py-12">Select a registered course on the left to view alternative sections.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Justification Notes -->
+            <div class="stitch-card p-5 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                <label class="block text-xs font-black uppercase tracking-wider text-slate-400">MANDATORY ADVISING NOTE</label>
+                <textarea name="comments" required rows="3" placeholder="Explain the reason why you need to swap sections..." 
+                          class="w-full px-3 py-2 bg-slate-50 dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl text-xs outline-none text-slate-800 dark:text-slate-100 resize-none"></textarea>
+                
+                <div class="flex justify-end">
+                    <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl transition-all shadow-md shadow-blue-500/20">
+                        Execute Section Change
+                    </button>
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <p class="text-xs text-slate-400 italic py-8 text-center">No enrolled courses available to swap.</p>
+        {% endif %}
+    </div>
+
+    <!-- 3. SEAT INCREASE TAB (Only Admin) -->
+    {% if current_user.role == 'admin' %}
+    <div id="tab-content-seat" class="profile-tab-content hidden space-y-6">
+        <div class="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h2 class="text-lg font-extrabold">Seat Increase / Capacity Override</h2>
+            <p class="text-xs text-slate-500">Bypass section capacity limits and directly enroll {{ student.name }} into full sections.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for sec in offered_sections %}
+            {% if not sec.is_lab %}
+            <div class="stitch-card p-4 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="font-extrabold text-sm text-slate-900 dark:text-slate-100">{{ sec.course_code }} Sec {{ sec.section_number }}</span>
+                    <span class="px-2 py-0.5 rounded text-[0.6rem] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">Cap: {{ sec.enrolled_count }}/{{ sec.capacity }}</span>
+                </div>
+                <div class="text-xs text-slate-400 font-mono">Schedule: {{ sec.schedule }}</div>
+
+                <form action="/faculty/student-profile-add-section" method="POST" class="pt-2">
+                    <input type="hidden" name="student_id" value="{{ student.id }}">
+                    <input type="hidden" name="section_id" value="{{ sec.id }}">
+                    <button type="submit" class="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-lg transition-colors shadow-sm">
+                        Execute Seat Increase Override
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 4. ORGANIZED HISTORY & AUDIT TAB -->
+    <div id="tab-content-history" class="profile-tab-content hidden space-y-6">
+        <div class="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h2 class="text-lg font-extrabold">Organized Advising Movement History</h2>
+            <p class="text-xs text-slate-500">Complete chronological audit timeline of all student requests, advisor approvals, and faculty manual overrides.</p>
+        </div>
+
+        <div class="space-y-4">
+            {% for req in requests %}
+            <div class="stitch-card p-5 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-3">
+                <div class="flex justify-between items-start flex-wrap gap-2">
+                    <div>
+                        <span class="font-extrabold text-base text-blue-600 dark:text-blue-400">{{ req.course_id }}</span>
+                        <span class="ml-2 text-xs text-slate-400">Logged on {{ req.created_at }}</span>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider
+                        {% if req.status == 'approved' %}
+                            bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-500/20
+                        {% elif req.status == 'rejected' %}
+                            bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-400 border border-rose-500/20
+                        {% elif req.status == 'returned' %}
+                            bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400 border border-amber-500/20
+                        {% elif req.status == 'pending_admin' %}
+                            bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-400 border border-cyan-500/20
+                        {% else %}
+                            bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400 border border-blue-500/20
+                        {% endif %}">
+                        {{ req.status.replace('_', ' ') }}
+                    </span>
+                </div>
+
+                <!-- Highlight Badges for Non-Advisor Override Audit -->
+                {% if req.is_non_advisor %}
+                <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-black flex items-center gap-2">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
+                    <div>
+                        <span>⚡ NON-ADVISOR OVERRIDE EXECUTED: Student performed advising with Non-Advisor Faculty (Dr. {{ req.action_faculty.name if req.action_faculty else 'Other' }} - {{ req.action_faculty.id if req.action_faculty else '' }})</span>
+                    </div>
+                </div>
+                {% elif req.type == 'manual_override' %}
+                <div class="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-2">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-blue-500 flex-shrink-0"></i>
+                    <span>✓ MANUAL ADVISING OVERRIDE EXECUTED BY ADVISOR</span>
+                </div>
+                {% endif %}
+
+                <div class="flex items-center gap-2 text-xs text-slate-500 font-semibold">
+                    <i data-lucide="tag" class="w-3.5 h-3.5 text-slate-400"></i>
+                    <span>Action Type: <strong class="capitalize text-slate-800 dark:text-slate-200">{{ req.type.replace('_', ' ') }}</strong></span>
+                </div>
+
+                <!-- Section & Linked Lab Info -->
+                {% if req.type == 'change_section' and req.cur_sec and req.sec %}
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                    <div class="font-medium text-slate-700 dark:text-slate-300">
+                        <span class="line-through text-rose-500">Current: Sec {{ req.cur_sec.section_number }} ({{ req.cur_sec.schedule }}){% if req.cur_linked_sec %} + Lab Sec {{ req.cur_linked_sec.section_number }}{% endif %}</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5 inline mx-1.5 text-slate-400"></i>
+                        <span class="font-bold text-emerald-600 dark:text-emerald-400">Target Swap: Sec {{ req.sec.section_number }} ({{ req.sec.schedule }}){% if req.linked_sec %} + Lab Sec {{ req.linked_sec.section_number }}{% endif %}</span>
+                    </div>
+                </div>
+                {% elif req.sec %}
+                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                    <div class="font-semibold text-slate-800 dark:text-slate-200">
+                        Target Section: Sec {{ req.sec.section_number }} ({{ req.sec.schedule }}) • Room {{ req.sec.room }}
+                    </div>
+                    {% if req.linked_sec %}
+                    <div class="text-blue-500 text-[0.68rem] font-semibold">
+                        + Linked Lab: {{ req.linked_sec.course_code }} Sec {{ req.linked_sec.section_number }} ({{ req.linked_sec.schedule }})
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Student Justification & Advisor Notes -->
+                <div class="text-xs text-slate-700 dark:text-slate-300 italic bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                    "{{ req.comments }}"
+                </div>
+                {% if req.advisor_note %}
+                <div class="text-xs text-blue-600 dark:text-blue-400 font-medium pt-1">
+                    <strong>Advisor Note:</strong> "{{ req.advisor_note }}"
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-xs text-slate-400 text-center py-6">No request history found for this student.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+const OFFERED_SECTIONS = {{ sections_json | safe }};
+const REGISTERED_SEC_IDS = {{ registrations_json | safe }};
+const RECOMMENDED_CODES = {{ recommended_codes | safe }};
+const PASSED_CODES = {{ passed_codes | safe }};
+const FAILED_CODES = {{ failed_codes | safe }};
+const D_CODES = {{ d_codes | safe }};
+const STUDENT_ID = "{{ student.id }}";
+const STUDENT_NAME = "{{ student.name }}";
+
+let currentFilter = 'recommended';
+
+// Schedule Parsing & Conflict Engine
+function parseSchedule(scheduleStr) {
+    if (!scheduleStr) return [];
+    try {
+        const s = String(scheduleStr).trim();
+        let match = s.match(/^([A-Za-z]+)[:\s]*([\d\.:]+)\s*(?:AM|PM)?\s*-\s*([\d\.:]+)\s*(AM|PM)?/i);
+        let daysStr, startStr, endStr;
+        if (match) {
+            daysStr = match[1]; startStr = match[2]; endStr = match[3];
+        } else {
+            match = s.match(/([A-Za-z]+).*?(\d{1,2}[\.\:]\d{2}).*?(\d{1,2}[\.\:]\d{2})/);
+            if (!match) return [];
+            daysStr = match[1]; startStr = match[2]; endStr = match[3];
+        }
+        const days = Array.from(daysStr.toUpperCase());
+        const toMin = (tStr) => {
+            let clean = tStr.trim().replace('.', ':');
+            const isPm = /PM/i.test(tStr);
+            const isAm = /AM/i.test(tStr);
+            clean = clean.replace(/[^\d:]/g, '');
+            const pts = clean.split(':');
+            let h = parseInt(pts[0]) || 0;
+            let m = pts[1] ? parseInt(pts[1]) : 0;
+            if (isPm && h < 12) h += 12;
+            else if (isAm && h === 12) h = 0;
+            else if (!isPm && !isAm && h < 8) h += 12;
+            return h * 60 + m;
+        };
+        let startMin = toMin(startStr);
+        let endMin = toMin(endStr);
+        if (endMin <= startMin) endMin += 12 * 60;
+        return days.map(d => ({ day: d, start: startMin, end: endMin }));
+    } catch (e) {
+        return [];
+    }
+}
+
+function checkOverlap(s1, s2) {
+    const p1 = parseSchedule(s1);
+    const p2 = parseSchedule(s2);
+    for (let item1 of p1) {
+        for (let item2 of p2) {
+            if (item1.day === item2.day) {
+                if (item1.start < item2.end && item2.start < item1.end) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+function switchProfileTab(tabName) {
+    document.querySelectorAll('.profile-tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.profile-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm', 'font-black');
+        btn.classList.add('text-slate-600', 'dark:text-slate-400', 'font-bold');
+    });
+
+    const targetContent = document.getElementById('tab-content-' + tabName);
+    const targetBtn = document.getElementById('tab-btn-' + tabName);
+    if (targetContent && targetBtn) {
+        targetContent.classList.remove('hidden');
+        targetBtn.classList.remove('text-slate-600', 'dark:text-slate-400', 'font-bold');
+        targetBtn.classList.add('bg-blue-600', 'text-white', 'shadow-sm', 'font-black');
+    }
+}
+
+function setAddFilter(filterType) {
+    currentFilter = filterType;
+    document.querySelectorAll('.add-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'font-bold');
+        btn.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300', 'font-semibold');
+    });
+    const activeBtn = document.getElementById('filter-btn-' + filterType);
+    if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300', 'font-semibold');
+        activeBtn.classList.add('bg-blue-600', 'text-white', 'font-bold');
+    }
+    renderAddCards();
+}
+
+function getRegisteredBaseCodes() {
+    const regCodes = new Set();
+    REGISTERED_SEC_IDS.forEach(id => {
+        const sec = OFFERED_SECTIONS.find(s => s.id === id);
+        if (sec) {
+            regCodes.add(sec.course_code.replace(' Lab', '').trim());
+        }
+    });
+    return regCodes;
+}
+
+function getRegisteredSchedules() {
+    const scheds = [];
+    REGISTERED_SEC_IDS.forEach(id => {
+        const sec = OFFERED_SECTIONS.find(s => s.id === id);
+        if (sec && sec.schedule) scheds.push(sec.schedule);
+    });
+    return scheds;
+}
+
+function autoAddSection(secId) {
+    const input = document.getElementById('auto-add-sec-id');
+    const form = document.getElementById('auto-add-form');
+    if (input && form) {
+        input.value = secId;
+        form.submit();
+    }
+}
+
+function renderAddCards() {
+    const searchQ = (document.getElementById('add-search-input').value || '').trim().toLowerCase();
+    const container = document.getElementById('add-cards-grid');
+    const enrolledBaseCodes = getRegisteredBaseCodes();
+    const registeredSchedules = getRegisteredSchedules();
+
+    let list = OFFERED_SECTIONS.filter(s => !s.is_lab);
+
+    if (currentFilter === 'recommended') {
+        list = list.filter(s => RECOMMENDED_CODES.includes(s.course_code.replace(' Lab', '').trim()));
+    } else if (currentFilter === 'retakeable') {
+        list = list.filter(s => PASSED_CODES.includes(s.course_code.replace(' Lab', '').trim()) || D_CODES.includes(s.course_code.replace(' Lab', '').trim()) || FAILED_CODES.includes(s.course_code.replace(' Lab', '').trim()));
+    } else if (currentFilter === 'd') {
+        list = list.filter(s => D_CODES.includes(s.course_code.replace(' Lab', '').trim()));
+    } else if (currentFilter === 'f') {
+        list = list.filter(s => FAILED_CODES.includes(s.course_code.replace(' Lab', '').trim()));
+    }
+
+    if (searchQ) {
+        list = list.filter(s => s.course_code.toLowerCase().includes(searchQ) || (s.course_title && s.course_title.toLowerCase().includes(searchQ)));
+    }
+
+    if (list.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic col-span-2 py-8 text-center">No offered courses match this filter.</p>`;
+        return;
+    }
+
+    container.innerHTML = list.map(sec => {
+        const baseCode = sec.course_code.replace(' Lab', '').trim();
+        const isEnrolledSameCourse = enrolledBaseCodes.has(baseCode);
+        const isFull = sec.enrolled_count >= sec.capacity;
+        
+        let hasConflict = false;
+        for (let s of registeredSchedules) {
+            if (checkOverlap(sec.schedule, s)) {
+                hasConflict = true;
+                break;
+            }
+        }
+
+        let badgeHtml = '';
+        let isDisabled = false;
+
+        if (isEnrolledSameCourse) {
+            badgeHtml = `<span class="px-2.5 py-0.5 rounded text-[0.62rem] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Enrolled</span>`;
+            isDisabled = true;
+        } else if (hasConflict) {
+            badgeHtml = `<span class="px-2.5 py-0.5 rounded text-[0.62rem] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">Conflict</span>`;
+            isDisabled = true;
+        } else if (isFull) {
+            badgeHtml = `<span class="px-2.5 py-0.5 rounded text-[0.62rem] font-black bg-rose-500/10 text-rose-500 border border-rose-500/20">Full</span>`;
+            isDisabled = true;
+        }
+
+        return `
+            <div onclick="${isDisabled ? '' : `autoAddSection('${sec.id}')`}" 
+                 class="stitch-card p-4 bg-white dark:bg-[#0c101d] border ${isDisabled ? 'border-slate-200 dark:border-slate-800 opacity-60 cursor-not-allowed' : 'border-slate-200 dark:border-slate-800 hover:border-blue-500/60 cursor-pointer'} rounded-2xl space-y-3 transition-all relative">
+                
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-sm text-slate-900 dark:text-slate-100 font-mono">${sec.course_code}</span>
+                        <span class="px-2 py-0.5 rounded text-[0.62rem] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">Sec ${sec.section_number}</span>
+                    </div>
+                    ${badgeHtml}
+                </div>
+
+                <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">${sec.course_title || sec.course_code}</div>
+
+                <div class="text-xs text-slate-600 dark:text-slate-300 font-mono space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                    <div class="flex justify-between items-center">
+                        <span class="flex items-center gap-1.5"><i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i> ${sec.schedule}</span>
+                        <span class="flex items-center gap-1.5 text-slate-800 dark:text-slate-200 font-bold"><i data-lucide="bookmark" class="w-3.5 h-3.5 text-blue-500"></i> ${sec.credits} CR</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i> ${sec.room || 'Main'}</span>
+                        <span class="flex items-center gap-1.5"><i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i> Seats: ${sec.enrolled_count} / ${sec.capacity}</span>
+                    </div>
+                    ${sec.prerequisites ? `<div class="text-[0.68rem] text-slate-400 italic pt-1">Prereq: ${sec.prerequisites}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+}
+
+function loadAlternativeSections(courseCode, currentSecId) {
+    const container = document.getElementById('alternative-sections-container');
+    const alternatives = OFFERED_SECTIONS.filter(s => s.course_code === courseCode && s.id !== currentSecId && !s.is_lab);
+
+    if (alternatives.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-8">No alternative section offerings available for ${courseCode}.</p>`;
+        return;
+    }
+
+    const otherRegSchedules = [];
+    REGISTERED_SEC_IDS.forEach(id => {
+        if (id !== currentSecId) {
+            const sec = OFFERED_SECTIONS.find(s => s.id === id);
+            if (sec && sec.schedule) otherRegSchedules.push(sec.schedule);
+        }
+    });
+
+    container.innerHTML = `
+        <div class="font-extrabold text-xs text-slate-300 border-b border-slate-100 dark:border-slate-800 pb-2">${courseCode} Current: Sec (Selected)</div>
+        <div class="space-y-2 pt-1">
+            ${alternatives.map(sec => {
+                let isConflicted = false;
+                for (let s of otherRegSchedules) {
+                    if (checkOverlap(sec.schedule, s)) {
+                        isConflicted = true;
+                        break;
+                    }
+                }
+
+                let badge = isConflicted ? 
+                    `<span class="px-2.5 py-1 rounded text-[0.62rem] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">Conflicted (${courseCode})</span>` :
+                    `<span class="px-2.5 py-1 rounded text-[0.62rem] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">Available</span>`;
+
+                return `
+                    <label class="block cursor-pointer">
+                        <input type="radio" name="new_section_id" value="${sec.id}" ${isConflicted ? 'disabled' : ''} required class="peer sr-only">
+                        <div class="p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-500/10 ${isConflicted ? 'opacity-60 cursor-not-allowed' : ''} transition-all flex justify-between items-center">
+                            <div>
+                                <span class="font-mono font-extrabold text-xs text-slate-900 dark:text-slate-100">Sec ${sec.section_number} Theory: ${sec.schedule}</span>
+                                <div class="text-[0.68rem] text-slate-400 font-mono">Room: ${sec.room} • Seats: ${sec.enrolled_count}/${sec.capacity}</div>
+                            </div>
+                            ${badge}
+                        </div>
+                    </label>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+// Initial Render
+document.addEventListener('DOMContentLoaded', () => {
+    renderAddCards();
+});
+</script>
+{% endblock %}

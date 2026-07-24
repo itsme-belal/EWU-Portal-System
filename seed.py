@@ -128,21 +128,25 @@ def seed_db():
             db.session.add(d)
         db.session.commit()
 
-        # Seed excel files
-        print("Importing Excel schedules...")
-        excel_files = [
-            'CSE_Course_Schedule.xlsx',
-            'EEE_Course_Schedule.xlsx',
-            'Common_Course_Schedule_(CSE-ICE-EEE).xlsx',
-            'Non_Departmental_Schedule_(CSE-ICE-EEE).xlsx'
-        ]
+        # Seed excel files dynamically if present
+        print("Importing available Excel schedules...")
         from app import import_excel_schedule
-        for f in excel_files:
-            if os.path.exists(f):
-                import_excel_schedule(f)
-                print(f"Imported {f}")
-            else:
-                print(f"Warning: {f} not found.")
+        found_excel = False
+        search_dirs = ['.', 'static/uploads']
+        for sdir in search_dirs:
+            if os.path.exists(sdir):
+                for fname in os.listdir(sdir):
+                    if fname.endswith('.xlsx') and not fname.startswith('~$'):
+                        fpath = os.path.join(sdir, fname)
+                        try:
+                            import_excel_schedule(fpath)
+                            print(f"Imported schedule file: {fname}")
+                            found_excel = True
+                        except Exception as e:
+                            print(f"Note: Could not import {fname}: {e}")
+
+        if not found_excel:
+            print("No local Excel schedule files found. Schedules can be uploaded via Admin Portal.")
 
         print("Database successfully initialized and seeded. Done.")
 
