@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Faculty Profile - {{ faculty.name }} ({{ faculty.id }}){% endblock %}
+
+{% block sidebar_nav %}
+{% if current_user.role == 'student' %}
+<a href="{{ url_for('student_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Student Portal
+</a>
+{% elif current_user.role == 'faculty' %}
+<a href="{{ url_for('faculty_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Faculty Dashboard
+</a>
+{% elif current_user.role == 'admin' %}
+<a href="{{ url_for('admin_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Admin Portal
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-[1600px] mx-auto space-y-6 pb-12 px-2 sm:px-4">
+    <!-- Top Bar -->
+    <div class="flex justify-between items-center flex-wrap gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div class="flex items-center gap-3">
+            <button onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); } else { window.location.href='/'; }" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back
+            </button>
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight">Faculty Academic Profile</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400">East West University Faculty Directory & Teaching Schedule</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <span class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-purple-500/10 text-purple-400 border border-purple-500/20 font-mono">
+                ID: {{ faculty.id }}
+            </span>
+        </div>
+    </div>
+
+    <!-- FULL WIDTH FACULTY BANNER CARD -->
+    <div class="stitch-card p-6 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-6">
+        <div class="flex items-start justify-between flex-wrap gap-6 border-b border-slate-100 dark:border-slate-800/80 pb-6">
+            <div class="flex items-center gap-5">
+                <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center font-black text-4xl shadow-xl shadow-purple-500/20 overflow-hidden border-2 border-white dark:border-slate-800 flex-shrink-0">
+                    {% if faculty.profile_pic %}
+                    <img src="/static/uploads/{{ faculty.profile_pic }}" class="w-full h-full object-cover">
+                    {% else %}
+                    {{ faculty.name[0] | upper }}
+                    {% endif %}
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <h2 class="text-2xl font-black text-slate-900 dark:text-slate-100">{{ faculty.name }}</h2>
+                        <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                            {{ faculty.post or 'Faculty Member' }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-4 flex-wrap">
+                        <span>Department: <strong class="text-slate-800 dark:text-slate-200">{{ faculty.department_id }}</strong></span>
+                        <span>•</span>
+                        <span>Office Room: <strong class="text-slate-800 dark:text-slate-200">{{ faculty.office or 'N/A' }}</strong></span>
+                        <span>•</span>
+                        <span>Email: <strong class="text-blue-400 font-mono">{{ user.email if user else 'N/A' }}</strong></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-2 gap-3 w-full sm:w-auto">
+                <div class="p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center min-w-[130px]">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Assigned Sections</span>
+                    <span class="text-xl font-black text-purple-500 font-mono">{{ sections | length }}</span>
+                </div>
+                <div class="p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center min-w-[130px]">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Advisees Count</span>
+                    <span class="text-xl font-black text-blue-500 font-mono">{{ advisees | length }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN TWO COLUMN LAYOUT: Contact & Bio (1 Column) + Interactive Content Workspace (3 Columns) -->
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6 w-full">
+        <!-- LEFT SIDEBAR: Details Card (1/4 width) -->
+        <div class="xl:col-span-1 space-y-6">
+            <div class="stitch-card p-5 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4 text-xs">
+                <h3 class="font-extrabold text-slate-900 dark:text-slate-100 uppercase tracking-wider text-[0.65rem] flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
+                    <i data-lucide="building" class="w-3.5 h-3.5 text-purple-400"></i> Office & Contact Info
+                </h3>
+
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Email Address</span>
+                        <span class="font-mono text-slate-200 break-all">{{ user.email if user else 'N/A' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Office Room</span>
+                        <span class="font-mono text-slate-200">{{ faculty.office or 'N/A' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Phone Contact</span>
+                        <span class="font-mono text-slate-200">{{ faculty.phone or 'N/A' }}</span>
+                    </div>
+                </div>
+
+                {% if faculty.research_interests %}
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Research Interests</span>
+                    <p class="text-slate-300 italic mt-1 leading-relaxed">{{ faculty.research_interests }}</p>
+                </div>
+                {% endif %}
+
+                {% if faculty.about %}
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">About / Biography</span>
+                    <p class="text-slate-300 italic mt-1 leading-relaxed">{{ faculty.about }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RIGHT WORKSPACE: Horizontal Tabs & Wide Full Tables (3/4 width) -->
+        <div class="xl:col-span-3 space-y-6 min-w-0">
+            <!-- Grid-based Full-Width Horizontal Tabs Bar -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-2 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm w-full">
+                <button onclick="switchFacultyTab('routine')" id="fac-tab-btn-routine" 
+                        class="fac-tab-btn w-full px-4 py-3 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-2 bg-purple-600 text-white shadow-md">
+                    <i data-lucide="calendar" class="w-4 h-4 text-purple-200 flex-shrink-0"></i> 
+                    <span class="truncate">Teaching Routine ({{ sections | length }})</span>
+                </button>
+                <button onclick="switchFacultyTab('advisees')" id="fac-tab-btn-advisees" 
+                        class="fac-tab-btn w-full px-4 py-3 text-xs font-bold rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-2">
+                    <i data-lucide="users" class="w-4 h-4 text-blue-400 flex-shrink-0"></i> 
+                    <span class="truncate">Assigned Advisees ({{ advisees | length }})</span>
+                </button>
+            </div>
+
+            <!-- TAB 1: TEACHING ROUTINE -->
+            <div id="fac-tab-content-routine" class="fac-tab-content space-y-4">
+                <div class="stitch-card p-6 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4 w-full">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 flex-wrap gap-2">
+                        <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <i data-lucide="calendar" class="w-5 h-5 text-purple-400"></i> Faculty Class Schedule & Section Offerings
+                        </h3>
+                    </div>
+
+                    <div class="table-container overflow-x-auto w-full">
+                        <table class="stitch-table w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs font-bold text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                                    <th class="py-3 px-4">Course Code</th>
+                                    <th class="py-3 px-4">Section</th>
+                                    <th class="py-3 px-4">Semester</th>
+                                    <th class="py-3 px-4">Class Schedule</th>
+                                    <th class="py-3 px-4">Room</th>
+                                    <th class="py-3 px-4">Enrolled Capacity</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+                                {% for sec in sections %}
+                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                                    <td class="py-3.5 px-4 font-bold text-slate-900 dark:text-slate-100">
+                                        <span class="text-purple-400 font-mono">{{ sec.course_code }}</span>
+                                    </td>
+                                    <td class="py-3.5 px-4 font-mono font-bold text-slate-200">Sec {{ sec.section_number }}</td>
+                                    <td class="py-3.5 px-4 font-mono text-slate-400">{{ sec.semester_id }}</td>
+                                    <td class="py-3.5 px-4 font-semibold text-emerald-400">{{ sec.schedule or 'TBA' }}</td>
+                                    <td class="py-3.5 px-4 font-mono text-slate-300">Room {{ sec.room or 'TBA' }}</td>
+                                    <td class="py-3.5 px-4">
+                                        <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-bold">
+                                            {{ sec.enrolled_count }} / {{ sec.capacity }} Students
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-slate-500 italic">No section offerings assigned for teaching.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: ASSIGNED ADVISEES ROSTER -->
+            <div id="fac-tab-content-advisees" class="fac-tab-content hidden space-y-4">
+                <div class="stitch-card p-6 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4 w-full">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 flex-wrap gap-2">
+                        <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <i data-lucide="users" class="w-5 h-5 text-blue-400"></i> Assigned Student Advisees Roster ({{ advisees | length }})
+                        </h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {% for std in advisees %}
+                        <a href="/student-profile/{{ std.id }}" 
+                           class="p-4 bg-slate-50 dark:bg-slate-900/60 hover:bg-blue-500/10 border border-slate-200 dark:border-slate-800 hover:border-blue-500/30 rounded-xl transition-all flex items-center justify-between group">
+                            <div>
+                                <span class="font-extrabold text-xs text-slate-900 dark:text-slate-100 group-hover:text-blue-400 transition-colors block">{{ std.name }}</span>
+                                <span class="text-[0.65rem] font-mono text-slate-400 block mt-0.5">ID: {{ std.id }} • CGPA: {{ "%.2f"|format(std.cgpa) }}</span>
+                            </div>
+                            <i data-lucide="external-link" class="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition-colors"></i>
+                        </a>
+                        {% else %}
+                        <p class="col-span-full py-8 text-center text-slate-500 italic text-xs">No advisee students assigned to this faculty member.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchFacultyTab(tabName) {
+    document.querySelectorAll('.fac-tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.fac-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-purple-600', 'text-white', 'shadow-md', 'font-black');
+        btn.classList.add('text-slate-600', 'dark:text-slate-400', 'font-bold');
+    });
+
+    const targetContent = document.getElementById('fac-tab-content-' + tabName);
+    const targetBtn = document.getElementById('fac-tab-btn-' + tabName);
+    if (targetContent && targetBtn) {
+        targetContent.classList.remove('hidden');
+        targetBtn.classList.remove('text-slate-600', 'dark:text-slate-400', 'font-bold');
+        targetBtn.classList.add('bg-purple-600', 'text-white', 'shadow-md', 'font-black');
+    }
+}
+</script>
+{% endblock %}

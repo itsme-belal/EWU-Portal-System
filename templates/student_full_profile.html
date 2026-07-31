@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Student Profile - {{ student.name }} ({{ student.id }}){% endblock %}
+
+{% block sidebar_nav %}
+{% if current_user.role == 'student' %}
+<a href="{{ url_for('student_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Student Portal
+</a>
+{% elif current_user.role == 'faculty' %}
+<a href="{{ url_for('faculty_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Faculty Dashboard
+</a>
+{% elif current_user.role == 'admin' %}
+<a href="{{ url_for('admin_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Admin Portal
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-[1600px] mx-auto space-y-6 pb-12 px-2 sm:px-4">
+    <!-- Top Action & Navigation Bar -->
+    <div class="flex justify-between items-center flex-wrap gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div class="flex items-center gap-3">
+            <button onclick="if (document.referrer && document.referrer !== window.location.href) { history.back(); } else { window.location.href='/'; }" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back
+            </button>
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight">Student Academic Profile</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Complete Student Details, Enrolled Routines & Academic History</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="/faculty/view-student-profile/{{ student.id }}" 
+               class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl inline-flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20">
+                <i data-lucide="sliders" class="w-4 h-4"></i> Open Academic Advising Panel
+            </a>
+        </div>
+    </div>
+
+    <!-- FULL WIDTH STUDENT BANNER CARD -->
+    <div class="stitch-card p-6 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-6">
+        <div class="flex items-start justify-between flex-wrap gap-6 border-b border-slate-100 dark:border-slate-800/80 pb-6">
+            <div class="flex items-center gap-5">
+                <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-4xl shadow-xl shadow-blue-500/20 overflow-hidden border-2 border-white dark:border-slate-800 flex-shrink-0">
+                    {% if student.profile_pic %}
+                    <img src="/static/uploads/{{ student.profile_pic }}" class="w-full h-full object-cover">
+                    {% else %}
+                    {{ student.name[0] | upper }}
+                    {% endif %}
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <h2 class="text-2xl font-black text-slate-900 dark:text-slate-100">{{ student.name }}</h2>
+                        <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            ID: {{ student.id }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-4 flex-wrap">
+                        <span>Department: <strong class="text-slate-800 dark:text-slate-200">{{ student.department_id }}</strong></span>
+                        <span>•</span>
+                        <span>Assigned Advisor: 
+                            {% if advisor %}
+                            <a href="/view-faculty-profile/{{ advisor.id }}" class="font-extrabold text-blue-400 hover:underline">
+                                {{ advisor.name }}
+                            </a>
+                            {% else %}
+                            <strong class="text-slate-400">Not Assigned</strong>
+                            {% endif %}
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full lg:w-auto">
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center min-w-[120px]">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">CGPA</span>
+                    <span class="text-xl font-black text-blue-500 font-mono">{{ "%.2f"|format(student.cgpa) }}</span>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center min-w-[120px]">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Passed Credits</span>
+                    <span class="text-xl font-black text-emerald-500 font-mono">{{ student.completed_credits }} CR</span>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center min-w-[120px]">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Remaining</span>
+                    <span class="text-xl font-bold text-slate-300 font-mono">{{ student.remaining_credits }} CR</span>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl text-center min-w-[120px]">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Dues Status</span>
+                    {% if student.outstanding_balance > 0 %}
+                    <span class="text-sm font-black text-rose-400 font-mono block mt-1">BDT {{ student.outstanding_balance }}</span>
+                    {% else %}
+                    <span class="text-sm font-black text-emerald-400 block mt-1">Cleared</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN TWO COLUMN LAYOUT: Contact Info (1 Column) + Interactive Content Workspace (3 Columns) -->
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6 w-full">
+        <!-- LEFT SIDEBAR: Personal Details Card (1/4 width) -->
+        <div class="xl:col-span-1 space-y-6">
+            <div class="stitch-card p-5 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4 text-xs">
+                <h3 class="font-extrabold text-slate-900 dark:text-slate-100 uppercase tracking-wider text-[0.65rem] flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
+                    <i data-lucide="contact" class="w-3.5 h-3.5 text-blue-400"></i> Personal & Contact Info
+                </h3>
+
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Email Address</span>
+                        <span class="font-mono text-slate-200 break-all">{{ student_user.email if student_user else 'N/A' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Phone Contact</span>
+                        <span class="font-mono text-slate-200">{{ student.phone_number or 'N/A' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Present Address</span>
+                        <span class="text-slate-300 leading-snug block mt-0.5">{{ student.present_address or 'N/A' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Permanent Address</span>
+                        <span class="text-slate-300 leading-snug block mt-0.5">{{ student.permanent_address or 'N/A' }}</span>
+                    </div>
+                </div>
+
+                {% if student.about %}
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                    <span class="text-[0.62rem] font-bold text-slate-400 uppercase tracking-wider block">Profile Bio / Note</span>
+                    <p class="text-slate-300 italic mt-1 leading-relaxed">{{ student.about }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RIGHT WORKSPACE: Horizontal Tabs & Wide Full Tables (3/4 width) -->
+        <div class="xl:col-span-3 space-y-6 min-w-0">
+            <!-- Grid-based Full-Width Horizontal Tabs Bar -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-2 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm w-full">
+                <button onclick="switchFullProfileTab('current')" id="full-tab-btn-current" 
+                        class="full-tab-btn w-full px-3 py-3 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-2 bg-blue-600 text-white shadow-md">
+                    <i data-lucide="calendar" class="w-4 h-4 text-emerald-300 flex-shrink-0"></i> 
+                    <span class="truncate">Current Routine ({{ current_semester }})</span>
+                </button>
+                <button onclick="switchFullProfileTab('next')" id="full-tab-btn-next" 
+                        class="full-tab-btn w-full px-3 py-3 text-xs font-bold rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-2">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-blue-400 flex-shrink-0"></i> 
+                    <span class="truncate">Advised Courses ({{ next_semester }})</span>
+                </button>
+                <button onclick="switchFullProfileTab('grades')" id="full-tab-btn-grades" 
+                        class="full-tab-btn w-full px-3 py-3 text-xs font-bold rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-2">
+                    <i data-lucide="award" class="w-4 h-4 text-amber-400 flex-shrink-0"></i> 
+                    <span class="truncate">Grade Transcript</span>
+                </button>
+                <button onclick="switchFullProfileTab('ledger')" id="full-tab-btn-ledger" 
+                        class="full-tab-btn w-full px-3 py-3 text-xs font-bold rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-2">
+                    <i data-lucide="receipt" class="w-4 h-4 text-purple-400 flex-shrink-0"></i> 
+                    <span class="truncate">Financial Ledger</span>
+                </button>
+            </div>
+
+            <!-- TAB 1: CURRENT SEMESTER ENROLLED ROUTINE -->
+            <div id="full-tab-content-current" class="full-tab-content space-y-4">
+                <div class="stitch-card p-6 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4 w-full">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 flex-wrap gap-2">
+                        <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <i data-lucide="calendar" class="w-5 h-5 text-emerald-400"></i> Current Semester Enrolled Routine ({{ current_semester }})
+                        </h3>
+                        <span class="text-xs font-black text-emerald-400 font-mono">Total Credits: {{ current_credits }} CR</span>
+                    </div>
+
+                    <div class="table-container overflow-x-auto w-full">
+                        <table class="stitch-table w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs font-bold text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                                    <th class="py-3 px-4">Course Code</th>
+                                    <th class="py-3 px-4">Section</th>
+                                    <th class="py-3 px-4">Credits</th>
+                                    <th class="py-3 px-4">Class Schedule</th>
+                                    <th class="py-3 px-4">Room</th>
+                                    <th class="py-3 px-4">Course Instructor</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+                                {% for item in current_registered_sections %}
+                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                                    <td class="py-3.5 px-4 font-bold text-slate-900 dark:text-slate-100">
+                                        <span class="text-blue-400 font-mono">{{ item.sec.course_code }}</span>
+                                    </td>
+                                    <td class="py-3.5 px-4 font-mono font-bold text-slate-200">Sec {{ item.sec.section_number }}</td>
+                                    <td class="py-3.5 px-4 font-mono font-bold text-emerald-400">{{ item.sec.credits }} CR</td>
+                                    <td class="py-3.5 px-4 font-semibold text-emerald-400">{{ item.sec.schedule or 'TBA' }}</td>
+                                    <td class="py-3.5 px-4 font-mono text-slate-300">Room {{ item.sec.room or 'TBA' }}</td>
+                                    <td class="py-3.5 px-4 font-bold text-slate-200">
+                                        {% if item.faculty %}
+                                        <a href="/view-faculty-profile/{{ item.faculty.id }}" class="hover:text-purple-400 hover:underline">
+                                            {{ item.faculty.name }}
+                                        </a>
+                                        {% else %}
+                                        <span class="text-slate-500">TBA</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-slate-500 italic">No registered courses found for current semester {{ current_semester }}.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: NEXT SEMESTER ADVISED COURSES -->
+            <div id="full-tab-content-next" class="full-tab-content hidden space-y-4">
+                <div class="stitch-card p-6 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4 w-full">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 flex-wrap gap-2">
+                        <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-blue-400"></i> Next Semester Advised / Registered Courses ({{ next_semester }})
+                        </h3>
+                        <span class="text-xs font-black text-blue-400 font-mono">Total Advised Credits: {{ next_credits }} CR</span>
+                    </div>
+
+                    <div class="table-container overflow-x-auto w-full">
+                        <table class="stitch-table w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs font-bold text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                                    <th class="py-3 px-4">Course Code</th>
+                                    <th class="py-3 px-4">Section</th>
+                                    <th class="py-3 px-4">Credits</th>
+                                    <th class="py-3 px-4">Class Schedule</th>
+                                    <th class="py-3 px-4">Room</th>
+                                    <th class="py-3 px-4">Instructor</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+                                {% for item in next_registered_sections %}
+                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                                    <td class="py-3.5 px-4 font-bold text-slate-900 dark:text-slate-100">
+                                        <span class="text-purple-400 font-mono">{{ item.sec.course_code }}</span>
+                                    </td>
+                                    <td class="py-3.5 px-4 font-mono font-bold text-slate-200">Sec {{ item.sec.section_number }}</td>
+                                    <td class="py-3.5 px-4 font-mono font-bold text-emerald-400">{{ item.sec.credits }} CR</td>
+                                    <td class="py-3.5 px-4 font-semibold text-emerald-400">{{ item.sec.schedule or 'TBA' }}</td>
+                                    <td class="py-3.5 px-4 font-mono text-slate-300">Room {{ item.sec.room or 'TBA' }}</td>
+                                    <td class="py-3.5 px-4 font-bold text-slate-200">
+                                        {% if item.faculty %}
+                                        <a href="/view-faculty-profile/{{ item.faculty.id }}" class="hover:text-purple-400 hover:underline">
+                                            {{ item.faculty.name }}
+                                        </a>
+                                        {% else %}
+                                        <span class="text-slate-500">TBA</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-slate-500 italic">No advised registrations recorded for next semester {{ next_semester }}.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: ACADEMIC GRADE TRANSCRIPT -->
+            <div id="full-tab-content-grades" class="full-tab-content hidden space-y-6">
+                <!-- EWU Grading Scale Banner -->
+                <div class="stitch-card p-5 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                        <h4 class="font-black text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                            <i data-lucide="award" class="w-4 h-4 text-amber-400"></i> EAST WEST UNIVERSITY GRADING SYSTEM SCALE
+                        </h4>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs font-mono">
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">80-100</span><strong class="text-emerald-400 text-xs block mt-0.5">A+ (4.00)</strong></div>
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">75-79</span><strong class="text-emerald-400 text-xs block mt-0.5">A (3.75)</strong></div>
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">70-74</span><strong class="text-emerald-400 text-xs block mt-0.5">A- (3.50)</strong></div>
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">65-69</span><strong class="text-blue-400 text-xs block mt-0.5">B+ (3.25)</strong></div>
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">60-64</span><strong class="text-blue-400 text-xs block mt-0.5">B (3.00)</strong></div>
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">55-59</span><strong class="text-blue-400 text-xs block mt-0.5">B- (2.75)</strong></div>
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">50-54</span><strong class="text-amber-400 text-xs block mt-0.5">C+ (2.50)</strong></div>
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">45-49</span><strong class="text-amber-400 text-xs block mt-0.5">C (2.25)</strong></div>
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">40-44</span><strong class="text-slate-300 text-xs block mt-0.5">D (2.00)</strong></div>
+                        <div class="p-2 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800"><span class="block text-[0.6rem] text-slate-400 font-bold uppercase">&lt; 40</span><strong class="text-rose-400 text-xs block mt-0.5">F (0.00)</strong></div>
+                    </div>
+                </div>
+
+                <!-- EWU Grade Report Format -->
+                <div class="stitch-card p-6 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-6 w-full">
+                    <!-- Letterhead -->
+                    <div class="border-b border-slate-200 dark:border-slate-800 pb-6 flex flex-col sm:flex-row justify-between items-start gap-4">
+                        <div class="space-y-1">
+                            <h2 class="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight uppercase">EAST WEST UNIVERSITY</h2>
+                            <p class="text-[0.7rem] text-slate-400">Plot No. A/2, Jahurul Islam City, Aftabnagar Dhaka 1212</p>
+                            <p class="text-[0.68rem] text-slate-400">Tel: 09666775577 • E-mail: admissions@ewubd.edu</p>
+                            <p class="text-xs font-mono font-bold text-blue-400 pt-2">Grade Report Date: 25 Jul, 2026</p>
+                        </div>
+
+                        <div class="text-left sm:text-right space-y-1">
+                            <span class="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-bold font-mono">Student's Copy</span>
+                            <p class="text-[0.62rem] text-slate-500 italic">Not valid for Admissions, Credit Transfer or Similar Purposes</p>
+                            <div class="pt-2 text-xs font-mono text-slate-300">
+                                <p><strong>EWU ID:</strong> {{ student.id }}</p>
+                                <p><strong>Name:</strong> {{ student.name }}</p>
+                                <p><strong>Degree Objective:</strong> B.Sc. in {{ student.department_id }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Semester-by-Semester Grade Tables -->
+                    <div class="space-y-6">
+                        {% for sem in grade_report %}
+                        <div class="border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 bg-slate-50/50 dark:bg-slate-900/30 space-y-3">
+                            <h3 class="font-extrabold text-sm text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2 font-mono flex items-center justify-between">
+                                <span>{{ sem.semester_display }}</span>
+                            </h3>
+
+                            <div class="table-container overflow-x-auto">
+                                <table class="stitch-table w-full text-left text-xs">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-mono text-[0.7rem] uppercase">
+                                            <th class="py-2 px-3">Course</th>
+                                            <th class="py-2 px-3 text-center">cr</th>
+                                            <th class="py-2 px-3 text-center">grd</th>
+                                            <th class="py-2 px-3 text-center">gp</th>
+                                            <th class="py-2 px-3 text-center">gpacr</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
+                                        {% for c in sem.courses %}
+                                        <tr class="hover:bg-blue-500/10 dark:hover:bg-blue-500/10 transition-colors">
+                                            <td class="py-2.5 px-3 font-bold text-blue-400">{{ c.course_code }}</td>
+                                            <td class="py-2.5 px-3 text-center text-slate-300">{{ c.credits }}</td>
+                                            <td class="py-2.5 px-3 text-center font-bold text-emerald-400">{{ c.grade_letter }}</td>
+                                            <td class="py-2.5 px-3 text-center text-slate-200 font-bold">{{ c.gp }}</td>
+                                            <td class="py-2.5 px-3 text-center text-slate-400">{{ c.gpacr }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Term Footer: CGPA & Term GPA -->
+                            <div class="flex flex-wrap justify-between items-center pt-3 border-t border-slate-200 dark:border-slate-800 font-mono text-xs font-bold gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-slate-400 uppercase tracking-wider text-[0.65rem]">Cumulative Status:</span>
+                                    <span class="px-3 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 font-black text-sm">
+                                        CGPA: {{ sem.cgpa }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-slate-400 uppercase tracking-wider text-[0.65rem]">Semester Result:</span>
+                                    <span class="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-black text-sm">
+                                        Term GPA: {{ sem.term_gpa }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="py-8 text-center text-slate-500 italic text-xs">No academic grade records recorded for this student.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: FINANCIAL LEDGER -->
+            <div id="full-tab-content-ledger" class="full-tab-content hidden space-y-4">
+                <div class="stitch-card p-6 bg-white dark:bg-[#0c101d] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4 w-full">
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 flex-wrap gap-2">
+                        <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <i data-lucide="receipt" class="w-5 h-5 text-purple-400"></i> Financial Billing & Transaction Ledger
+                        </h3>
+                    </div>
+
+                    <div class="table-container overflow-x-auto w-full">
+                        <table class="stitch-table w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs font-bold text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                                    <th class="py-3 px-4">Transaction Description</th>
+                                    <th class="py-3 px-4">Date</th>
+                                    <th class="py-3 px-4">Amount (BDT)</th>
+                                    <th class="py-3 px-4">Payment Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+                                {% for l in ledger %}
+                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
+                                    <td class="py-3.5 px-4 font-bold text-slate-200">{{ l.description }}</td>
+                                    <td class="py-3.5 px-4 font-mono text-slate-400">{{ l.date or '' }}</td>
+                                    <td class="py-3.5 px-4 font-mono font-bold {{ 'text-red-400' if l.amount < 0 else 'text-emerald-400' }}">
+                                        {{ l.amount }} BDT
+                                    </td>
+                                    <td class="py-3.5 px-4 font-extrabold uppercase">
+                                        <span class="px-2.5 py-1 rounded-lg text-[0.65rem] {{ 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' if l.status == 'paid' else 'bg-amber-500/10 text-amber-400 border border-amber-500/20' }}">
+                                            {{ l.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="py-8 text-center text-slate-500 italic">No financial ledger entries recorded.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchFullProfileTab(tabName) {
+    document.querySelectorAll('.full-tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.full-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'font-black');
+        btn.classList.add('text-slate-600', 'dark:text-slate-400', 'font-bold');
+    });
+
+    const targetContent = document.getElementById('full-tab-content-' + tabName);
+    const targetBtn = document.getElementById('full-tab-btn-' + tabName);
+    if (targetContent && targetBtn) {
+        targetContent.classList.remove('hidden');
+        targetBtn.classList.remove('text-slate-600', 'dark:text-slate-400', 'font-bold');
+        targetBtn.classList.add('bg-blue-600', 'text-white', 'shadow-md', 'font-black');
+    }
+}
+</script>
+{% endblock %}

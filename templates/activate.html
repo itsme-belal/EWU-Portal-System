@@ -1,0 +1,22 @@
+{% extends "auth_base.html" %}
+{% block title %}Activate Account{% endblock %}
+
+{% block form_content %}
+<p class="form-title" style="margin-top:10px;">Activate Your Account</p>
+<p style="text-align:center;font-size:0.75rem;color:#6b7280;margin-bottom:18px;">Enter your registered university email address to receive an activation code.</p>
+
+<form action="/activate" method="POST">
+    <div class="field">
+        <label for="email">University Email</label>
+        <div class="field-inner">
+            <input type="email" name="email" id="email" required
+                   placeholder="e.g. 2023-2-60-010@std.ewubd.edu">
+        </div>
+    </div>
+    <button type="submit" class="btn-signin" style="margin-top:6px;">Send Activation Code</button>
+</form>
+
+<a href="/login" style="display:block;text-align:center;font-size:0.74rem;color:#6b7280;margin-top:14px;text-decoration:none;">
+    ← Back to Sign In
+</a>
+{% endblock %}

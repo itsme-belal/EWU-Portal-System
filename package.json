@@ -1,0 +1,26 @@
+{
+  "name": "ewu-portal-system--1",
+  "version": "1.0.0",
+  "description": "A production-quality university academic management portal for **East West University**, built with **Python Flask** and **SQLAlchemy** (SQLite by default, PostgreSQL-ready).",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css --minify",
+    "watch:css": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itsme-belal/EWU-Portal-System.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/itsme-belal/EWU-Portal-System/issues"
+  },
+  "homepage": "https://github.com/itsme-belal/EWU-Portal-System#readme",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

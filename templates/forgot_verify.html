@@ -1,0 +1,44 @@
+{% extends "auth_base.html" %}
+{% block title %}Enter Reset Code{% endblock %}
+
+{% block form_content %}
+
+<!-- Icon + Title -->
+<div style="text-align:center; margin: 8px 0 20px;">
+    <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:14px;background:#f0fdf4;margin-bottom:12px;">
+        <i data-lucide="shield-check" style="width:24px;height:24px;color:#16a34a;"></i>
+    </div>
+    <p class="form-title" style="margin:0 0 4px;">Check Your Email</p>
+    <p style="font-size:0.74rem;color:#6b7280;line-height:1.6;">
+        A 6-digit code was sent to<br>
+        <strong style="color:#374151;">{{ email }}</strong>
+    </p>
+</div>
+
+<form action="/forgot-password/verify" method="POST">
+    <input type="hidden" name="email" value="{{ email }}">
+    <div class="field">
+        <label for="code" style="text-align:center;display:block;">6-Digit Reset Code</label>
+        <input type="text" name="code" id="code" required maxlength="6" placeholder="— — — — — —"
+               autocomplete="one-time-code"
+               style="width:100%;padding:13px 14px;border:1.5px solid #d1d5db;border-radius:10px;font-size:1.4rem;font-weight:800;letter-spacing:0.35em;text-align:center;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s;color:#111827;"
+               onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#d1d5db'">
+        <p id="demo-hint" style="font-size:0.68rem;color:#9ca3af;text-align:center;margin-top:6px;">
+            Check the server console / flash message for your demo code.
+        </p>
+    </div>
+    <button type="submit" class="btn-signin" style="margin-top:4px;background:linear-gradient(135deg,#16a34a,#22c55e);box-shadow:0 3px 12px rgba(22,163,74,0.3);">
+        Verify &amp; Continue
+    </button>
+</form>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9;font-size:0.73rem;">
+    <a href="/forgot-password" style="color:#6b7280;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:500;">
+        <i data-lucide="arrow-left" style="width:13px;height:13px;"></i> Back
+    </a>
+    <a href="/forgot-password" style="color:#2563eb;text-decoration:none;font-weight:600;">
+        Resend Code
+    </a>
+</div>
+
+{% endblock %}

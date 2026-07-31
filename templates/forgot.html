@@ -1,0 +1,35 @@
+{% extends "auth_base.html" %}
+{% block title %}Forgot Password{% endblock %}
+
+{% block form_content %}
+
+<!-- Icon + Title -->
+<div style="text-align:center; margin: 8px 0 20px;">
+    <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:14px;background:#eff6ff;margin-bottom:12px;">
+        <i data-lucide="key-round" style="width:24px;height:24px;color:#2563eb;"></i>
+    </div>
+    <p class="form-title" style="margin:0 0 4px;">Forgot Password?</p>
+    <p style="font-size:0.74rem;color:#6b7280;line-height:1.6;">Enter your registered university email.<br>We'll send you a reset code.</p>
+</div>
+
+<form action="/forgot-password" method="POST">
+    <div class="field">
+        <label for="email">University Email</label>
+        <div class="field-inner">
+            <input type="email" name="email" id="email" required
+                   placeholder="e.g. 2023-2-60-010@std.ewubd.edu"
+                   style="padding-left:12px;">
+        </div>
+    </div>
+    <button type="submit" class="btn-signin" style="margin-top:4px;">
+        Send Reset Code
+    </button>
+</form>
+
+<div style="display:flex;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9;justify-content:center;">
+    <a href="/login" style="font-size:0.74rem;color:#6b7280;text-decoration:none;display:flex;align-items:center;gap:4px;font-weight:500;">
+        <i data-lucide="arrow-left" style="width:13px;height:13px;"></i> Back to Sign In
+    </a>
+</div>
+
+{% endblock %}
