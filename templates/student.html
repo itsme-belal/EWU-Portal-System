@@ -1715,12 +1715,12 @@
 
                 <form action="{{ url_for('change_password') }}" method="POST" class="space-y-4 text-xs">
                     <div>
-                        <label class="block font-bold text-slate-400 uppercase tracking-wider text-[0.65rem] mb-1.5">New Password</label>
-                        <input type="password" name="new_password" required minlength="6" placeholder="Enter new password" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        <label class="block font-bold text-slate-400 uppercase tracking-wider text-[0.65rem] mb-1.5">New Password (6-12 chars)</label>
+                        <input type="password" name="new_password" required minlength="6" maxlength="12" placeholder="6-12 characters" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
                     </div>
                     <div>
                         <label class="block font-bold text-slate-400 uppercase tracking-wider text-[0.65rem] mb-1.5">Confirm New Password</label>
-                        <input type="password" name="confirm_password" required minlength="6" placeholder="Re-enter new password" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        <input type="password" name="confirm_password" required minlength="6" maxlength="12" placeholder="Re-enter new password" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
                     </div>
                     <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
                         <i data-lucide="shield-check" class="w-4 h-4"></i> Update Password
@@ -4066,21 +4066,30 @@
         document.getElementById('change-section-modal').classList.add('hidden');
     }
 
-    // 30s Auto Refresh
+    // Live Real-Time Advising Polling (Every 3s)
     setInterval(() => {
-        if (document.getElementById('tab-advising').classList.contains('hidden') === false && isFinalActive && prePlanSubmitted) {
-            // Silently fetch updated section statistics
-            fetch('/student')
-            .then(res => res.text())
-            .then(html => {
-                // Parse sections_json again and update local array
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                // Since data is static script loaded, we reload the sections offering layout quietly
-                loadAdvisingSections();
-            });
+        const advisingTab = document.getElementById('tab-advising');
+        if (advisingTab && !advisingTab.classList.contains('hidden')) {
+            fetch('/api/live-advising-status')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success' && Array.isArray(data.sections)) {
+                    data.sections.forEach(sec => {
+                        const seatBadge = document.getElementById(`seats-badge-${sec.id}`);
+                        if (seatBadge) {
+                            seatBadge.textContent = `${sec.seats_left} seats left (${sec.enrolled_count}/${sec.capacity})`;
+                            if (sec.seats_left <= 0) {
+                                seatBadge.className = 'px-2 py-0.5 rounded text-[0.65rem] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                            } else {
+                                seatBadge.className = 'px-2 py-0.5 rounded text-[0.65rem] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                            }
+                        }
+                    });
+                }
+            })
+            .catch(() => {});
         }
-    }, 30000);
+    }, 3000);
 
     // Save routine as image using html2canvas
     function downloadScheduleAsImage() {

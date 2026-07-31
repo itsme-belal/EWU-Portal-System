@@ -59,8 +59,8 @@ def seed_db():
         db.drop_all()
         db.create_all()
 
-        print("Seeding Admin Users...")
-        admin_pass_hash = generate_password_hash('admin')
+        default_admin_pass = os.environ.get('DEFAULT_ADMIN_PASSWORD', 'admin123')
+        admin_pass_hash = generate_password_hash(default_admin_pass)
         admin_user1 = User(
             id='admin_u1',
             email='itsmebelalhossain@gmail.com',
@@ -70,16 +70,6 @@ def seed_db():
             is_activated=True
         )
         db.session.add(admin_user1)
-        
-        admin_user2 = User(
-            id='admin_u2',
-            email='admin@ewubd.edu',
-            password_hash=generate_password_hash('password123'),
-            role='admin',
-            is_active=True,
-            is_activated=True
-        )
-        db.session.add(admin_user2)
 
         admin_profile1 = Admin(
             id='A001',
@@ -87,13 +77,6 @@ def seed_db():
             name='Registrar'
         )
         db.session.add(admin_profile1)
-
-        admin_profile2 = Admin(
-            id='A002',
-            user_id='admin_u2',
-            name='Registrar Assistant'
-        )
-        db.session.add(admin_profile2)
 
         print("Seeding System Settings...")
         db.session.add(SystemSetting(key='current_semester', value='Spring2026'))

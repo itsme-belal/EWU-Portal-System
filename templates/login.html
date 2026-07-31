@@ -30,6 +30,7 @@
         <label for="password">Password</label>
         <div class="field-inner">
             <input type="password" name="password" id="password" required autocomplete="current-password"
+                   minlength="6" maxlength="12"
                    placeholder="••••••••" style="padding-right:36px;">
             <button type="button" class="eye-btn" onclick="togglePwd()">
                 <i data-lucide="eye" id="eye-ico" style="width:15px;height:15px;"></i>
@@ -41,7 +42,7 @@
     <div class="captcha-row">
         <span class="captcha-expr" id="cq">—</span>
         <span style="font-size:0.82rem;color:#6b7280;font-weight:600;">= ?</span>
-        <input type="number" id="ca" class="captcha-ans" placeholder="?" required autocomplete="off">
+        <input type="number" id="ca" class="captcha-ans" placeholder="?" required autocomplete="off" min="0" oninput="if(this.value && this.value < 0) this.value = 0;">
         <button type="button" class="captcha-refresh" onclick="refreshCap()" title="New question">
             <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>
         </button>

@@ -1295,12 +1295,12 @@
 
                 <form action="{{ url_for('change_password') }}" method="POST" class="space-y-4 text-xs">
                     <div>
-                        <label class="block font-bold text-slate-400 uppercase tracking-wider text-[0.65rem] mb-1.5">New Password</label>
-                        <input type="password" name="new_password" required minlength="4" placeholder="Enter new password" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        <label class="block font-bold text-slate-400 uppercase tracking-wider text-[0.65rem] mb-1.5">New Password (6-12 chars)</label>
+                        <input type="password" name="new_password" required minlength="6" maxlength="12" placeholder="6-12 characters" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
                     </div>
                     <div>
                         <label class="block font-bold text-slate-400 uppercase tracking-wider text-[0.65rem] mb-1.5">Confirm New Password</label>
-                        <input type="password" name="confirm_password" required minlength="4" placeholder="Re-enter new password" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        <input type="password" name="confirm_password" required minlength="6" maxlength="12" placeholder="Re-enter new password" class="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
                     </div>
                     <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
                         <i data-lucide="shield-check" class="w-4 h-4"></i> Update Password
@@ -2961,6 +2961,21 @@
         document.body.removeChild(link);
         showToast('success', 'Marks sheet downloaded as CSV.');
     }
+
+    // Live Advising Requests Polling for Faculty (Every 3s)
+    setInterval(() => {
+        fetch('/api/live-advising-status')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success' && typeof data.pending_requests_count !== 'undefined') {
+                const badge = document.getElementById('faculty-pending-requests-count');
+                if (badge) {
+                    badge.textContent = data.pending_requests_count;
+                }
+            }
+        })
+        .catch(() => {});
+    }, 3000);
 </script>
 
 <!-- Faculty Student Profile & Progress Modal -->
@@ -3021,5 +3036,4 @@
         </div>
     </div>
 </div>
-</script>
 {% endblock %}

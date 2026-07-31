@@ -737,8 +737,30 @@ def save_grade_for_student(student_id, course_code, grade_letter, semester_id):
     return True
 
 # Helper: check student credit-bracket gating
+def is_time_within_window(start_str, end_str):
+    if not start_str or not end_str:
+        return False
+    now = datetime.now()
+    try:
+        start_dt = datetime.strptime(start_str[:16], '%Y-%m-%dT%H:%M')
+        end_dt = datetime.strptime(end_str[:16], '%Y-%m-%dT%H:%M')
+        end_dt_inclusive = end_dt.replace(second=59, microsecond=999999)
+        return start_dt <= now <= end_dt_inclusive
+    except Exception:
+        now_str = now.strftime('%Y-%m-%dT%H:%M')
+        return start_str <= now_str <= end_str
+
+def is_time_before_window(start_str):
+    if not start_str:
+        return False
+    now = datetime.now()
+    try:
+        start_dt = datetime.strptime(start_str[:16], '%Y-%m-%dT%H:%M')
+        return now < start_dt
+    except Exception:
+        return now.strftime('%Y-%m-%dT%H:%M') < start_str
+
 def is_student_allowed_in_portal(student):
-    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
     semester = get_current_semester()
     
     all_windows = AdvisingWindow.query.filter_by(semester_id=semester).all()
@@ -750,18 +772,17 @@ def is_student_allowed_in_portal(student):
         return False, None
         
     for w in student_windows:
-        if w.start_date_time <= now_str <= w.end_date_time:
+        if is_time_within_window(w.start_date_time, w.end_date_time):
             return True, w
             
     return False, None
 
 def get_active_window(student_credits, win_type):
-    now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
     semester = get_current_semester()
     windows = AdvisingWindow.query.filter_by(type=win_type, semester_id=semester).all()
     for w in windows:
         if w.credit_min <= student_credits <= w.credit_max:
-            if w.start_date_time <= now_str <= w.end_date_time:
+            if is_time_within_window(w.start_date_time, w.end_date_time):
                 return w
     return None
 
@@ -1131,6 +1152,10 @@ def activate_complete():
     password = request.form.get('password', '')
     confirm = request.form.get('confirm_password', '')
 
+    if not password or len(password) < 6 or len(password) > 12:
+        flash('Password must be between 6 and 12 characters long.', 'error')
+        return render_template('activate_password.html', email=email)
+
     if password != confirm:
         flash('Passwords do not match.', 'error')
         return render_template('activate_password.html', email=email)
@@ -1223,6 +1248,10 @@ def forgot_complete():
     password = request.form.get('password', '')
     confirm = request.form.get('confirm_password', '')
 
+    if not password or len(password) < 6 or len(password) > 12:
+        flash('Password must be between 6 and 12 characters long.', 'error')
+        return render_template('forgot_password.html', email=email)
+
     if password != confirm:
         flash('Passwords do not match.', 'error')
         return render_template('forgot_password.html', email=email)
@@ -1258,6 +1287,83 @@ def student_dashboard():
 @login_required
 def student_advising():
     return render_student_portal('advising')
+
+@app.route('/api/live-advising-status')
+@login_required
+def api_live_advising_status():
+    if current_user.role == 'student':
+        student = Student.query.filter_by(user_id=current_user.id).first()
+        if not student:
+            return jsonify({'status': 'error', 'message': 'Student profile not found'}), 404
+            
+        next_sem = get_next_semester()
+        sections = SectionOffering.query.filter(
+            (SectionOffering.semester_id == next_sem) | (SectionOffering.semester_id == 'summer-2026')
+        ).all()
+        
+        section_data = [
+            {
+                'id': s.id,
+                'course_code': s.course_code,
+                'course_title': s.course_title,
+                'section_number': s.section_number,
+                'capacity': s.capacity,
+                'enrolled_count': s.enrolled_count,
+                'seats_left': max(0, s.capacity - s.enrolled_count),
+                'schedule': s.schedule,
+                'room': s.room
+            }
+            for s in sections
+        ]
+        
+        regs = Registration.query.filter_by(student_id=student.id, status='registered').all()
+        registered_section_ids = [r.section_id for r in regs]
+        
+        reqs = AdvisingRequest.query.filter_by(student_id=student.id).all()
+        request_data = [
+            {
+                'id': req.id,
+                'course_id': req.course_id,
+                'section_id': req.section_id,
+                'type': req.type,
+                'status': req.status,
+                'advisor_note': req.advisor_note or ''
+            }
+            for req in reqs
+        ]
+        
+        return jsonify({
+            'status': 'success',
+            'advising_status': student.advising_status,
+            'sections': section_data,
+            'registered_section_ids': registered_section_ids,
+            'requests': request_data
+        })
+    elif current_user.role == 'faculty':
+        faculty = Faculty.query.filter_by(user_id=current_user.id).first()
+        if not faculty:
+            return jsonify({'status': 'error', 'message': 'Faculty profile not found'}), 404
+            
+        requests = AdvisingRequest.query.filter_by(advisor_id=faculty.id, status='pending_advisor').all()
+        req_data = [
+            {
+                'id': req.id,
+                'student_id': req.student_id,
+                'course_id': req.course_id,
+                'section_id': req.section_id,
+                'type': req.type,
+                'comments': req.comments,
+                'created_at': req.created_at.strftime('%Y-%m-%d %H:%M') if req.created_at else ''
+            }
+            for req in requests
+        ]
+        return jsonify({
+            'status': 'success',
+            'pending_requests_count': len(requests),
+            'pending_requests': req_data
+        })
+    else:
+        return jsonify({'status': 'success', 'role': 'admin'})
 
 def get_eligible_courses_for_student(student):
     """Returns a set of course codes student is eligible to take."""
@@ -1502,7 +1608,7 @@ def render_student_portal(active_tab):
     # 2) A window bracket covers this student's credit range, AND
     # 3) Current time falls within that bracket's start/end times
     if student_pre_window and is_setting_true('pre_advising_active'):
-        if student_pre_window.start_date_time <= now_str <= student_pre_window.end_date_time:
+        if is_time_within_window(student_pre_window.start_date_time, student_pre_window.end_date_time):
             pre_advising_active = True
 
     final_advising_active = False
@@ -1516,7 +1622,7 @@ def render_student_portal(active_tab):
     plan_exists = AdvisingPlan.query.filter_by(student_id=student.id, semester_id=get_next_semester()).first()
     pre_plan_done = plan_exists and len(plan_exists.course_ids or []) >= 3
     if student_final_window and is_setting_true('final_advising_active') and pre_plan_done:
-        if student_final_window.start_date_time <= now_str <= student_final_window.end_date_time:
+        if is_time_within_window(student_final_window.start_date_time, student_final_window.end_date_time):
             final_advising_active = True
         
     request_phase_active = is_setting_true('request_phase_active')
@@ -1644,12 +1750,12 @@ def render_student_portal(active_tab):
     def get_window_status(w, active_toggle):
         if not w:
             return 'Not Set Yet', 'text-slate-400 bg-slate-500/10'
-        if w.start_date_time <= now_iso <= w.end_date_time:
+        if is_time_within_window(w.start_date_time, w.end_date_time):
             if active_toggle:
                 return 'OPEN NOW', 'text-emerald-500 bg-emerald-500/10 animate-pulse font-extrabold border border-emerald-500/20'
             else:
                 return 'Inactive (Toggled Off)', 'text-amber-500 bg-amber-500/10 font-bold border border-amber-500/20'
-        elif now_iso < w.start_date_time:
+        elif is_time_before_window(w.start_date_time):
             return 'Scheduled / Upcoming', 'text-blue-500 bg-blue-500/10 font-bold border border-blue-500/20'
         else:
             return 'Closed', 'text-rose-500 bg-rose-500/10 font-bold border border-rose-500/20'
@@ -1765,7 +1871,7 @@ def save_plan():
     pre_open = (
         student_pre_window is not None
         and _is_setting_true('pre_advising_active')
-        and student_pre_window.start_date_time <= now_str <= student_pre_window.end_date_time
+        and is_time_within_window(student_pre_window.start_date_time, student_pre_window.end_date_time)
     )
     if not pre_open:
         msg = 'Pre-advising is not currently open for your credit bracket, or the window has not been set by the admin.'
@@ -1858,8 +1964,7 @@ def toggle_section():
         AdvisingWindow.credit_max >= student.completed_credits
     ).first()
     if student_final_window:
-        now_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
-        if is_setting_true('final_advising_active') and (student_final_window.start_date_time <= now_str <= student_final_window.end_date_time):
+        if is_setting_true('final_advising_active') and is_time_within_window(student_final_window.start_date_time, student_final_window.end_date_time):
             final_advising_active = True
     # No else fallback — if no window bracket found, final advising stays locked
 
@@ -3240,11 +3345,8 @@ def submit_seat_increase_multi():
     if not section_ids or not isinstance(section_ids, list):
         flash('Please select at least one section.', 'error')
         return redirect('/advising')
-    if len(section_ids) > 2:
-        flash('You can request seat increases for a maximum of two (2) courses in a single request.', 'error')
-        return redirect('/advising')
 
-    # Group requested sections by base course code so theory & lab create 1 request record
+    # Group requested sections by base course code so theory & lab create 1 request record (and count as 1 course)
     unique_sections = []
     seen_base = set()
     for sec_id in section_ids:
@@ -3263,6 +3365,10 @@ def submit_seat_increase_multi():
 
     if not unique_sections:
         flash('Please select at least one section.', 'error')
+        return redirect('/advising')
+
+    if len(unique_sections) > 2:
+        flash('You can request seat increases for a maximum of two (2) courses in a single request.', 'error')
         return redirect('/advising')
 
     existing_seat_reqs = AdvisingRequest.query.filter_by(student_id=student.id, type='seat_increase', semester_id=get_next_semester()).all()
@@ -3843,9 +3949,42 @@ def faculty_post_course_announcement():
         content=content
     )
     db.session.add(ann)
+    
+    # Notify registered students via in-app notification & email
+    regs = Registration.query.filter_by(section_id=section_id, status='registered').all()
+    sec = db.session.get(SectionOffering, section_id)
+    sec_name = f"{sec.course_code} (Sec {sec.section_number})" if sec else section_id
+    
+    notified_count = 0
+    for r in regs:
+        std = db.session.get(Student, r.student_id)
+        if std:
+            notif = Notification(
+                id=f"NOTIF-{int(datetime.utcnow().timestamp())}-{random.randint(1000,9999)}",
+                student_id=std.id,
+                title=f"Course Announcement: {sec_name}",
+                message=f"{title}: {content[:100]}..." if len(content) > 100 else f"{title}: {content}"
+            )
+            db.session.add(notif)
+            notified_count += 1
+            
+            std_email = get_email_for_student(std.id)
+            if std_email:
+                email_html = build_ewu_email_html(
+                    title=f"Announcement for {sec_name}",
+                    recipient_name=std.name,
+                    content_html=f"<h3 style='color:#1e3a8a;margin-top:0;'>{title}</h3><p style='font-size:14px;line-height:1.6;color:#334155;'>{content}</p><div style='margin-top:16px;padding:12px;background:#f8fafc;border-left:4px solid #3b82f6;border-radius:4px;'><p style='margin:0;font-size:12px;color:#64748b;'>Course: <strong>{sec_name}</strong> | Posted by Course Instructor</p></div>"
+                )
+                send_email_safe(
+                    subject=f"📢 Course Announcement: {title} ({sec_name})",
+                    recipients=[std_email],
+                    body=f"Course Announcement: {sec_name}\n\nTitle: {title}\n\n{content}",
+                    html=email_html
+                )
+                
     db.session.commit()
     
-    return jsonify({'status': 'success', 'message': 'Announcement posted successfully.'})
+    return jsonify({'status': 'success', 'message': f'Announcement posted and emailed to {notified_count} student(s).'})
 
 @app.route('/faculty/course/save-scheme', methods=['POST'])
 @login_required
@@ -4473,9 +4612,9 @@ def change_admin_password():
         return redirect(url_for('home'))
         
     new_pass = request.form.get('password')
-    if not new_pass or len(new_pass) < 4:
-        flash('Password must be at least 4 characters long.', 'error')
-        return redirect(url_for('admin_dashboard'))
+    if not new_pass or len(new_pass) < 6 or len(new_pass) > 12:
+        flash('Admin password must be between 6 and 12 characters long.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=settings')
         
     user = User.query.get(current_user.id)
     user.password_hash = generate_password_hash(new_pass)
@@ -4690,8 +4829,8 @@ def change_password():
     new_password = request.form.get('new_password', '').strip()
     confirm_password = request.form.get('confirm_password', '').strip()
     
-    if not new_password or len(new_password) < 4:
-        flash('Password must be at least 4 characters long.', 'error')
+    if not new_password or len(new_password) < 6 or len(new_password) > 12:
+        flash('Password must be between 6 and 12 characters long.', 'error')
         return redirect(request.referrer or url_for('home'))
         
     if new_password != confirm_password:
@@ -4799,8 +4938,13 @@ def create_student():
         flash('Student ID already exists.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=students')
         
+    pic_file = request.files.get('profile_pic')
+    if not pic_file or not pic_file.filename:
+        flash('Uploading student profile image is mandatory.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=students')
+
     try:
-        profile_pic_filename = save_profile_pic_upload(request.files.get('profile_pic'), f"student_{std_id}")
+        profile_pic_filename = save_profile_pic_upload(pic_file, f"student_{std_id}")
     except ValueError as exc:
         flash(str(exc), 'error')
         return redirect(url_for('admin_dashboard') + '?tab=students')
@@ -4962,8 +5106,13 @@ def create_faculty():
         flash('Faculty ID already exists.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=faculty')
         
+    fac_pic_file = request.files.get('profile_pic')
+    if not fac_pic_file or not fac_pic_file.filename:
+        flash('Uploading faculty profile image is mandatory.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=faculty')
+
     try:
-        profile_pic_filename = save_profile_pic_upload(request.files.get('profile_pic'), f"faculty_{fac_id}")
+        profile_pic_filename = save_profile_pic_upload(fac_pic_file, f"faculty_{fac_id}")
     except ValueError as exc:
         flash(str(exc), 'error')
         return redirect(url_for('admin_dashboard') + '?tab=faculty')
@@ -5368,10 +5517,23 @@ def create_window():
         
     win_type = request.form.get('type')
     label = request.form.get('label')
-    c_min = float(request.form.get('credit_min'))
-    c_max = float(request.form.get('credit_max'))
-    start = request.form.get('start_date_time')
-    end = request.form.get('end_date_time')
+    c_min = float(request.form.get('credit_min', 0))
+    c_max = float(request.form.get('credit_max', 0))
+    start = request.form.get('start_date_time', '').strip()
+    end = request.form.get('end_date_time', '').strip()
+
+    if not start or not end:
+        flash('Start and End date & time are required.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=timeline')
+
+    if end <= start:
+        flash('End date & time must be after Start date & time.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=timeline')
+
+    now_iso = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    if end < now_iso:
+        flash('Advising window end time cannot be set in the past.', 'error')
+        return redirect(url_for('admin_dashboard') + '?tab=timeline')
     
     win_id = f"win-{win_type}-{int(datetime.utcnow().timestamp())}"
     win = AdvisingWindow(
