@@ -14,33 +14,44 @@
             min-height: 100vh;
             display: flex;
             align-items: center;
-            justify-content: center;
-            overflow: hidden;
+            justify-content: flex-end;
+            padding-right: max(4vw, 40px);
+            overflow-x: hidden;
             position: relative;
+            background-color: #f8fafc;
         }
 
-        /* ── Animated Campus Background ── */
+        @media (max-width: 900px) {
+            body {
+                justify-content: center;
+                padding-right: 0;
+                padding: 16px;
+            }
+        }
+
+        /* ── EWU Campus Hero Background ── */
         .bg-campus {
             position: fixed;
             inset: 0;
-            background-image: url('/static/ewu_campus_night.jpg');
+            background-image: url('/static/images/ewu_campus.jpg');
             background-size: cover;
-            background-position: center bottom;
+            background-position: left center;
             z-index: 0;
-            animation: bgDrift 25s ease-in-out infinite alternate;
+            animation: bgDrift 30s ease-in-out infinite alternate;
         }
         @keyframes bgDrift {
-            0%   { transform: scale(1.04) translateX(0); }
-            100% { transform: scale(1.07) translateX(-10px); }
+            0%   { transform: scale(1.02) translateX(0); }
+            100% { transform: scale(1.05) translateX(-8px); }
         }
 
-        /* Soft overlay */
+        /* Soft overlay for legibility */
         .bg-overlay {
             position: fixed;
             inset: 0;
-            background: linear-gradient(170deg,
-                rgba(20,10,50,0.35) 0%,
-                rgba(10,5,30,0.45) 100%
+            background: linear-gradient(90deg,
+                rgba(15,23,42,0.15) 0%,
+                rgba(255,255,255,0.05) 55%,
+                rgba(255,255,255,0.25) 100%
             );
             z-index: 1;
         }

@@ -582,9 +582,32 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="/faculty/view-student-profile/{{ std.id }}" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm shadow-blue-500/20">
-                                <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Action
-                            </a>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                {% if std.pending_req_count and std.pending_req_count > 0 %}
+                                <a href="/faculty/view-student-profile/{{ std.id }}?tab=history" 
+                                   title="Student submitted {{ std.pending_req_count }} advising request(s) - Click to review History Timeline" 
+                                   class="relative inline-flex items-center justify-center p-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 transition-all cursor-pointer shadow-sm animate-pulse">
+                                    <i data-lucide="bell" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
+                                    <span class="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[0.6rem] font-black bg-rose-600 text-white rounded-full shadow-sm">
+                                        {{ std.pending_req_count }}
+                                    </span>
+                                </a>
+                                {% endif %}
+
+                                <a href="/faculty/view-student-profile/{{ std.id }}" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm shadow-blue-500/20">
+                                    <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Action
+                                </a>
+
+                                {% if std.advising_done_count and std.advising_done_count > 0 %}
+                                <span class="px-2 py-1 text-[0.65rem] font-black rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700" title="{{ std.advising_done_count }} advising request(s) previously approved">
+                                    ✓ Done: {{ std.advising_done_count }}
+                                </span>
+                                {% else %}
+                                <span class="px-2 py-1 text-[0.65rem] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                    No Prior Advising
+                                </span>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% else %}
@@ -662,9 +685,32 @@
                             Group: {{ std.completed_credits // 10 }} ({{ (std.completed_credits // 10)*10 }} - {{ ((std.completed_credits // 10)*10) + 10 }} CR)
                         </td>
                         <td>
-                            <a href="/faculty/view-student-profile/{{ std.id }}" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm shadow-blue-500/20">
-                                <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Action
-                            </a>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                {% if std.pending_req_count and std.pending_req_count > 0 %}
+                                <a href="/faculty/view-student-profile/{{ std.id }}?tab=history" 
+                                   title="Student submitted {{ std.pending_req_count }} advising request(s) - Click to review History Timeline" 
+                                   class="relative inline-flex items-center justify-center p-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 transition-all cursor-pointer shadow-sm animate-pulse">
+                                    <i data-lucide="bell" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
+                                    <span class="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[0.6rem] font-black bg-rose-600 text-white rounded-full shadow-sm">
+                                        {{ std.pending_req_count }}
+                                    </span>
+                                </a>
+                                {% endif %}
+
+                                <a href="/faculty/view-student-profile/{{ std.id }}" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm shadow-blue-500/20">
+                                    <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Action
+                                </a>
+
+                                {% if std.advising_done_count and std.advising_done_count > 0 %}
+                                <span class="px-2 py-1 text-[0.65rem] font-black rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700" title="{{ std.advising_done_count }} advising request(s) previously approved">
+                                    ✓ Done: {{ std.advising_done_count }}
+                                </span>
+                                {% else %}
+                                <span class="px-2 py-1 text-[0.65rem] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                    No Prior Advising
+                                </span>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% else %}

@@ -14,6 +14,8 @@ class User(db.Model, UserMixin):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     is_activated = db.Column(db.Boolean, default=False, nullable=False)
     otp_code = db.Column(db.String(10), nullable=True)
+    google_id = db.Column(db.String(100), nullable=True, unique=True)
+    google_email = db.Column(db.String(100), nullable=True)
 
 class SystemSetting(db.Model):
     __tablename__ = 'system_settings'

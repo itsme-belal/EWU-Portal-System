@@ -1122,6 +1122,14 @@ function loadAlternativeSections(courseCode, currentSecId) {
 // Initial Render
 document.addEventListener('DOMContentLoaded', () => {
     renderAddCards();
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam) {
+        switchProfileTab(tabParam);
+    } else {
+        const savedTab = sessionStorage.getItem('active_profile_tab');
+        if (savedTab) switchProfileTab(savedTab);
+    }
 });
 </script>
 {% endblock %}

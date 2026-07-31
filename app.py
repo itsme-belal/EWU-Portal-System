@@ -1,7 +1,13 @@
 import os
 import json
 import random
+import threading
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -58,12 +64,11 @@ db.init_app(app)
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', 'on', '1']
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '').strip()
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '').replace(' ', '')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME', 'EWU Portal System <no-reply@ewubd.edu>'))
 
 from flask_mail import Mail, Message as MailMessage
-import threading
 mail = Mail(app)
 
 def get_email_for_student(student_id):
@@ -81,8 +86,8 @@ def get_email_for_faculty(faculty_id):
     return None
 
 def send_email_safe(subject, recipients, body, html=None):
-    mail_user = os.environ.get('MAIL_USERNAME', app.config['MAIL_USERNAME'])
-    mail_pass = os.environ.get('MAIL_PASSWORD', app.config['MAIL_PASSWORD'])
+    mail_user = os.environ.get('MAIL_USERNAME', app.config['MAIL_USERNAME']).strip()
+    mail_pass = os.environ.get('MAIL_PASSWORD', app.config['MAIL_PASSWORD']).replace(' ', '')
 
     if not mail_user or not mail_pass:
         print(f"[MAIL LOG] SMTP credentials not set (MAIL_USERNAME/MAIL_PASSWORD). Email to {recipients} skipped.")
@@ -91,6 +96,7 @@ def send_email_safe(subject, recipients, body, html=None):
     def send_async():
         with app.app_context():
             try:
+                app.config['MAIL_PASSWORD'] = mail_pass
                 sender = os.environ.get('MAIL_DEFAULT_SENDER', app.config['MAIL_DEFAULT_SENDER']) or mail_user
                 msg = MailMessage(subject=subject, recipients=recipients, body=body, html=html, sender=sender)
                 mail.send(msg)
@@ -103,45 +109,127 @@ def send_email_safe(subject, recipients, body, html=None):
     t.start()
     return True
 
+def build_ewu_email_html(title, recipient_name, content_html, code=None, button_text=None, button_url=None):
+    code_block = ""
+    if code:
+        code_block = f"""
+        <div style="margin: 26px 0; padding: 22px; background: #eff6ff; border: 2px dashed #2563eb; border-radius: 14px; text-align: center;">
+            <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 800; color: #1e40af; text-transform: uppercase; letter-spacing: 1.5px;">Your 6-Digit Verification Code</p>
+            <div style="font-size: 36px; font-weight: 900; letter-spacing: 10px; color: #1d4ed8; font-family: 'Courier New', monospace, sans-serif;">{code}</div>
+            <p style="margin: 8px 0 0 0; font-size: 11px; color: #64748b;">This code is valid for 10 minutes. Do not share it with anyone.</p>
+        </div>
+        """
+
+    button_block = ""
+    if button_text and button_url:
+        button_block = f"""
+        <div style="margin: 28px 0 16px 0; text-align: center;">
+            <a href="{button_url}" target="_blank" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; font-weight: 800; font-size: 14px; text-decoration: none; padding: 14px 30px; border-radius: 10px; display: inline-block; box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35); text-transform: uppercase; letter-spacing: 0.5px;">
+                {button_text} &rarr;
+            </a>
+        </div>
+        """
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{title}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 32px 12px;">
+            <tr>
+                <td align="center">
+                    <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.1); border: 1px solid #cbd5e1;" cellspacing="0" cellpadding="0">
+                        <!-- BRANDED HEADER -->
+                        <tr>
+                            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 30px 36px; border-bottom: 4px solid #d97706; text-align: left;">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                                    <tr>
+                                        <td>
+                                            <div style="font-size: 22px; font-weight: 900; color: #ffffff; letter-spacing: 0.5px; margin: 0 0 4px 0;">EAST WEST UNIVERSITY</div>
+                                            <div style="font-size: 11px; font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: 2px;">Academic Portal & Notification System</div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        
+                        <!-- BODY CONTENT -->
+                        <tr>
+                            <td style="padding: 36px 36px 28px 36px; color: #334155; font-size: 15px; line-height: 1.6;">
+                                <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #0f172a;">Dear {recipient_name or 'User'},</p>
+                                
+                                {content_html}
+                                {code_block}
+                                {button_block}
+                                
+                                <p style="margin: 24px 0 0 0; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                                    If you have any questions or did not initiate this request, please contact the East West University Helpdesk.
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- FOOTER -->
+                        <tr>
+                            <td style="background-color: #f8fafc; padding: 20px 36px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                                <p style="margin: 0 0 4px 0; font-weight: 700; color: #475569;">East West University</p>
+                                <p style="margin: 0;">Plot No. A-2, Jahurul Islam City, Aftabnagar, Dhaka-1212, Bangladesh</p>
+                                <p style="margin: 6px 0 0 0; font-size: 11px; color: #94a3b8;">&copy; 2026 East West University. All rights reserved.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+
 def send_advisor_request_email(student, req_type_str, course_info, comments):
     recip = get_email_for_faculty(student.advisor_id) if student.advisor_id else None
     if not recip:
         recip = os.environ.get('MAIL_USERNAME', app.config['MAIL_USERNAME'])
-    if not recip:
-        return
-
+    
     advisor = Faculty.query.get(student.advisor_id) if student.advisor_id else None
     try:
         host_url = request.host_url.rstrip('/')
     except Exception:
         host_url = 'http://127.0.0.1:3001'
 
-    action_url = f"{host_url}/faculty/view-student-profile/{student.id}"
+    action_url = f"{host_url}/faculty/view-student-profile/{student.id}?tab=history"
 
-    html = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0c101d; color: #f8fafc; padding: 24px; border-radius: 16px; border: 1px solid #1e293b;">
-        <div style="border-bottom: 1px solid #1e293b; padding-bottom: 12px; margin-bottom: 16px;">
-            <h2 style="color: #3b82f6; margin: 0; font-size: 18px; font-weight: 800;">EWU ACADEMIC ADVISING NOTIFICATION</h2>
-            <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;">East West University Portal System</p>
-        </div>
-        <p style="font-size: 14px;">Dear Dr. {advisor.name if advisor else 'Faculty Advisor'},</p>
-        <p style="font-size: 14px; color: #cbd5e1;">Student <strong>{student.name} ({student.id})</strong> has submitted a new <strong>{req_type_str} Request</strong>.</p>
-        
-        <div style="background: #111827; padding: 16px; border-radius: 12px; border: 1px solid #1e293b; margin: 16px 0;">
-            <p style="margin: 6px 0; font-size: 13px; color: #94a3b8;"><strong>Student ID:</strong> <span style="color: #f8fafc;">{student.id}</span></p>
-            <p style="margin: 6px 0; font-size: 13px; color: #94a3b8;"><strong>Student Name:</strong> <span style="color: #f8fafc;">{student.name}</span></p>
-            <p style="margin: 6px 0; font-size: 13px; color: #94a3b8;"><strong>Requested Course / Sec:</strong> <span style="color: #60a5fa; font-weight: bold;">{course_info}</span></p>
-            <p style="margin: 6px 0; font-size: 13px; color: #94a3b8;"><strong>Student Message:</strong> <em style="color: #f59e0b;">"{comments or 'No message attached.'}"</em></p>
-        </div>
+    # Always log student notification notice
+    try:
+        notif = Notification(
+            id=f"NTF-{student.id}-{int(datetime.utcnow().timestamp())}",
+            student_id=student.id,
+            title=f"Advising Request Submitted: {req_type_str}",
+            message=f"Your {req_type_str} request for {course_info} has been sent to your Faculty Advisor."
+        )
+        db.session.add(notif)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
 
-        <div style="text-align: center; margin-top: 24px; margin-bottom: 12px;">
-            <a href="{action_url}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 10px; font-weight: 800; text-decoration: none; display: inline-block; font-size: 14px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">
-                Review Student Profile & Take Action
-            </a>
-        </div>
-        <p style="font-size: 11px; color: #64748b; text-align: center; margin-top: 20px;">This is an automated system notification from EWU Academic Advising Portal.</p>
+    if not recip:
+        return
+
+    content_html = f"""
+    <p>Student <strong>{student.name} ({student.id})</strong> has submitted a new <strong>{req_type_str} Request</strong> for your review.</p>
+    
+    <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #cbd5e1; margin: 20px 0;">
+        <p style="margin: 6px 0; font-size: 13.5px; color: #475569;"><strong>Student ID:</strong> <span style="color: #0f172a; font-weight: 700;">{student.id}</span></p>
+        <p style="margin: 6px 0; font-size: 13.5px; color: #475569;"><strong>Student Name:</strong> <span style="color: #0f172a; font-weight: 700;">{student.name}</span></p>
+        <p style="margin: 6px 0; font-size: 13.5px; color: #475569;"><strong>Requested Course / Sec:</strong> <span style="color: #2563eb; font-weight: 800;">{course_info}</span></p>
+        <p style="margin: 6px 0; font-size: 13.5px; color: #475569;"><strong>Student Message:</strong> <em style="color: #d97706;">"{comments or 'No message attached.'}"</em></p>
     </div>
+    <p style="font-size: 13.5px; color: #64748b;">Click the button below to review the student's Organized History Timeline and make a decision directly:</p>
     """
+
+    html = build_ewu_email_html(f"New {req_type_str} Request", f"Dr. {advisor.name}" if advisor else "Faculty Advisor", content_html, button_text="Open Student History Timeline", button_url=action_url)
     send_email_safe(f"[EWU Portal] New {req_type_str} Request from {student.name} ({student.id})", [recip], f"Student {student.name} ({student.id}) submitted {req_type_str} request for {course_info}. Action link: {action_url}", html=html)
 
 def send_student_action_email(student, req_type_str, status_str, advisor_note, faculty_title, course_info):
@@ -155,31 +243,20 @@ def send_student_action_email(student, req_type_str, status_str, advisor_note, f
         host_url = 'http://127.0.0.1:3001'
 
     student_url = f"{host_url}/student"
-    status_color = "#10b981" if status_str.lower() == 'approved' else "#ef4444"
+    status_color = "#16a34a" if status_str.lower() == 'approved' else "#dc2626"
 
-    html = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0c101d; color: #f8fafc; padding: 24px; border-radius: 16px; border: 1px solid #1e293b;">
-        <div style="border-bottom: 1px solid #1e293b; padding-bottom: 12px; margin-bottom: 16px;">
-            <h2 style="color: #3b82f6; margin: 0; font-size: 18px; font-weight: 800;">EWU ADVISING STATUS UPDATE</h2>
-            <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;">East West University Portal System</p>
-        </div>
-        <p style="font-size: 14px;">Dear {student.name},</p>
-        <p style="font-size: 14px; color: #cbd5e1;">Your <strong>{req_type_str}</strong> for course <strong>{course_info}</strong> has been updated by <strong>{faculty_title}</strong>.</p>
-        
-        <div style="background: #111827; padding: 16px; border-radius: 12px; border: 1px solid #1e293b; margin: 16px 0;">
-            <p style="margin: 6px 0; font-size: 13px; color: #94a3b8;"><strong>Decision Status:</strong> <span style="color: {status_color}; font-weight: bold; font-size: 15px;">{status_str.upper()}</span></p>
-            <p style="margin: 6px 0; font-size: 13px; color: #94a3b8;"><strong>Faculty Note / Message:</strong> <em style="color: #cbd5e1;">"{advisor_note or 'No comments provided.'}"</em></p>
-        </div>
-
-        <div style="text-align: center; margin-top: 24px; margin-bottom: 12px;">
-            <a href="{student_url}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 10px; font-weight: 800; text-decoration: none; display: inline-block; font-size: 14px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">
-                Open Student Advising Portal
-            </a>
-        </div>
-        <p style="font-size: 11px; color: #64748b; text-align: center; margin-top: 20px;">This is an automated system notification from EWU Academic Advising Portal.</p>
+    content_html = f"""
+    <p>Your <strong>{req_type_str} Request</strong> for course <strong>{course_info}</strong> has been updated by <strong>{faculty_title}</strong>.</p>
+    
+    <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #cbd5e1; margin: 20px 0;">
+        <p style="margin: 6px 0; font-size: 14px; color: #475569;"><strong>Decision Status:</strong> <span style="color: {status_color}; font-weight: 900; font-size: 16px;">{status_str.upper()}</span></p>
+        <p style="margin: 6px 0; font-size: 13.5px; color: #475569;"><strong>Faculty Note / Message:</strong> <em style="color: #334155;">"{advisor_note or 'No additional comments.'}"</em></p>
     </div>
+    <p style="font-size: 13.5px; color: #64748b;">Log into your EWU Student Advising Portal to view your updated course schedule.</p>
     """
-    send_email_safe(f"[EWU Portal] Advising Update: {course_info} is {status_str.upper()}", [recip], f"Your request for {course_info} was {status_str.upper()}. Faculty note: {advisor_note}", html=html)
+
+    html = build_ewu_email_html(f"{req_type_str} Request {status_str}", student.name, content_html, button_text="Open Student Advising Portal", button_url=student_url)
+    send_email_safe(f"[EWU Portal] Your {req_type_str} Request Has Been {status_str.upper()}", [recip], f"Your {req_type_str} request for {course_info} was {status_str.upper()}. Faculty note: {advisor_note}", html=html)
 
 PROFILE_UPLOAD_DIR = os.path.join(app.root_path, 'static', 'uploads')
 ALLOWED_PROFILE_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -213,6 +290,10 @@ def ensure_runtime_schema():
             'office': 'VARCHAR(100)',
             'phone': 'VARCHAR(50)',
             'research_interests': 'VARCHAR(500)'
+        },
+        'users': {
+            'google_id': 'VARCHAR(100)',
+            'google_email': 'VARCHAR(100)'
         },
         'pre_advising_courses': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
         'section_offerings': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
@@ -809,17 +890,34 @@ def home():
 def login_page():
     if current_user.is_authenticated:
         return redirect(url_for(current_user.role + '_dashboard'))
-    return render_template('login.html')
+    google_client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+    return render_template('login.html', google_client_id=google_client_id)
 
 @app.route('/login', methods=['POST'])
 def do_login():
-    identifier = request.form.get('email', '').strip()  # can be email or student ID
+    identifier = request.form.get('email', '').strip()  # Student ID / Faculty ID / Email
     password = request.form.get('password', '')
 
-    # Try lookup by email first, then by User.id (student/faculty ID)
-    user = User.query.filter_by(email=identifier).first()
+    if not identifier or not password:
+        flash('Please enter your Student ID / Login ID and password.', 'error')
+        return redirect(url_for('login_page'))
+
+    id_prefix = identifier.split('@')[0] if '@' in identifier else identifier
+
+    # Lookup by User.id (Student ID / Faculty ID), User.email, or Student/Faculty record
+    user = User.query.filter_by(id=identifier).first()
     if not user:
-        user = User.query.filter_by(id=identifier).first()
+        user = User.query.filter_by(id=id_prefix).first()
+    if not user:
+        user = User.query.filter_by(email=identifier).first()
+    if not user:
+        student = Student.query.filter((Student.id == identifier) | (Student.id == id_prefix)).first()
+        if student:
+            user = User.query.get(student.user_id) or User.query.get(student.id)
+    if not user:
+        faculty = Faculty.query.filter((Faculty.id == identifier) | (Faculty.id == id_prefix)).first()
+        if faculty:
+            user = User.query.get(faculty.user_id) or User.query.get(faculty.id)
 
     if user:
         if not user.is_active:
@@ -840,53 +938,207 @@ def do_login():
             session['fresh_login'] = True
             return redirect(url_for(user.role + '_dashboard'))
 
-    flash('Invalid credentials. Check your Student ID / email and password.', 'error')
+    flash('Invalid credentials. Check your ID and password.', 'error')
     return redirect(url_for('login_page'))
 
 
-# ACTIVATION FLOW
+# GOOGLE OAUTH 1-CLICK & DIRECT GMAIL/STUDENT EMAIL SIGNIN
+@app.route('/login/google', methods=['POST'])
+def google_login():
+    data = request.get_json(silent=True) or request.form
+    google_email = (data.get('email') or data.get('google_email') or '').strip().lower()
+    google_id = (data.get('google_id') or data.get('sub') or '').strip()
+    google_name = (data.get('name') or '').strip()
+
+    if not google_email:
+        if request.is_json:
+            return jsonify({'status': 'error', 'message': 'Google / Gmail address is required.'}), 400
+        flash('Google / Gmail address is required.', 'error')
+        return redirect(url_for('login_page'))
+
+    id_prefix = google_email.split('@')[0]
+
+    # 1. Lookup user by google_id, google_email, registered email, or user.id
+    user = User.query.filter_by(google_id=google_id).first() if google_id else None
+    if not user:
+        user = User.query.filter_by(google_email=google_email).first()
+    if not user:
+        user = User.query.filter_by(email=google_email).first()
+    if not user:
+        user = User.query.filter_by(id=google_email).first()
+    if not user:
+        user = User.query.filter_by(id=id_prefix).first()
+
+    # 2. Lookup via Student / Faculty records
+    if not user:
+        student = Student.query.filter((Student.id == google_email) | (Student.id == id_prefix)).first()
+        if student:
+            user = User.query.get(student.user_id) or User.query.get(student.id)
+
+    if not user:
+        faculty = Faculty.query.filter((Faculty.id == google_email) | (Faculty.id == id_prefix)).first()
+        if faculty:
+            user = User.query.get(faculty.user_id) or User.query.get(faculty.id)
+
+    # If user found, link Google account if needed & log in immediately
+    if user:
+        if not user.is_active:
+            if request.is_json:
+                return jsonify({'status': 'error', 'message': 'Your account has been deactivated.'}), 403
+            flash('Your account has been deactivated. Contact the administrator.', 'error')
+            return redirect(url_for('login_page'))
+
+        if not user.google_id and google_id:
+            user.google_id = google_id
+        if not user.google_email:
+            user.google_email = google_email
+        user.is_activated = True
+        db.session.commit()
+
+        login_user(user)
+        session['fresh_login'] = True
+        flash(f"Welcome back, {user.name or google_name or user.id}! Logged in with Google.", 'success')
+
+        if request.is_json:
+            return jsonify({
+                'status': 'success',
+                'redirect': url_for(user.role + '_dashboard'),
+                'message': 'Google login successful.'
+            })
+        return redirect(url_for(user.role + '_dashboard'))
+
+    # If user not found, Google email is unlinked. Require 1-time activation link with EWU ID
+    if request.is_json:
+        return jsonify({
+            'status': 'need_activation',
+            'google_email': google_email,
+            'google_id': google_id,
+            'google_name': google_name,
+            'message': 'Google account unlinked. Enter your EWU Student/Faculty ID & Password once to complete lifetime activation.'
+        })
+
+    flash('Google account unlinked. Enter your Student/Faculty ID and Password once to complete lifetime activation.', 'info')
+    return render_template('login.html', google_link_email=google_email, google_link_id=google_id)
+
+
+@app.route('/login/google/activate', methods=['POST'])
+def google_activate():
+    identifier = request.form.get('student_id', '').strip() or request.form.get('email', '').strip()
+    password = request.form.get('password', '')
+    google_email = request.form.get('google_email', '').strip().lower()
+    google_id = request.form.get('google_id', '').strip()
+
+    user = User.query.filter_by(email=identifier).first()
+    if not user:
+        user = User.query.filter_by(id=identifier).first()
+
+    if not user:
+        flash('Invalid EWU Student / Faculty ID.', 'error')
+        return redirect(url_for('login_page'))
+
+    if not check_password_hash(user.password_hash, password):
+        flash('Incorrect password. Failed to activate Google account.', 'error')
+        return redirect(url_for('login_page'))
+
+    # Permanently link Google account to user
+    if google_id:
+        user.google_id = google_id
+    if google_email:
+        user.google_email = google_email
+    user.is_activated = True
+    db.session.commit()
+
+    login_user(user)
+    session['fresh_login'] = True
+    flash(f"Success! Google account permanently linked to {user.id}. 1-Click Google Sign-In is now active lifetime!", 'success')
+    return redirect(url_for(user.role + '_dashboard'))
+
+
+# ACTIVATION FLOW (EMAIL & ID CODE VERIFICATION)
 @app.route('/activate', methods=['GET', 'POST'])
 def activate_account():
     if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            flash('Email not found in student/faculty records.', 'error')
+        identifier = request.form.get('email', '').strip()
+        if not identifier:
+            flash('Please enter your Student ID or University Email.', 'error')
             return redirect(url_for('activate_account'))
-        
-        # Generate 6 digit OTP
+
+        id_prefix = identifier.split('@')[0] if '@' in identifier else identifier
+
+        # Lookup user by ID or Email
+        user = User.query.filter_by(id=identifier).first()
+        if not user:
+            user = User.query.filter_by(id=id_prefix).first()
+        if not user:
+            user = User.query.filter_by(email=identifier).first()
+        if not user:
+            student = Student.query.filter((Student.id == identifier) | (Student.id == id_prefix)).first()
+            if student:
+                user = User.query.get(student.user_id) or User.query.get(student.id)
+        if not user:
+            faculty = Faculty.query.filter((Faculty.id == identifier) | (Faculty.id == id_prefix)).first()
+            if faculty:
+                user = User.query.get(faculty.user_id) or User.query.get(faculty.id)
+
+        if not user:
+            flash('Student ID or Email not found in university records.', 'error')
+            return redirect(url_for('activate_account'))
+
+        if user.is_activated:
+            flash('Your account is already activated. Please sign in directly.', 'info')
+            return redirect(url_for('login_page'))
+
+        # Generate 6-digit OTP
         code = str(random.randint(100000, 999999))
         user.otp_code = code
         db.session.commit()
-        
-        flash(f"Verification code successfully sent to email! [DEMO VERIFICATION CODE: {code}]", 'success')
-        return render_template('activate_verify.html', email=email)
-        
+
+        # Send Branded HTML Email
+        subject = "EWU Portal - Account Activation Verification Code"
+        content_html = "<p style='margin-bottom:12px;'>Thank you for activating your East West University Portal account.</p><p style='margin-bottom:12px;'>Please use the 6-digit verification code below to verify your email address and set your account password:</p>"
+        html = build_ewu_email_html("Account Activation Verification Code", user.name if hasattr(user, 'name') and user.name else user.id, content_html, code=code)
+        body = f"Hello {user.id},\n\nYour 6-digit verification code to activate your East West University Portal account is: {code}\n\nThank you,\nEast West University Portal"
+        email_sent = send_email_safe(subject, [user.email], body, html=html)
+
+        if email_sent:
+            flash(f"Verification code sent to your email address ({user.email}). Please check your Inbox!", 'success')
+        else:
+            flash(f"Verification code sent to {user.email}! (Code: {code})", 'info')
+        return render_template('activate_verify.html', email=user.email)
+
     return render_template('activate.html')
+
 
 @app.route('/activate/verify', methods=['POST'])
 def activate_verify():
     email = request.form.get('email', '').strip()
     code = request.form.get('code', '').strip()
-    
+
     user = User.query.filter_by(email=email).first()
-    if user and user.otp_code == code:
-        return render_template('activate_password.html', email=email)
-        
+    if not user:
+        user = User.query.filter_by(id=email).first()
+
+    if user and user.otp_code and user.otp_code == code:
+        return render_template('activate_password.html', email=user.email)
+
     flash('Incorrect verification code. Please try again.', 'error')
     return render_template('activate_verify.html', email=email)
+
 
 @app.route('/activate/complete', methods=['POST'])
 def activate_complete():
     email = request.form.get('email', '').strip()
     password = request.form.get('password', '')
     confirm = request.form.get('confirm_password', '')
-    
+
     if password != confirm:
         flash('Passwords do not match.', 'error')
         return render_template('activate_password.html', email=email)
-        
+
     user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User.query.filter_by(id=email).first()
+
     if user:
         user.password_hash = generate_password_hash(password)
         user.is_activated = True
@@ -894,57 +1146,98 @@ def activate_complete():
         db.session.commit()
         flash('Account activated successfully! You can now log in.', 'success')
         return redirect(url_for('login_page'))
-        
+
     flash('User record error.', 'error')
     return redirect(url_for('login_page'))
 
-# FORGOT PASSWORD FLOW
+
+# FORGOT PASSWORD FLOW (EMAIL & ID CODE VERIFICATION)
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            flash('Email not found.', 'error')
+        identifier = request.form.get('email', '').strip()
+        if not identifier:
+            flash('Please enter your Student ID or Email.', 'error')
             return redirect(url_for('forgot_password'))
-            
+
+        id_prefix = identifier.split('@')[0] if '@' in identifier else identifier
+
+        # Lookup user by ID or Email
+        user = User.query.filter_by(id=identifier).first()
+        if not user:
+            user = User.query.filter_by(id=id_prefix).first()
+        if not user:
+            user = User.query.filter_by(email=identifier).first()
+        if not user:
+            student = Student.query.filter((Student.id == identifier) | (Student.id == id_prefix)).first()
+            if student:
+                user = User.query.get(student.user_id) or User.query.get(student.id)
+        if not user:
+            faculty = Faculty.query.filter((Faculty.id == identifier) | (Faculty.id == id_prefix)).first()
+            if faculty:
+                user = User.query.get(faculty.user_id) or User.query.get(faculty.id)
+
+        if not user:
+            flash('Account or email not found in university records.', 'error')
+            return redirect(url_for('forgot_password'))
+
         code = str(random.randint(100000, 999999))
         user.otp_code = code
         db.session.commit()
-        flash(f"Reset code successfully generated! [DEMO RESET CODE: {code}]", 'success')
-        return render_template('forgot_verify.html', email=email)
+
+        # Send Branded HTML Email
+        subject = "EWU Portal - Password Reset Verification Code"
+        content_html = "<p style='margin-bottom:12px;'>We received a request to reset the password for your East West University Portal account.</p><p style='margin-bottom:12px;'>Please use the 6-digit verification code below to complete your password reset:</p>"
+        html = build_ewu_email_html("Password Reset Verification Code", user.name if hasattr(user, 'name') and user.name else user.id, content_html, code=code)
+        body = f"Hello {user.id},\n\nYour 6-digit password reset code for East West University Portal is: {code}\n\nThank you,\nEast West University Portal"
+        email_sent = send_email_safe(subject, [user.email], body, html=html)
+
+        if email_sent:
+            flash(f"Password reset code sent to your email address ({user.email}). Please check your Inbox!", 'success')
+        else:
+            flash(f"Password reset code sent to {user.email}! (Code: {code})", 'info')
+        return render_template('forgot_verify.html', email=user.email)
+
     return render_template('forgot.html')
+
 
 @app.route('/forgot-password/verify', methods=['POST'])
 def forgot_verify():
     email = request.form.get('email', '').strip()
     code = request.form.get('code', '').strip()
-    
+
     user = User.query.filter_by(email=email).first()
-    if user and user.otp_code == code:
-        return render_template('forgot_password.html', email=email)
-        
+    if not user:
+        user = User.query.filter_by(id=email).first()
+
+    if user and user.otp_code and user.otp_code == code:
+        return render_template('forgot_password.html', email=user.email)
+
     flash('Incorrect reset code. Please try again.', 'error')
     return render_template('forgot_verify.html', email=email)
+
 
 @app.route('/forgot-password/complete', methods=['POST'])
 def forgot_complete():
     email = request.form.get('email', '').strip()
     password = request.form.get('password', '')
     confirm = request.form.get('confirm_password', '')
-    
+
     if password != confirm:
         flash('Passwords do not match.', 'error')
         return render_template('forgot_password.html', email=email)
-        
+
     user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User.query.filter_by(id=email).first()
+
     if user:
         user.password_hash = generate_password_hash(password)
         user.otp_code = None
         db.session.commit()
         flash('Password successfully reset! You can now log in.', 'success')
         return redirect(url_for('login_page'))
-        
+
     flash('User record error.', 'error')
     return redirect(url_for('login_page'))
 
@@ -1892,6 +2185,26 @@ def faculty_dashboard():
      
     all_sections = SectionOffering.query.order_by(SectionOffering.course_code.asc(), SectionOffering.section_number.asc()).all()
     dept_students = Student.query.filter_by(department_id=faculty.department_id).all()
+
+    for s in advisees:
+        s.pending_req_count = AdvisingRequest.query.filter(
+            AdvisingRequest.student_id == s.id,
+            AdvisingRequest.status.in_(['pending_advisor', 'pending_admin'])
+        ).count()
+        s.advising_done_count = AdvisingRequest.query.filter(
+            AdvisingRequest.student_id == s.id,
+            AdvisingRequest.status == 'approved'
+        ).count()
+
+    for s in dept_students:
+        s.pending_req_count = AdvisingRequest.query.filter(
+            AdvisingRequest.student_id == s.id,
+            AdvisingRequest.status.in_(['pending_advisor', 'pending_admin'])
+        ).count()
+        s.advising_done_count = AdvisingRequest.query.filter(
+            AdvisingRequest.student_id == s.id,
+            AdvisingRequest.status == 'approved'
+        ).count()
      
     # Class Schedules
     prev_semester = get_previous_semester()
