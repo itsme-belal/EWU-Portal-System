@@ -1,7 +1,14 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import json
+
+# Bangladesh Standard Timezone (BST, UTC+6)
+BD_TZ = timezone(timedelta(hours=6))
+
+def get_now():
+    """Returns current naive datetime in Bangladesh Local Time (Asia/Dhaka, UTC+6)."""
+    return datetime.now(BD_TZ).replace(tzinfo=None)
 
 db = SQLAlchemy()
 
@@ -114,7 +121,7 @@ class SectionOffering(db.Model):
     is_lab = db.Column(db.Boolean, default=False)
     linked_section_id = db.Column(db.String(100), nullable=True)
     faculty_id = db.Column(db.String(50), db.ForeignKey('faculty.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_now)
 
     @property
     def dedicated_departments(self):
@@ -142,7 +149,7 @@ class AdvisingWindow(db.Model):
     start_date_time = db.Column(db.String(50), nullable=False)
     end_date_time = db.Column(db.String(50), nullable=False)
     semester_id = db.Column(db.String(20), default='summer-2026')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_now)
 
 class AdvisingPlan(db.Model):
     __tablename__ = 'advising_plans'
@@ -166,7 +173,7 @@ class Registration(db.Model):
     section_id = db.Column(db.String(100), db.ForeignKey('section_offerings.id'), nullable=False)
     semester_id = db.Column(db.String(20), default='summer-2026')
     status = db.Column(db.String(20), default='registered')
-    registered_at = db.Column(db.DateTime, default=datetime.utcnow)
+    registered_at = db.Column(db.DateTime, default=get_now)
 
 class SemesterDropRequest(db.Model):
     __tablename__ = 'semester_drop_requests'
@@ -175,7 +182,7 @@ class SemesterDropRequest(db.Model):
     semester_id = db.Column(db.String(20), nullable=False)
     reason = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), default='pending')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_now)
 
 class AttendanceRecord(db.Model):
     __tablename__ = 'attendance_records'
@@ -186,7 +193,7 @@ class AttendanceRecord(db.Model):
     date = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(20), nullable=False, default='present')
     marked_by = db.Column(db.String(50), db.ForeignKey('faculty.id'), nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=get_now, onupdate=get_now)
 
 class AdvisingRequest(db.Model):
     __tablename__ = 'advising_requests'
@@ -201,7 +208,7 @@ class AdvisingRequest(db.Model):
     comments = db.Column(db.Text, nullable=False)
     advisor_note = db.Column(db.Text, nullable=True)
     advisor_id = db.Column(db.String(50), db.ForeignKey('faculty.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_now)
 
 class Grade(db.Model):
     __tablename__ = 'grades'
@@ -248,7 +255,7 @@ class Notification(db.Model):
     title = db.Column(db.String(100), nullable=False)
     message = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_now)
 
 class CourseMaterial(db.Model):
     __tablename__ = 'course_materials'
@@ -257,7 +264,7 @@ class CourseMaterial(db.Model):
     title = db.Column(db.String(255), nullable=False)
     file_path = db.Column(db.String(255), nullable=False)
     file_type = db.Column(db.String(50), nullable=False) # 'slide', 'note', 'assignment', 'lab'
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=get_now)
 
 class CourseAnnouncement(db.Model):
     __tablename__ = 'course_announcements'
@@ -265,7 +272,7 @@ class CourseAnnouncement(db.Model):
     section_id = db.Column(db.String(100), db.ForeignKey('section_offerings.id'), nullable=False)
     title = db.Column(db.String(255), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_now)
 
 class Message(db.Model):
     __tablename__ = 'messages'
@@ -274,7 +281,7 @@ class Message(db.Model):
     receiver_id = db.Column(db.String(50), nullable=True) # User.id
     content = db.Column(db.Text, nullable=False)
     attachment_path = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_now)
     is_read = db.Column(db.Boolean, default=False)
     course_chat_section_id = db.Column(db.String(100), db.ForeignKey('section_offerings.id'), nullable=True)
 

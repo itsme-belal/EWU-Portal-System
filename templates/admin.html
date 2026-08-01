@@ -2534,6 +2534,7 @@ main canvas { color: var(--text-1); }
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Course / Section</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Request Type</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Submitted At</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Student Justification</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Advisor Note</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-400">Admin Actions</th>
@@ -2583,6 +2584,9 @@ main canvas { color: var(--text-1); }
                             {% else %}
                             <span class="badge badge-warning text-[0.6rem] font-bold uppercase font-mono">Pending Advisor</span>
                             {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-xs font-mono text-slate-400 whitespace-nowrap">
+                            {{ req.created_at.strftime('%b %d, %Y at %I:%M %p') if req.created_at else '—' }}
                         </td>
                         <td class="px-4 py-3 text-xs italic text-slate-400">
                             "{{ req.comments }}"
@@ -3157,7 +3161,8 @@ main canvas { color: var(--text-1); }
 
         <!-- Profile Header -->
         <div class="fle<!-- ADMIN EDIT FACULTY MODAL -->
-<div id="admin-edit-faculty-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden" onclick="if(event.target===this) this.classList.add('hidden')">
+<!-- ADMIN EDIT FACULTY MODAL -->
+<div id="admin-edit-faculty-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden" onclick="if(event.target===this) closeAdminEditFacultyModal()">
     <div class="relative bg-[#0b0f19] border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl space-y-6 p-6 sm:p-8 my-auto" onclick="event.stopPropagation()">
         
         <!-- Header Banner -->
@@ -3177,7 +3182,7 @@ main canvas { color: var(--text-1); }
                     <p class="text-xs text-slate-400 mt-1">Update academic designation, department details & contact information</p>
                 </div>
             </div>
-            <button onclick="document.getElementById('admin-edit-faculty-modal').classList.add('hidden')" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+            <button type="button" onclick="closeAdminEditFacultyModal()" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
@@ -3261,7 +3266,7 @@ main canvas { color: var(--text-1); }
 
             <!-- ACTION BUTTONS -->
             <div class="flex justify-end items-center gap-3 pt-3 border-t border-slate-800">
-                <button type="button" onclick="document.getElementById('admin-edit-faculty-modal').classList.add('hidden')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-all">
+                <button type="button" onclick="closeAdminEditFacultyModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-all">
                     Cancel
                 </button>
                 <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl transition-all shadow-lg shadow-purple-500/20 flex items-center gap-2">
@@ -3273,7 +3278,7 @@ main canvas { color: var(--text-1); }
 </div>
 
 <!-- ADMIN EDIT STUDENT MODAL -->
-<div id="admin-edit-student-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden" onclick="if(event.target===this) this.classList.add('hidden')">
+<div id="admin-edit-student-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden" onclick="if(event.target===this) closeAdminEditStudentModal()">
     <div class="relative bg-[#0b0f19] border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl space-y-6 p-6 sm:p-8 my-auto" onclick="event.stopPropagation()">
         
         <!-- Header Banner -->
@@ -3293,7 +3298,7 @@ main canvas { color: var(--text-1); }
                     <p class="text-xs text-slate-400 mt-1">Manage academic stats, financial hold status, contact details & bio</p>
                 </div>
             </div>
-            <button onclick="document.getElementById('admin-edit-student-modal').classList.add('hidden')" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+            <button type="button" onclick="closeAdminEditStudentModal()" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
@@ -3386,7 +3391,7 @@ main canvas { color: var(--text-1); }
 
             <!-- ACTION BUTTONS -->
             <div class="flex justify-end items-center gap-3 pt-3 border-t border-slate-800">
-                <button type="button" onclick="document.getElementById('admin-edit-student-modal').classList.add('hidden')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-all">
+                <button type="button" onclick="closeAdminEditStudentModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-all">
                     Cancel
                 </button>
                 <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2">
@@ -4093,6 +4098,22 @@ main canvas { color: var(--text-1); }
     function closeFacultyModal(event) {
         if (event === null || event.target === document.getElementById('faculty-profile-modal')) {
             document.getElementById('faculty-profile-modal').classList.add('hidden');
+        }
+    }
+
+    function closeAdminEditFacultyModal() {
+        const modal = document.getElementById('admin-edit-faculty-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+        }
+    }
+
+    function closeAdminEditStudentModal() {
+        const modal = document.getElementById('admin-edit-student-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
         }
     }
 

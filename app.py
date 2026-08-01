@@ -1499,7 +1499,7 @@ def api_live_advising_status():
                 'section_id': req.section_id,
                 'type': req.type,
                 'comments': req.comments,
-                'created_at': req.created_at.strftime('%Y-%m-%d %H:%M') if req.created_at else ''
+                'created_at': req.created_at.strftime('%b %d, %Y at %I:%M %p') if req.created_at else ''
             }
             for req in requests
         ]
@@ -2814,7 +2814,7 @@ def faculty_post_announcement():
         title=title,
         content=content,
         created_by=f"Advisor: {faculty.name}" if target_scope == 'advisees' else f"Faculty: {faculty.name}",
-        created_at=datetime.utcnow().strftime('%Y-%m-%d %H:%M'),
+        created_at=get_now().strftime('%b %d, %Y at %I:%M %p'),
         target_role=target_role
     )
     db.session.add(ann)
@@ -2825,12 +2825,12 @@ def faculty_post_announcement():
         advisees = Student.query.filter_by(advisor_id=faculty.id).all()
         for std in advisees:
             notif = Notification(
-                id=f"notif-{int(datetime.utcnow().timestamp())}-{std.id}",
+                id=f"notif-{int(get_now().timestamp())}-{std.id}",
                 student_id=std.id,
                 title=f"📢 Advisor Announcement: {title}",
                 message=content,
                 is_read=False,
-                created_at=datetime.utcnow()
+                created_at=get_now()
             )
             db.session.add(notif)
             notified_count += 1
@@ -6983,11 +6983,11 @@ def post_announcement():
     content = request.form.get('content')
     
     ann = Announcement(
-        id=f"ann-{int(datetime.utcnow().timestamp())}",
+        id=f"ann-{int(get_now().timestamp())}",
         title=title,
         content=content,
         created_by="EWU Registrar Office",
-        created_at=datetime.utcnow().strftime('%Y-%m-%d'),
+        created_at=get_now().strftime('%b %d, %Y at %I:%M %p'),
         target_role=target
     )
     db.session.add(ann)
@@ -7207,7 +7207,7 @@ def admin_student_details(std_id):
         'course_id': r.course_id,
         'type': r.type,
         'status': r.status,
-        'created_at': r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else ''
+        'created_at': r.created_at.strftime('%b %d, %Y at %I:%M %p') if r.created_at else ''
     } for r in requests]
     
     regs = Registration.query.filter_by(student_id=student.id).all()
