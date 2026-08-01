@@ -3151,16 +3151,6 @@ main canvas { color: var(--text-1); }
     </div>
 </div>
 
-<!-- FACULTY PROFILE MODAL -->
-<div id="faculty-profile-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" onclick="closeFacultyModal(event)">
-    <div class="glass-card w-full max-w-3xl max-h-[80vh] overflow-y-auto p-6 relative flex flex-col gap-6" onclick="event.stopPropagation()">
-        <!-- Close Button -->
-        <button onclick="closeFacultyModal(null)" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
-            <i data-lucide="x" class="w-6 h-6"></i>
-        </button>
-
-        <!-- Profile Header -->
-        <div class="fle<!-- ADMIN EDIT FACULTY MODAL -->
 <!-- ADMIN EDIT FACULTY MODAL -->
 <div id="admin-edit-faculty-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden" onclick="if(event.target===this) closeAdminEditFacultyModal()">
     <div class="relative bg-[#0b0f19] border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl space-y-6 p-6 sm:p-8 my-auto" onclick="event.stopPropagation()">
