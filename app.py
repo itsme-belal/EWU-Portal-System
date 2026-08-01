@@ -104,6 +104,13 @@ def send_email_safe(subject, recipients, body, html=None):
 
     def send_async():
         with app.app_context():
+            import socket
+            old_getaddrinfo = socket.getaddrinfo
+            def ipv4_getaddrinfo(*args, **kwargs):
+                res = old_getaddrinfo(*args, **kwargs)
+                ipv4_res = [r for r in res if r[0] == socket.AF_INET]
+                return ipv4_res if ipv4_res else res
+            socket.getaddrinfo = ipv4_getaddrinfo
             try:
                 app.config['MAIL_PASSWORD'] = mail_pass
                 sender = os.environ.get('MAIL_DEFAULT_SENDER', app.config['MAIL_DEFAULT_SENDER']) or mail_user
@@ -112,6 +119,8 @@ def send_email_safe(subject, recipients, body, html=None):
                 print(f"[MAIL SUCCESS] Notification email sent to {recipients}: {subject}")
             except Exception as e:
                 print(f"[MAIL WARNING] Failed sending email to {recipients}: {e}")
+            finally:
+                socket.getaddrinfo = old_getaddrinfo
 
     t = threading.Thread(target=send_async)
     t.daemon = True
