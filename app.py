@@ -1853,7 +1853,7 @@ def render_student_portal(active_tab):
     # Ledger
     ledger = LedgerEntry.query.filter_by(student_id=student.id).all()
     installments = Installment.query.filter_by(student_id=student.id).all()
-    raw_requests = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=get_next_semester()).order_by(AdvisingRequest.created_at.desc()).all()
+    raw_requests = AdvisingRequest.query.filter_by(student_id=student.id).order_by(AdvisingRequest.created_at.desc()).all()
     requests = []
     for r in raw_requests:
         sec = SectionOffering.query.get(r.section_id) if r.section_id else None
@@ -2406,7 +2406,7 @@ def faculty_dashboard():
         Student.name.label('student_name'), Student.id.label('student_id')
     ).join(Student, Student.id == AdvisingRequest.student_id)\
      .filter(
-         (AdvisingRequest.advisor_id == faculty.id) | (Student.advisor_id == faculty.id)
+         (AdvisingRequest.advisor_id == faculty.id) | (Student.advisor_id == faculty.id) | (Student.department_id == faculty.department_id)
      )\
      .order_by(AdvisingRequest.created_at.desc()).all()
 
@@ -3379,6 +3379,7 @@ def submit_add_request_multi():
             semester_id=get_next_semester(),
             advisor_id=student.advisor_id
         )
+        db.session.add(req)
     db.session.commit()
 
     courses_text = ", ".join(unique_course_codes)
@@ -3641,7 +3642,7 @@ def faculty_view_student_profile(student_id):
             })
             total_registered_credits += sec.credits
 
-    raw_requests = AdvisingRequest.query.filter_by(student_id=student.id, semester_id=next_sem).order_by(AdvisingRequest.created_at.desc()).all()
+    raw_requests = AdvisingRequest.query.filter_by(student_id=student.id).order_by(AdvisingRequest.created_at.desc()).all()
     requests = []
     for r in raw_requests:
         sec = SectionOffering.query.get(r.section_id) if r.section_id else None
