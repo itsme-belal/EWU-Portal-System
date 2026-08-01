@@ -5432,16 +5432,36 @@ def admin_edit_student(std_id):
         
     name = request.form.get('name', '').strip()
     dept = request.form.get('department_id', '').strip()
-    cgpa = float(request.form.get('cgpa', std.cgpa or 0.0))
-    credits = float(request.form.get('completed_credits', std.completed_credits or 0.0))
-    balance = int(request.form.get('outstanding_balance', std.outstanding_balance or 0))
+    
+    cgpa_raw = request.form.get('cgpa', '').strip()
+    try:
+        cgpa = float(cgpa_raw) if cgpa_raw != '' else (std.cgpa or 0.0)
+    except ValueError:
+        cgpa = std.cgpa or 0.0
+
+    credits_raw = request.form.get('completed_credits', '').strip()
+    try:
+        credits = float(credits_raw) if credits_raw != '' else (std.completed_credits or 0.0)
+    except ValueError:
+        credits = std.completed_credits or 0.0
+
+    balance_raw = request.form.get('outstanding_balance', '').strip()
+    try:
+        balance = int(float(balance_raw)) if balance_raw != '' else (std.outstanding_balance or 0)
+    except ValueError:
+        balance = std.outstanding_balance or 0
+
     cleared = (request.form.get('financial_cleared') == 'on') or (request.form.get('financial_cleared') == 'true')
     phone = request.form.get('phone_number', '').strip()
     about = request.form.get('about', '').strip()
     present_address = request.form.get('present_address', '').strip()
     permanent_address = request.form.get('permanent_address', '').strip()
     
-    if name: std.name = name
+    if name: 
+        std.name = name
+        usr = User.query.get(std.user_id) if std.user_id else None
+        if usr:
+            usr.name = name
     if dept: std.department_id = dept
     std.cgpa = cgpa
     std.completed_credits = credits
