@@ -6376,7 +6376,9 @@ def upload_schedule():
         flash('Course schedule imported successfully!', 'success')
     except Exception as e:
         flash(f'Error importing schedule: {str(e)}', 'error')
-        
+
+    return redirect(url_for('admin_dashboard') + '?tab=course-management')
+
 @app.route('/admin/upload-multi-excel', methods=['POST'])
 @login_required
 def upload_multi_excel():
