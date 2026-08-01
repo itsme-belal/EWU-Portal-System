@@ -4476,7 +4476,7 @@ def admin_dashboard():
     students = Student.query.all()
     faculties = Faculty.query.all()
     pre_courses = PreAdvisingCourse.query.all()
-    section_offerings = SectionOffering.query.filter_by(semester_id=next_sem).all()
+    section_offerings = SectionOffering.query.filter_by(semester_id=next_sem).order_by(SectionOffering.course_code.asc(), SectionOffering.section_number.asc()).all()
     windows = AdvisingWindow.query.filter_by(semester_id=curr_sem).all()
     departments = Department.query.all()
     
@@ -5475,9 +5475,17 @@ def admin_delete_student(std_id):
 @login_required
 def edit_section_capacity(sec_id):
     if current_user.role != 'admin':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
         return redirect(url_for('home'))
         
-    cap = int(request.form.get('capacity', 30))
+    try:
+        cap = int(request.form.get('capacity', 30))
+    except (ValueError, TypeError):
+        cap = 30
+    if cap < 0:
+        cap = 0
+        
     sec = SectionOffering.query.get(sec_id)
     if sec:
         sec.capacity = cap
@@ -5487,10 +5495,14 @@ def edit_section_capacity(sec_id):
             if linked_sec:
                 linked_sec.capacity = cap
         db.session.commit()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({'status': 'success', 'sec_id': sec_id, 'capacity': cap, 'enrolled': sec.enrolled_count})
         flash(f"Section '{sec_id}' capacity updated to {cap}.", 'success')
     else:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({'status': 'error', 'message': 'Section not found.'}), 404
         flash('Section offering not found.', 'error')
-    return redirect(url_for('admin_dashboard') + '?tab=courses')
+    return redirect(url_for('admin_dashboard') + '?tab=course-management')
 
 @app.route('/admin/toggle-status/<user_id>', methods=['POST'])
 @login_required

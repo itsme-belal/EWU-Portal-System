@@ -4149,21 +4149,28 @@ main canvas { color: var(--text-1); }
     }
 
     function openAdminEditStudentModal(stdId) {
-        fetch(`/admin/student-details/${stdId}`)
+        fetch(`/admin/student-details/${encodeURIComponent(stdId)}`)
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    document.getElementById('edit-std-id').value = data.id;
-                    document.getElementById('edit-std-name').value = data.name;
-                    document.getElementById('edit-std-dept').value = data.department_id;
-                    document.getElementById('edit-std-phone').value = data.phone_number || '';
-                    document.getElementById('edit-std-cgpa').value = data.cgpa || 0;
-                    document.getElementById('edit-std-credits').value = data.completed_credits || 0;
-                    document.getElementById('edit-std-balance').value = data.outstanding_balance || 0;
-                    document.getElementById('edit-std-cleared').checked = !!data.financial_cleared;
-                    document.getElementById('edit-std-about').value = data.about || '';
-                    document.getElementById('edit-std-present').value = data.present_address || '';
-                    document.getElementById('edit-std-permanent').value = data.permanent_address || '';
+                    const setVal = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = val;
+                    };
+                    setVal('edit-std-id', data.id);
+                    setVal('edit-std-name', data.name);
+                    setVal('edit-std-dept', data.department_id);
+                    setVal('edit-std-phone', data.phone_number || '');
+                    setVal('edit-std-cgpa', data.cgpa || 0);
+                    setVal('edit-std-credits', data.completed_credits || 0);
+                    setVal('edit-std-balance', data.outstanding_balance || 0);
+                    
+                    const clearedChk = document.getElementById('edit-std-cleared');
+                    if (clearedChk) clearedChk.checked = !!data.financial_cleared;
+
+                    setVal('edit-std-about', data.about || '');
+                    setVal('edit-std-present', data.present_address || '');
+                    setVal('edit-std-permanent', data.permanent_address || '');
                     
                     const headerName = document.getElementById('edit-std-header-name');
                     if (headerName) headerName.textContent = data.name ? `Edit Profile: ${data.name}` : 'Edit Student Profile';
@@ -4179,11 +4186,21 @@ main canvas { color: var(--text-1); }
                         if (initial) { initial.textContent = (data.name ? data.name[0] : 'S').toUpperCase(); initial.classList.remove('hidden'); }
                     }
 
-                    document.getElementById('admin-edit-student-form').action = `/admin/edit-student/${data.id}`;
-                    document.getElementById('admin-edit-student-modal').classList.remove('hidden');
+                    const formEl = document.getElementById('admin-edit-student-form');
+                    if (formEl) formEl.action = `/admin/edit-student/${data.id}`;
+
+                    const modal = document.getElementById('admin-edit-student-modal');
+                    if (modal) {
+                        modal.classList.remove('hidden');
+                        modal.style.display = 'flex';
+                    }
                 } else {
                     alert(data.message || 'Error fetching student details.');
                 }
+            })
+            .catch(err => {
+                console.error('Error in openAdminEditStudentModal:', err);
+                alert('Could not fetch student details: ' + (err.message || err));
             });
     }
 
@@ -4353,7 +4370,35 @@ main canvas { color: var(--text-1); }
         if (nextVal < 0) nextVal = 0;
         if (nextVal > 500) nextVal = 500;
         input.value = nextVal;
-        form.submit();
+
+        const formData = new FormData();
+        formData.append('capacity', nextVal);
+
+        fetch(`/admin/edit-capacity/${encodeURIComponent(secId)}`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                input.value = data.capacity;
+                // Update seats left pill text if present
+                const row = input.closest('tr') || input.closest('.course-card');
+                if (row) {
+                    const enrolledSpan = row.querySelector('.enrolled-number');
+                    const enrolled = enrolledSpan ? parseInt(enrolledSpan.textContent || '0', 10) : 0;
+                    const seatsLeft = Math.max(0, data.capacity - enrolled);
+                    const leftEl = row.querySelector('.seats-left-text');
+                    if (leftEl) leftEl.textContent = `${seatsLeft} seats left`;
+                }
+            } else {
+                form.submit();
+            }
+        })
+        .catch(() => {
+            form.submit();
+        });
     }
 
     function clearSectionFilters() {
