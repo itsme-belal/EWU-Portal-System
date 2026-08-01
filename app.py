@@ -869,6 +869,8 @@ def assign_advisor_for_student(student):
     
     fac_user = User.query.filter_by(email=fac_email).first()
     if not fac_user:
+        fac_user = User.query.get('usr-' + fac_initial)
+    if not fac_user:
         fac_user = User(
             id='usr-' + fac_initial,
             email=fac_email,
@@ -5651,180 +5653,247 @@ def create_window():
     flash('Advising timeline slot added successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
 
+def get_temp_excel_file(file_source):
+    """
+    Accepts either a string path or a Werkzeug FileStorage object.
+    If FileStorage object, saves to a temporary file and returns (tmp_path, is_temp=True).
+    If string path, returns (file_source, is_temp=False).
+    """
+    import tempfile
+    if isinstance(file_source, str):
+        return file_source, False
+    
+    temp_fd, tmp_path = tempfile.mkstemp(suffix='.xlsx')
+    os.close(temp_fd)
+    file_source.seek(0)
+    file_source.save(tmp_path)
+    return tmp_path, True
+
+def cleanup_excel_resource(wb, tmp_path, is_temp):
+    """
+    Closes openpyxl workbook, removes temp file if created, and triggers garbage collection.
+    """
+    import gc
+    if wb:
+        try:
+            if hasattr(wb, '_archive') and wb._archive:
+                wb._archive.close()
+            wb.close()
+        except Exception:
+            pass
+        del wb
+    gc.collect()
+    if is_temp and tmp_path and os.path.exists(tmp_path):
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+    gc.collect()
+
 def import_excel_schedule(file_source):
     import openpyxl
-    wb = openpyxl.load_workbook(file_source)
-    for sheet_name in wb.sheetnames:
-        sheet = wb[sheet_name]
-        header_row = next(sheet.iter_rows(max_row=1), None)
-        if not header_row:
-            continue
-            
-        headers = [str(cell.value).strip() for cell in header_row]
-        required_cols = ['ID', 'Course Code', 'Section', 'Date & Time', 'Credit', 'Seat Capacity', 'Dedicated Department', 'Room', 'Pre-Requisite', 'Linked Course ID', 'Completed Credit Requirement']
-        
-        col_map = {}
-        for name in required_cols:
-            if name in headers:
-                col_map[name] = headers.index(name)
-            else:
-                for idx, h in enumerate(headers):
-                    if h.lower().replace(' ', '').replace('-', '') == name.lower().replace(' ', '').replace('-', ''):
-                        col_map[name] = idx
-                        break
-                        
-        fac_col = None
-        for idx, h in enumerate(headers):
-            if h.lower().replace(' ', '').replace('_', '').replace('-', '') in ['faculty', 'facultyid', 'assignedfaculty']:
-                fac_col = idx
-                break
-                
-        if 'Course Code' not in col_map or 'Section' not in col_map:
-            continue
-            
-        rows = list(sheet.iter_rows(min_row=2, values_only=True))
-        row_mapping = {}
-        semester_id = get_next_semester()
-        
-        # Pass 1: Add/Update Courses and Sections
-        for row in rows:
-            if not row or all(v is None for v in row):
+    import logging
+    tmp_path, is_temp = get_temp_excel_file(file_source)
+    wb = None
+    imported_count = 0
+    try:
+        wb = openpyxl.load_workbook(tmp_path, read_only=True, data_only=True)
+        for sheet_name in wb.sheetnames:
+            sheet = wb[sheet_name]
+            header_row = next(sheet.iter_rows(max_row=1, values_only=True), None)
+            if not header_row:
                 continue
                 
-            row_id = row[col_map['ID']] if 'ID' in col_map else None
-            ccode = str(row[col_map['Course Code']]).strip() if row[col_map['Course Code']] is not None else ''
-            if not ccode or ccode.lower() == 'none':
-                continue
-                
-            section_val = row[col_map['Section']]
-            if section_val is None:
-                continue
-            snum = f"{int(section_val):02d}"
-            sec_id = f"{ccode}-{snum}-{semester_id}"
-            if row_id is not None:
-                row_mapping[row_id] = sec_id
-                
-            credits_val = float(row[col_map['Credit']]) if ('Credit' in col_map and row[col_map['Credit']] is not None) else 3.0
+            headers = [str(val or '').strip() for val in header_row]
+            required_cols = ['ID', 'Course Code', 'Section', 'Date & Time', 'Credit', 'Seat Capacity', 'Dedicated Department', 'Room', 'Pre-Requisite', 'Linked Course ID', 'Completed Credit Requirement']
             
-            dept_str = str(row[col_map['Dedicated Department']]).strip() if ('Dedicated Department' in col_map and row[col_map['Dedicated Department']]) else ''
-            depts = [d.strip() for d in dept_str.split(',') if d.strip()]
-            first_dept = depts[0] if depts else 'CSE'
-            
-            prereq_str = str(row[col_map['Pre-Requisite']]).strip() if ('Pre-Requisite' in col_map and row[col_map['Pre-Requisite']]) else ''
-            prereqs = [p.strip() for p in prereq_str.split(',') if p.strip() and p.strip().lower() != 'none']
-            
-            comp_cred_req = 0
-            if 'Completed Credit Requirement' in col_map and row[col_map['Completed Credit Requirement']] is not None:
-                try:
-                    comp_cred_req = int(row[col_map['Completed Credit Requirement']])
-                except ValueError:
-                    comp_cred_req = 0
-
-            # Parse Faculty Assignment from Excel if present
-            fac_id = None
-            if fac_col is not None and row[fac_col] is not None:
-                fac_val = str(row[fac_col]).strip()
-                if fac_val and fac_val.lower() != 'none':
-                    faculty = Faculty.query.get(fac_val)
-                    if not faculty:
-                        faculty = Faculty.query.filter(Faculty.id.ilike(fac_val)).first()
-                    if not faculty:
-                        faculty = Faculty.query.filter(Faculty.name.ilike(fac_val)).first()
-                    if faculty:
-                        fac_id = faculty.id
-            
-            # Course Catalog sync
-            course = PreAdvisingCourse.query.get(ccode)
-            if not course:
-                course = PreAdvisingCourse(
-                    id=ccode,
-                    code=ccode,
-                    title=ccode,
-                    credits=credits_val,
-                    department_id=first_dept,
-                    completed_credit_requirement=comp_cred_req
-                )
-                course.prerequisites = prereqs
-                db.session.add(course)
-            else:
-                course.credits = credits_val
-                course.department_id = first_dept
-                course.prerequisites = prereqs
-                course.completed_credit_requirement = comp_cred_req
-                
-            # SectionOffering sync
-            sched = str(row[col_map['Date & Time']]).strip() if ('Date & Time' in col_map and row[col_map['Date & Time']]) else 'TBA'
-            room = str(row[col_map['Room']]).strip() if ('Room' in col_map and row[col_map['Room']]) else 'TBA'
-            
-            cap_val = str(row[col_map['Seat Capacity']]).strip() if ('Seat Capacity' in col_map and row[col_map['Seat Capacity']] is not None) else '30'
-            capacity = int(cap_val.split('/')[-1]) if '/' in cap_val else int(cap_val)
-            
-            is_lab = 'Lab' in ccode
-            
-            sec = SectionOffering.query.get(sec_id)
-            if not sec:
-                sec = SectionOffering(
-                    id=sec_id,
-                    course_code=ccode,
-                    course_title=ccode,
-                    section_number=snum,
-                    credits=credits_val,
-                    schedule=sched,
-                    room=room,
-                    capacity=capacity,
-                    is_lab=is_lab,
-                    semester_id=semester_id,
-                    completed_credit_requirement=comp_cred_req
-                )
-                sec.dedicated_departments = depts
-                sec.prerequisites = prereqs
-                db.session.add(sec)
-            else:
-                sec.credits = credits_val
-                sec.schedule = sched
-                sec.room = room
-                sec.capacity = capacity
-                sec.dedicated_departments = depts
-                sec.prerequisites = prereqs
-                sec.completed_credit_requirement = comp_cred_req
-            
-            if fac_id:
-                # Validate schedule conflict for this faculty
-                conflict = False
-                assigned_secs = SectionOffering.query.filter_by(faculty_id=fac_id, semester_id=semester_id).all()
-                for a in assigned_secs:
-                    if a.id != sec_id and schedules_conflict(a.schedule, sched):
-                        conflict = True
-                        break
-                if not conflict:
-                    sec.faculty_id = fac_id
+            col_map = {}
+            for name in required_cols:
+                if name in headers:
+                    col_map[name] = headers.index(name)
                 else:
-                    print(f"Warning: Faculty {fac_id} has conflict with section {sec_id} in sheet schedule.")
+                    for idx, h in enumerate(headers):
+                        if h.lower().replace(' ', '').replace('-', '') == name.lower().replace(' ', '').replace('-', ''):
+                            col_map[name] = idx
+                            break
+                            
+            fac_col = None
+            for idx, h in enumerate(headers):
+                if h.lower().replace(' ', '').replace('_', '').replace('-', '') in ['faculty', 'facultyid', 'assignedfaculty']:
+                    fac_col = idx
+                    break
+                    
+            if 'Course Code' not in col_map or 'Section' not in col_map:
+                continue
                 
-        db.session.commit()
-        
-        # Pass 2: Setup linked Lab/Theory relations
-        if 'Linked Course ID' in col_map:
-            for row in rows:
+            row_mapping = {}
+            linked_pairs = []
+            semester_id = get_next_semester()
+            
+            batch_counter = 0
+            row_counter = 0
+            
+            row_iter = sheet.iter_rows(min_row=2, values_only=True)
+            for row in row_iter:
                 if not row or all(v is None for v in row):
                     continue
+                    
                 row_id = row[col_map['ID']] if 'ID' in col_map else None
-                linked_val = row[col_map['Linked Course ID']]
-                if row_id is None or linked_val is None or str(linked_val).strip().lower() == 'none':
+                ccode_raw = row[col_map['Course Code']]
+                ccode = str(ccode_raw).strip() if ccode_raw is not None else ''
+                if not ccode or ccode.lower() == 'none':
                     continue
                     
+                section_val = row[col_map['Section']]
+                if section_val is None:
+                    continue
                 try:
-                    linked_row_id = int(linked_val)
-                except ValueError:
-                    continue
+                    snum = f"{int(section_val):02d}"
+                except (ValueError, TypeError):
+                    snum = str(section_val).strip()
+                sec_id = f"{ccode}-{snum}-{semester_id}"
+                if row_id is not None:
+                    row_mapping[row_id] = sec_id
                     
-                sec_id = row_mapping.get(row_id)
-                linked_sec_id = row_mapping.get(linked_row_id)
-                if sec_id and linked_sec_id:
-                    sec = SectionOffering.query.get(sec_id)
-                    if sec:
-                        sec.linked_section_id = linked_sec_id
-            db.session.commit()
+                linked_val = row[col_map['Linked Course ID']] if 'Linked Course ID' in col_map else None
+                if row_id is not None and linked_val is not None and str(linked_val).strip().lower() != 'none':
+                    try:
+                        linked_pairs.append((row_id, int(linked_val)))
+                    except ValueError:
+                        pass
+                        
+                credits_val = float(row[col_map['Credit']]) if ('Credit' in col_map and row[col_map['Credit']] is not None) else 3.0
+                
+                dept_str = str(row[col_map['Dedicated Department']]).strip() if ('Dedicated Department' in col_map and row[col_map['Dedicated Department']]) else ''
+                depts = [d.strip() for d in dept_str.split(',') if d.strip()]
+                first_dept = depts[0] if depts else 'CSE'
+                
+                prereq_str = str(row[col_map['Pre-Requisite']]).strip() if ('Pre-Requisite' in col_map and row[col_map['Pre-Requisite']]) else ''
+                prereqs = [p.strip() for p in prereq_str.split(',') if p.strip() and p.strip().lower() != 'none']
+                
+                comp_cred_req = 0
+                if 'Completed Credit Requirement' in col_map and row[col_map['Completed Credit Requirement']] is not None:
+                    try:
+                        comp_cred_req = int(row[col_map['Completed Credit Requirement']])
+                    except ValueError:
+                        comp_cred_req = 0
+
+                fac_id = None
+                if fac_col is not None and row[fac_col] is not None:
+                    fac_val = str(row[fac_col]).strip()
+                    if fac_val and fac_val.lower() != 'none':
+                        faculty = Faculty.query.get(fac_val)
+                        if not faculty:
+                            faculty = Faculty.query.filter(Faculty.id.ilike(fac_val)).first()
+                        if not faculty:
+                            faculty = Faculty.query.filter(Faculty.name.ilike(fac_val)).first()
+                        if faculty:
+                            fac_id = faculty.id
+                
+                course = PreAdvisingCourse.query.get(ccode)
+                if not course:
+                    course = PreAdvisingCourse(
+                        id=ccode,
+                        code=ccode,
+                        title=ccode,
+                        credits=credits_val,
+                        department_id=first_dept,
+                        completed_credit_requirement=comp_cred_req
+                    )
+                    course.prerequisites = prereqs
+                    db.session.add(course)
+                else:
+                    course.credits = credits_val
+                    course.department_id = first_dept
+                    course.prerequisites = prereqs
+                    course.completed_credit_requirement = comp_cred_req
+                    
+                sched = str(row[col_map['Date & Time']]).strip() if ('Date & Time' in col_map and row[col_map['Date & Time']]) else 'TBA'
+                room = str(row[col_map['Room']]).strip() if ('Room' in col_map and row[col_map['Room']]) else 'TBA'
+                
+                cap_val = str(row[col_map['Seat Capacity']]).strip() if ('Seat Capacity' in col_map and row[col_map['Seat Capacity']] is not None) else '30'
+                capacity = int(cap_val.split('/')[-1]) if '/' in cap_val else int(cap_val)
+                
+                is_lab = 'Lab' in ccode
+                
+                sec = SectionOffering.query.get(sec_id)
+                if not sec:
+                    sec = SectionOffering(
+                        id=sec_id,
+                        course_code=ccode,
+                        course_title=ccode,
+                        section_number=snum,
+                        credits=credits_val,
+                        schedule=sched,
+                        room=room,
+                        capacity=capacity,
+                        is_lab=is_lab,
+                        semester_id=semester_id,
+                        completed_credit_requirement=comp_cred_req
+                    )
+                    sec.dedicated_departments = depts
+                    sec.prerequisites = prereqs
+                    db.session.add(sec)
+                else:
+                    sec.credits = credits_val
+                    sec.schedule = sched
+                    sec.room = room
+                    sec.capacity = capacity
+                    sec.dedicated_departments = depts
+                    sec.prerequisites = prereqs
+                    sec.completed_credit_requirement = comp_cred_req
+                
+                if fac_id:
+                    conflict = False
+                    assigned_secs = SectionOffering.query.filter_by(faculty_id=fac_id, semester_id=semester_id).all()
+                    for a in assigned_secs:
+                        if a.id != sec_id and schedules_conflict(a.schedule, sched):
+                            conflict = True
+                            break
+                    if not conflict:
+                        sec.faculty_id = fac_id
+                
+                imported_count += 1
+                batch_counter += 1
+                row_counter += 1
+
+                if row_counter % 500 == 0:
+                    logging.info(f"Import Excel Schedule: Processed {row_counter} rows.")
+
+                if batch_counter >= 100:
+                    db.session.commit()
+                    db.session.expunge_all()
+                    batch_counter = 0
+
+            if batch_counter > 0:
+                db.session.commit()
+                db.session.expunge_all()
+                batch_counter = 0
+
+            if linked_pairs:
+                for r_id, l_r_id in linked_pairs:
+                    sec_id = row_mapping.get(r_id)
+                    linked_sec_id = row_mapping.get(l_r_id)
+                    if sec_id and linked_sec_id:
+                        sec = SectionOffering.query.get(sec_id)
+                        if sec:
+                            sec.linked_section_id = linked_sec_id
+                            batch_counter += 1
+                            if batch_counter >= 100:
+                                db.session.commit()
+                                db.session.expunge_all()
+                                batch_counter = 0
+                if batch_counter > 0:
+                    db.session.commit()
+                    db.session.expunge_all()
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error in import_excel_schedule: {e}")
+        raise e
+    finally:
+        cleanup_excel_resource(wb, tmp_path, is_temp)
+        
+    return imported_count
 
 def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_email=None, curr_sem_drop=False, student_dept='CSE'):
     import re
@@ -5832,7 +5901,6 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
         return
     current_sem = get_current_semester()
     
-    # Gather all new section IDs from the routine string first
     new_sec_ids = set()
     items = re.findall(r'[^,\[]+(?:\[[^\]]*\])?', schedule_str)
     for item in items:
@@ -5849,7 +5917,6 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
             sec_id = f"{ccode}-{sec_num}-{current_sem}"
             new_sec_ids.add(sec_id)
             
-    # Delete any existing registrations in current semester not in the new routine
     if not curr_sem_drop:
         old_regs = Registration.query.filter_by(student_id=student_id, semester_id=current_sem).all()
         for r in old_regs:
@@ -5897,12 +5964,13 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
                 )
                 db.session.add(sec)
                 db.session.flush()
-
-            # Dynamic Faculty Assignment
+                
             if fac_initial and fac_email:
                 s_dept = (student_dept or 'CSE').upper()
                 if ccode.upper().startswith(s_dept):
                     fac_user = User.query.filter_by(email=fac_email).first()
+                    if not fac_user:
+                        fac_user = User.query.get('usr-' + fac_initial)
                     if not fac_user:
                         fac_user = User(
                             id='usr-' + fac_initial,
@@ -5914,6 +5982,8 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
                         )
                         db.session.add(fac_user)
                         db.session.flush()
+                    else:
+                        fac_user.email = fac_email
                         
                     fac_rec = Faculty.query.get(fac_initial)
                     if not fac_rec:
@@ -5962,37 +6032,10 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
 def import_excel_students(file_source):
     import openpyxl
     import re
-    wb = openpyxl.load_workbook(file_source)
-    sheet = wb.active
-    header_row = next(sheet.iter_rows(max_row=1), None)
-    if not header_row:
-        raise ValueError("The excel file is empty or has no header row.")
-        
-    headers = [str(cell.value).strip() for cell in header_row]
-    
-    required_cols = [
-        'Student ID', 'Name', 'Student Email', 'Phone Number', 'Department',
-        'Completed Credit', 'Remaining Credit', 'CGPA', 'Present Address',
-        'Permanent Address', 'Completed Courses and Grades', 'Current Courses',
-        'Current Course Credit', 'Next Semester Courses', 'Next Semester Course Credit',
-        'Profile Picture', 'Current Course Schedule & Reading', 'Current Course Schedule & Routine',
-        'Faculty Initial', 'faculty Email', 'Current Semester Drop', 'Next Semester Drop'
-    ]
-    
-    col_map = {}
-    for name in required_cols:
-        if name in headers:
-            col_map[name] = headers.index(name)
-        else:
-            for idx, h in enumerate(headers):
-                if h.lower().replace(' ', '').replace('_', '').replace('-', '') == name.lower().replace(' ', '').replace('_', '').replace('-', ''):
-                    col_map[name] = idx
-                    break
-                    
-    if 'Student ID' not in col_map or 'Name' not in col_map or 'Student Email' not in col_map:
-        raise ValueError("Headers must contain at least 'Student ID', 'Name', and 'Student Email'.")
-        
-    rows = list(sheet.iter_rows(min_row=2, values_only=True))
+    import logging
+
+    tmp_path, is_temp = get_temp_excel_file(file_source)
+    wb = None
     imported_count = 0
 
     def clean_excel_val(val):
@@ -6011,303 +6054,392 @@ def import_excel_students(file_source):
             return float(cleaned)
         except ValueError:
             return default
-    
-    for row in rows:
-        if not row or all(v is None for v in row):
-            continue
+
+    try:
+        wb = openpyxl.load_workbook(tmp_path, read_only=True, data_only=True)
+        sheet = wb.active
+        header_row = next(sheet.iter_rows(max_row=1, values_only=True), None)
+        if not header_row:
+            raise ValueError("The excel file is empty or has no header row.")
             
-        std_id = clean_excel_val(row[col_map['Student ID']])
-        name = clean_excel_val(row[col_map['Name']])
-        email = clean_excel_val(row[col_map['Student Email']])
+        headers = [str(val or '').strip() for val in header_row]
         
-        if not std_id or not name or not email:
-            continue
-            
-        phone = clean_excel_val(row[col_map['Phone Number']]) if 'Phone Number' in col_map else None
-        dept = clean_excel_val(row[col_map['Department']]) or 'CSE'
+        required_cols = [
+            'Student ID', 'Name', 'Student Email', 'Phone Number', 'Department',
+            'Completed Credit', 'Remaining Credit', 'CGPA', 'Present Address',
+            'Permanent Address', 'Completed Courses and Grades', 'Current Courses',
+            'Current Course Credit', 'Next Semester Courses', 'Next Semester Course Credit',
+            'Profile Picture', 'Current Course Schedule & Reading', 'Current Course Schedule & Routine',
+            'Faculty Initial', 'faculty Email', 'Current Semester Drop', 'Next Semester Drop'
+        ]
         
-        # Validate department based on student ID
+        col_map = {}
+        for name in required_cols:
+            if name in headers:
+                col_map[name] = headers.index(name)
+            else:
+                for idx, h in enumerate(headers):
+                    if h.lower().replace(' ', '').replace('_', '').replace('-', '') == name.lower().replace(' ', '').replace('_', '').replace('-', ''):
+                        col_map[name] = idx
+                        break
+                        
+        if 'Student ID' not in col_map or 'Name' not in col_map or 'Student Email' not in col_map:
+            raise ValueError("Headers must contain at least 'Student ID', 'Name', and 'Student Email'.")
+
         dept_code_map = {
             '60': 'CSE',
             '50': 'ICE',
             '80': 'EEE',
             '40': 'ENG'
         }
-        id_parts = std_id.split('-')
-        if len(id_parts) != 4:
-            raise ValueError(f"Student ID '{std_id}' must be in the format 'YYYY-Semester-DeptCode-Number' (e.g., '2023-2-60-010').")
-        dept_code = id_parts[2]
-        expected_dept = dept_code_map.get(dept_code)
-        if not expected_dept:
-            raise ValueError(f"Invalid department code '{dept_code}' in Student ID '{std_id}'.")
-        if expected_dept != dept:
-            raise ValueError(f"Department mismatch: Student ID '{std_id}' contains department code '{dept_code}' ({expected_dept}), but Excel specified '{dept}'.")
-        
-        credits = clean_float_excel(row[col_map['Completed Credit']]) if 'Completed Credit' in col_map else 0.0
-        rem_credits = clean_float_excel(row[col_map['Remaining Credit']], 140.0) if 'Remaining Credit' in col_map else 140.0
-        cgpa = clean_float_excel(row[col_map['CGPA']]) if 'CGPA' in col_map else 0.0
-            
-        present_address = clean_excel_val(row[col_map['Present Address']]) if 'Present Address' in col_map else None
-        permanent_address = clean_excel_val(row[col_map['Permanent Address']]) if 'Permanent Address' in col_map else None
-        
-        comp_courses_grades = clean_excel_val(row[col_map['Completed Courses and Grades']]) if 'Completed Courses and Grades' in col_map else None
-        curr_courses = clean_excel_val(row[col_map['Current Courses']]) if 'Current Courses' in col_map else None
-        curr_credit = clean_float_excel(row[col_map['Current Course Credit']]) if 'Current Course Credit' in col_map else 0.0
-        next_courses = clean_excel_val(row[col_map['Next Semester Courses']]) if 'Next Semester Courses' in col_map else None
-        next_credit = clean_float_excel(row[col_map['Next Semester Course Credit']]) if 'Next Semester Course Credit' in col_map else 0.0
-        prof_pic = clean_excel_val(row[col_map['Profile Picture']]) if 'Profile Picture' in col_map else None
-            
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            user = User(
-                id='usr-' + std_id,
-                email=email,
-                password_hash=generate_password_hash('password123'),
-                role='student',
-                is_active=True,
-                is_activated=False
-            )
-            db.session.add(user)
-            db.session.flush()
-            
-        student = Student.query.get(std_id)
-        if not student:
-            student = Student(
-                id=std_id,
-                user_id=user.id,
-                name=name,
-                department_id=dept,
-                completed_credits=credits,
-                remaining_credits=rem_credits,
-                cgpa=cgpa,
-                phone_number=phone,
-                present_address=present_address,
-                permanent_address=permanent_address,
-                completed_courses_and_grades=comp_courses_grades,
-                current_courses=curr_courses,
-                current_course_credit=curr_credit,
-                next_semester_courses=next_courses,
-                next_semester_course_credit=next_credit,
-                profile_pic=prof_pic,
-                outstanding_balance=0,
-                financial_cleared=True,
-                about=''
-            )
-            db.session.add(student)
-        else:
-            student.name = name
-            student.department_id = dept
-            student.completed_credits = credits
-            student.remaining_credits = rem_credits
-            student.cgpa = cgpa
-            student.phone_number = phone
-            student.present_address = present_address
-            student.permanent_address = permanent_address
-            student.completed_courses_and_grades = comp_courses_grades
-            student.current_courses = curr_courses
-            student.current_course_credit = curr_credit
-            student.next_semester_courses = next_courses
-            student.next_semester_course_credit = next_credit
-            if prof_pic:
-                student.profile_pic = prof_pic
-                
-        assign_advisor_for_student(student)
-                
-        if comp_courses_grades and comp_courses_grades.lower() != 'none':
-            parts = re.split(r'[,;\n\r]+', comp_courses_grades)
-            for part in parts:
-                part = part.strip()
-                if not part: continue
-                match = re.search(r'([A-Za-z0-9\s]+)[:\s]+([A-Za-z+-]+)', part)
-                if match:
-                    ccode = match.group(1).strip().replace(' ', '')
-                    gletter = match.group(2).strip()
-                    points_map = {
-                        'A+': 4.0, 'A': 4.0, 'A-': 3.7,
-                        'B+': 3.3, 'B': 3.0, 'B-': 2.7,
-                        'C+': 2.3, 'C': 2.0, 'C-': 1.7,
-                        'D+': 1.3, 'D': 1.0, 'F': 0.0
-                    }
-                    gpoint = points_map.get(gletter.upper(), 0.0)
-                    grade_id = f"GRD-{std_id}-{ccode}"
-                    
-                    existing_grade = Grade.query.get(grade_id)
-                    if not existing_grade:
-                        new_grade = Grade(
-                            id=grade_id,
-                            student_id=std_id,
-                            section_id=ccode,
-                            grade_letter=gletter.upper(),
-                            grade_point=gpoint,
-                            semester_id='completed'
-                        )
-                        db.session.add(new_grade)
-                    else:
-                        existing_grade.grade_letter = gletter.upper()
-                        existing_grade.grade_point = gpoint
-                        
-        if curr_courses and curr_courses.lower() != 'none':
-            ccodes = [c.strip() for c in re.split(r'[,;\s]+', curr_courses) if c.strip()]
-            for cc in ccodes:
-                if not cc: continue
-                sec = SectionOffering.query.filter_by(course_code=cc, semester_id=get_current_semester()).first()
-                if sec:
-                    reg_id = f"REG-{std_id}-{sec.id}"
-                    existing_reg = Registration.query.get(reg_id)
-                    if not existing_reg:
-                        new_reg = Registration(
-                            id=reg_id,
-                            student_id=std_id,
-                            section_id=sec.id,
-                            semester_id=get_current_semester(),
-                            status='registered'
-                        )
-                        db.session.add(new_reg)
-                        sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
 
-        # Current Semester Schedule & Reading Ingestion
-        sched_str = None
-        if 'Current Course Schedule & Routine' in col_map:
-            sched_str = clean_excel_val(row[col_map['Current Course Schedule & Routine']])
-        elif 'Current Course Schedule & Reading' in col_map:
-            sched_str = clean_excel_val(row[col_map['Current Course Schedule & Reading']])
-            
-        fac_initial = clean_excel_val(row[col_map['Faculty Initial']]) if 'Faculty Initial' in col_map else None
-        fac_email = clean_excel_val(row[col_map['faculty Email']]) if 'faculty Email' in col_map else None
-        
-        curr_drop_val = clean_excel_val(row[col_map['Current Semester Drop']]) or ''
-        curr_drop = (curr_drop_val.lower() == 'yes')
-        
-        if sched_str:
-            parse_and_apply_schedule(std_id, sched_str, fac_initial=fac_initial, fac_email=fac_email, curr_sem_drop=curr_drop, student_dept=dept)
+        batch_counter = 0
+        row_counter = 0
 
-        # Next Semester Courses & Drop Ingestion
-        next_drop_val = clean_excel_val(row[col_map['Next Semester Drop']]) or ''
-        next_drop = (next_drop_val.lower() == 'yes')
-        if next_courses and next_courses.lower() != 'none':
-            next_sem = get_next_semester()
-            ccodes_next = [c.strip() for c in re.split(r'[,;\s]+', next_courses) if c.strip()]
-            for cc in ccodes_next:
-                if not cc: continue
-                sec = SectionOffering.query.filter_by(course_code=cc, semester_id=next_sem).first()
-                if sec:
-                    reg_id = f"REG-{std_id}-{sec.id}"
-                    existing_reg = Registration.query.get(reg_id)
-                    status_next = 'dropped' if next_drop else 'registered'
-                    if not existing_reg:
-                        new_reg = Registration(
-                            id=reg_id,
-                            student_id=std_id,
-                            section_id=sec.id,
-                            semester_id=next_sem,
-                            status=status_next
-                        )
-                        db.session.add(new_reg)
-                        if status_next == 'registered':
+        row_iter = sheet.iter_rows(min_row=2, values_only=True)
+        for row in row_iter:
+            if not row or all(v is None for v in row):
+                continue
+
+            std_id = clean_excel_val(row[col_map['Student ID']])
+            name = clean_excel_val(row[col_map['Name']])
+            email = clean_excel_val(row[col_map['Student Email']])
+
+            if not std_id or not name or not email:
+                continue
+
+            phone = clean_excel_val(row[col_map['Phone Number']]) if 'Phone Number' in col_map else None
+            dept = clean_excel_val(row[col_map['Department']]) or 'CSE'
+
+            id_parts = std_id.split('-')
+            if len(id_parts) != 4:
+                raise ValueError(f"Student ID '{std_id}' must be in the format 'YYYY-Semester-DeptCode-Number' (e.g., '2023-2-60-010').")
+            dept_code = id_parts[2]
+            expected_dept = dept_code_map.get(dept_code)
+            if not expected_dept:
+                raise ValueError(f"Invalid department code '{dept_code}' in Student ID '{std_id}'.")
+            if expected_dept != dept:
+                raise ValueError(f"Department mismatch: Student ID '{std_id}' contains department code '{dept_code}' ({expected_dept}), but Excel specified '{dept}'.")
+
+            credits = clean_float_excel(row[col_map['Completed Credit']]) if 'Completed Credit' in col_map else 0.0
+            rem_credits = clean_float_excel(row[col_map['Remaining Credit']], 140.0) if 'Remaining Credit' in col_map else 140.0
+            cgpa = clean_float_excel(row[col_map['CGPA']]) if 'CGPA' in col_map else 0.0
+
+            present_address = clean_excel_val(row[col_map['Present Address']]) if 'Present Address' in col_map else None
+            permanent_address = clean_excel_val(row[col_map['Permanent Address']]) if 'Permanent Address' in col_map else None
+
+            comp_courses_grades = clean_excel_val(row[col_map['Completed Courses and Grades']]) if 'Completed Courses and Grades' in col_map else None
+            curr_courses = clean_excel_val(row[col_map['Current Courses']]) if 'Current Courses' in col_map else None
+            curr_credit = clean_float_excel(row[col_map['Current Course Credit']]) if 'Current Course Credit' in col_map else 0.0
+            next_courses = clean_excel_val(row[col_map['Next Semester Courses']]) if 'Next Semester Courses' in col_map else None
+            next_credit = clean_float_excel(row[col_map['Next Semester Course Credit']]) if 'Next Semester Course Credit' in col_map else 0.0
+            prof_pic = clean_excel_val(row[col_map['Profile Picture']]) if 'Profile Picture' in col_map else None
+
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                user = User.query.get('usr-' + std_id)
+            if not user:
+                user = User(
+                    id='usr-' + std_id,
+                    email=email,
+                    password_hash=generate_password_hash('password123'),
+                    role='student',
+                    is_active=True,
+                    is_activated=False
+                )
+                db.session.add(user)
+                db.session.flush()
+            else:
+                user.email = email
+
+            student = Student.query.get(std_id)
+            if not student:
+                student = Student(
+                    id=std_id,
+                    user_id=user.id,
+                    name=name,
+                    department_id=dept,
+                    completed_credits=credits,
+                    remaining_credits=rem_credits,
+                    cgpa=cgpa,
+                    phone_number=phone,
+                    present_address=present_address,
+                    permanent_address=permanent_address,
+                    completed_courses_and_grades=comp_courses_grades,
+                    current_courses=curr_courses,
+                    current_course_credit=curr_credit,
+                    next_semester_courses=next_courses,
+                    next_semester_course_credit=next_credit,
+                    profile_pic=prof_pic,
+                    outstanding_balance=0,
+                    financial_cleared=True,
+                    about=''
+                )
+                db.session.add(student)
+            else:
+                student.name = name
+                student.department_id = dept
+                student.completed_credits = credits
+                student.remaining_credits = rem_credits
+                student.cgpa = cgpa
+                student.phone_number = phone
+                student.present_address = present_address
+                student.permanent_address = permanent_address
+                student.completed_courses_and_grades = comp_courses_grades
+                student.current_courses = curr_courses
+                student.current_course_credit = curr_credit
+                student.next_semester_courses = next_courses
+                student.next_semester_course_credit = next_credit
+                if prof_pic:
+                    student.profile_pic = prof_pic
+
+            assign_advisor_for_student(student)
+
+            if comp_courses_grades and comp_courses_grades.lower() != 'none':
+                parts = re.split(r'[,;\n\r]+', comp_courses_grades)
+                for part in parts:
+                    part = part.strip()
+                    if not part: continue
+                    match = re.search(r'([A-Za-z0-9\s]+)[:\s]+([A-Za-z+-]+)', part)
+                    if match:
+                        ccode = match.group(1).strip().replace(' ', '')
+                        gletter = match.group(2).strip()
+                        points_map = {
+                            'A+': 4.0, 'A': 4.0, 'A-': 3.7,
+                            'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+                            'C+': 2.3, 'C': 2.0, 'C-': 1.7,
+                            'D+': 1.3, 'D': 1.0, 'F': 0.0
+                        }
+                        gpoint = points_map.get(gletter.upper(), 0.0)
+                        grade_id = f"GRD-{std_id}-{ccode}"
+
+                        existing_grade = Grade.query.get(grade_id)
+                        if not existing_grade:
+                            new_grade = Grade(
+                                id=grade_id,
+                                student_id=std_id,
+                                section_id=ccode,
+                                grade_letter=gletter.upper(),
+                                grade_point=gpoint,
+                                semester_id='completed'
+                            )
+                            db.session.add(new_grade)
+                        else:
+                            existing_grade.grade_letter = gletter.upper()
+                            existing_grade.grade_point = gpoint
+
+            if curr_courses and curr_courses.lower() != 'none':
+                ccodes = [c.strip() for c in re.split(r'[,;\s]+', curr_courses) if c.strip()]
+                for cc in ccodes:
+                    if not cc: continue
+                    sec = SectionOffering.query.filter_by(course_code=cc, semester_id=get_current_semester()).first()
+                    if sec:
+                        reg_id = f"REG-{std_id}-{sec.id}"
+                        existing_reg = Registration.query.get(reg_id)
+                        if not existing_reg:
+                            new_reg = Registration(
+                                id=reg_id,
+                                student_id=std_id,
+                                section_id=sec.id,
+                                semester_id=get_current_semester(),
+                                status='registered'
+                            )
+                            db.session.add(new_reg)
                             sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
-                    else:
-                        if existing_reg.status != status_next:
-                            if existing_reg.status == 'registered' and status_next == 'dropped':
-                                sec.enrolled_count = max(0, sec.enrolled_count - 1)
-                            elif existing_reg.status == 'dropped' and status_next == 'registered':
+
+            sched_str = None
+            if 'Current Course Schedule & Routine' in col_map:
+                sched_str = clean_excel_val(row[col_map['Current Course Schedule & Routine']])
+            elif 'Current Course Schedule & Reading' in col_map:
+                sched_str = clean_excel_val(row[col_map['Current Course Schedule & Reading']])
+
+            fac_initial = clean_excel_val(row[col_map['Faculty Initial']]) if 'Faculty Initial' in col_map else None
+            fac_email = clean_excel_val(row[col_map['faculty Email']]) if 'faculty Email' in col_map else None
+
+            curr_drop_val = clean_excel_val(row[col_map['Current Semester Drop']]) or ''
+            curr_drop = (curr_drop_val.lower() == 'yes')
+
+            if sched_str:
+                parse_and_apply_schedule(std_id, sched_str, fac_initial=fac_initial, fac_email=fac_email, curr_sem_drop=curr_drop, student_dept=dept)
+
+            next_drop_val = clean_excel_val(row[col_map['Next Semester Drop']]) or ''
+            next_drop = (next_drop_val.lower() == 'yes')
+            if next_courses and next_courses.lower() != 'none':
+                next_sem = get_next_semester()
+                ccodes_next = [c.strip() for c in re.split(r'[,;\s]+', next_courses) if c.strip()]
+                for cc in ccodes_next:
+                    if not cc: continue
+                    sec = SectionOffering.query.filter_by(course_code=cc, semester_id=next_sem).first()
+                    if sec:
+                        reg_id = f"REG-{std_id}-{sec.id}"
+                        existing_reg = Registration.query.get(reg_id)
+                        status_next = 'dropped' if next_drop else 'registered'
+                        if not existing_reg:
+                            new_reg = Registration(
+                                id=reg_id,
+                                student_id=std_id,
+                                section_id=sec.id,
+                                semester_id=next_sem,
+                                status=status_next
+                            )
+                            db.session.add(new_reg)
+                            if status_next == 'registered':
                                 sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
-                            existing_reg.status = status_next
-                        
-        imported_count += 1
-        
-    db.session.commit()
+                        else:
+                            if existing_reg.status != status_next:
+                                if existing_reg.status == 'registered' and status_next == 'dropped':
+                                    sec.enrolled_count = max(0, sec.enrolled_count - 1)
+                                elif existing_reg.status == 'dropped' and status_next == 'registered':
+                                    sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                                existing_reg.status = status_next
+
+            imported_count += 1
+            batch_counter += 1
+            row_counter += 1
+
+            if row_counter % 500 == 0:
+                logging.info(f"Import Excel Students: Processed {row_counter} rows.")
+
+            if batch_counter >= 100:
+                db.session.commit()
+                db.session.expunge_all()
+                batch_counter = 0
+
+        if batch_counter > 0:
+            db.session.commit()
+            db.session.expunge_all()
+
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error in import_excel_students: {e}")
+        raise e
+    finally:
+        cleanup_excel_resource(wb, tmp_path, is_temp)
+
     return imported_count
 
 def import_excel_faculty(file_source):
     import openpyxl
-    wb = openpyxl.load_workbook(file_source)
-    sheet = wb.active
-    header_row = next(sheet.iter_rows(max_row=1), None)
-    if not header_row:
-        raise ValueError("The excel file is empty or has no header row.")
-        
-    headers = [str(cell.value).strip() for cell in header_row]
-    
-    required_cols = [
-        'Faculty Initial', 'Name', 'Email', 'Department', 'Post',
-        'Present Address', 'Permanent Address', 'Profile Pic'
-    ]
-    
-    col_map = {}
-    for name in required_cols:
-        if name in headers:
-            col_map[name] = headers.index(name)
-        else:
-            for idx, h in enumerate(headers):
-                if h.lower().replace(' ', '').replace('_', '').replace('-', '') == name.lower().replace(' ', '').replace('_', '').replace('-', ''):
-                    col_map[name] = idx
-                    break
-                    
-    if 'Faculty Initial' not in col_map or 'Name' not in col_map or 'Email' not in col_map:
-        raise ValueError("Headers must contain at least 'Faculty Initial', 'Name', and 'Email'.")
-        
-    rows = list(sheet.iter_rows(min_row=2, values_only=True))
+    import logging
+
+    tmp_path, is_temp = get_temp_excel_file(file_source)
+    wb = None
     imported_count = 0
-    
-    for row in rows:
-        if not row or all(v is None for v in row):
-            continue
-            
-        fac_id = str(row[col_map['Faculty Initial']]).strip()
-        name = str(row[col_map['Name']]).strip()
-        email = str(row[col_map['Email']]).strip()
-        
-        if not fac_id or not name or not email:
-            continue
-            
-        dept = str(row[col_map['Department']]).strip() if ('Department' in col_map and row[col_map['Department']] is not None) else 'CSE'
-        post = str(row[col_map['Post']]).strip() if ('Post' in col_map and row[col_map['Post']] is not None) else None
-        present_address = str(row[col_map['Present Address']]).strip() if ('Present Address' in col_map and row[col_map['Present Address']] is not None) else None
-        permanent_address = str(row[col_map['Permanent Address']]).strip() if ('Permanent Address' in col_map and row[col_map['Permanent Address']] is not None) else None
-        
-        prof_pic = str(row[col_map['Profile Pic']]).strip() if ('Profile Pic' in col_map and row[col_map['Profile Pic']] is not None) else None
-        if prof_pic and prof_pic.lower() == 'none':
-            prof_pic = None
-            
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            user = User(
-                id='usr-' + fac_id,
-                email=email,
-                password_hash=generate_password_hash('password123'),
-                role='faculty',
-                is_active=True,
-                is_activated=False
-            )
-            db.session.add(user)
-            db.session.flush()
-            
-        faculty = Faculty.query.get(fac_id)
-        if not faculty:
-            faculty = Faculty(
-                id=fac_id,
-                user_id=user.id,
-                name=name,
-                department_id=dept,
-                post=post,
-                present_address=present_address,
-                permanent_address=permanent_address,
-                profile_pic=prof_pic,
-                about=''
-            )
-            db.session.add(faculty)
-        else:
-            faculty.name = name
-            faculty.department_id = dept
-            faculty.post = post
-            faculty.present_address = present_address
-            faculty.permanent_address = permanent_address
-            if prof_pic:
-                faculty.profile_pic = prof_pic
-                
-        imported_count += 1
-        
-    db.session.commit()
+
+    try:
+        wb = openpyxl.load_workbook(tmp_path, read_only=True, data_only=True)
+        sheet = wb.active
+        header_row = next(sheet.iter_rows(max_row=1, values_only=True), None)
+        if not header_row:
+            raise ValueError("The excel file is empty or has no header row.")
+
+        headers = [str(val or '').strip() for val in header_row]
+
+        required_cols = [
+            'Faculty Initial', 'Name', 'Email', 'Department', 'Post',
+            'Present Address', 'Permanent Address', 'Profile Pic'
+        ]
+
+        col_map = {}
+        for name in required_cols:
+            if name in headers:
+                col_map[name] = headers.index(name)
+            else:
+                for idx, h in enumerate(headers):
+                    if h.lower().replace(' ', '').replace('_', '').replace('-', '') == name.lower().replace(' ', '').replace('_', '').replace('-', ''):
+                        col_map[name] = idx
+                        break
+
+        if 'Faculty Initial' not in col_map or 'Name' not in col_map or 'Email' not in col_map:
+            raise ValueError("Headers must contain at least 'Faculty Initial', 'Name', and 'Email'.")
+
+        batch_counter = 0
+        row_counter = 0
+
+        row_iter = sheet.iter_rows(min_row=2, values_only=True)
+        for row in row_iter:
+            if not row or all(v is None for v in row):
+                continue
+
+            fac_id = str(row[col_map['Faculty Initial']]).strip() if row[col_map['Faculty Initial']] is not None else ''
+            name = str(row[col_map['Name']]).strip() if row[col_map['Name']] is not None else ''
+            email = str(row[col_map['Email']]).strip() if row[col_map['Email']] is not None else ''
+
+            if not fac_id or not name or not email or fac_id.lower() == 'none':
+                continue
+
+            dept = str(row[col_map['Department']]).strip() if ('Department' in col_map and row[col_map['Department']] is not None) else 'CSE'
+            post = str(row[col_map['Post']]).strip() if ('Post' in col_map and row[col_map['Post']] is not None) else None
+            present_address = str(row[col_map['Present Address']]).strip() if ('Present Address' in col_map and row[col_map['Present Address']] is not None) else None
+            permanent_address = str(row[col_map['Permanent Address']]).strip() if ('Permanent Address' in col_map and row[col_map['Permanent Address']] is not None) else None
+
+            prof_pic = str(row[col_map['Profile Pic']]).strip() if ('Profile Pic' in col_map and row[col_map['Profile Pic']] is not None) else None
+            if prof_pic and prof_pic.lower() == 'none':
+                prof_pic = None
+
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                user = User.query.get('usr-' + fac_id)
+            if not user:
+                user = User(
+                    id='usr-' + fac_id,
+                    email=email,
+                    password_hash=generate_password_hash('password123'),
+                    role='faculty',
+                    is_active=True,
+                    is_activated=False
+                )
+                db.session.add(user)
+                db.session.flush()
+            else:
+                user.email = email
+
+            faculty = Faculty.query.get(fac_id)
+            if not faculty:
+                faculty = Faculty(
+                    id=fac_id,
+                    user_id=user.id,
+                    name=name,
+                    department_id=dept,
+                    post=post,
+                    present_address=present_address,
+                    permanent_address=permanent_address,
+                    profile_pic=prof_pic,
+                    about=''
+                )
+                db.session.add(faculty)
+            else:
+                faculty.name = name
+                faculty.department_id = dept
+                faculty.post = post
+                faculty.present_address = present_address
+                faculty.permanent_address = permanent_address
+                if prof_pic:
+                    faculty.profile_pic = prof_pic
+
+            imported_count += 1
+            batch_counter += 1
+            row_counter += 1
+
+            if row_counter % 500 == 0:
+                logging.info(f"Import Excel Faculty: Processed {row_counter} rows.")
+
+            if batch_counter >= 100:
+                db.session.commit()
+                db.session.expunge_all()
+                batch_counter = 0
+
+        if batch_counter > 0:
+            db.session.commit()
+            db.session.expunge_all()
+
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error in import_excel_faculty: {e}")
+        raise e
+    finally:
+        cleanup_excel_resource(wb, tmp_path, is_temp)
+
     return imported_count
 
 @app.route('/admin/upload-students', methods=['POST'])
@@ -6391,31 +6523,38 @@ def upload_multi_excel():
         return redirect(url_for('admin_dashboard'))
         
     imported_summary = []
-    
     import openpyxl
+
     for file in uploaded_files:
         if not file or not file.filename.endswith('.xlsx'):
             continue
+
+        tmp_path, is_temp = get_temp_excel_file(file)
+        wb_head = None
         try:
-            wb = openpyxl.load_workbook(file, data_only=True)
-            sheet = wb.active
-            headers = [str(cell.value or '').strip() for cell in sheet[1]] if sheet.max_row > 0 else []
-            file.seek(0)
+            wb_head = openpyxl.load_workbook(tmp_path, read_only=True, data_only=True)
+            sheet = wb_head.active
+            header_row = next(sheet.iter_rows(max_row=1, values_only=True), None)
+            headers = [str(val or '').strip() for val in header_row] if header_row else []
+            wb_head.close()
+            wb_head = None
             
-            # Identify file type by header signatures
             if any('Faculty Initial' in h for h in headers) and any('Email' in h for h in headers) and not any('Student ID' in h for h in headers):
-                c = import_excel_faculty(file)
+                c = import_excel_faculty(tmp_path)
                 imported_summary.append(f"Faculty File ({file.filename}): {c} records")
             elif any('Student ID' in h for h in headers) or any('Student Email' in h for h in headers):
-                c = import_excel_students(file)
+                c = import_excel_students(tmp_path)
                 imported_summary.append(f"Student File ({file.filename}): {c} records")
             elif any('Course Code' in h for h in headers) or any('Date & Time' in h for h in headers) or any('Section' in h for h in headers):
-                import_excel_schedule(file)
-                imported_summary.append(f"Schedule File ({file.filename}): Schedule sections imported")
+                c = import_excel_schedule(tmp_path)
+                imported_summary.append(f"Schedule File ({file.filename}): {c} schedule sections imported")
             else:
                 imported_summary.append(f"Skipped ({file.filename}): Unrecognized Excel format")
         except Exception as e:
+            db.session.rollback()
             imported_summary.append(f"Failed ({file.filename}): {str(e)}")
+        finally:
+            cleanup_excel_resource(wb_head, tmp_path, is_temp)
             
     if imported_summary:
         flash("Batch Excel Results: " + " | ".join(imported_summary), "info")
