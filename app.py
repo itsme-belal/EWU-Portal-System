@@ -3,6 +3,7 @@ import json
 import random
 import threading
 from datetime import datetime, timezone, timedelta
+from dotenv import load_dotenv
 
 # Bangladesh Standard Timezone (BST, UTC+6)
 BD_TZ = timezone(timedelta(hours=6))
