@@ -4491,11 +4491,25 @@ def admin_dashboard():
     fresh_login = session.pop('fresh_login', False)
     next_sem = get_next_semester()
     curr_sem = get_current_semester()
+
+    # Dynamic semester list
+    sem_sequence = ['Spring2026', 'Summer2026', 'Fall2026', 'Spring2027', 'Summer2027', 'Fall2027']
+    db_sems = set([s.semester_id for s in SectionOffering.query.with_entities(SectionOffering.semester_id).distinct() if s.semester_id])
+    db_sems.add(curr_sem)
+    db_sems.add(next_sem)
+    for s in sem_sequence:
+        db_sems.add(s)
+    available_semesters = sorted(list(db_sems), key=lambda x: sem_sequence.index(x) if x in sem_sequence else 999)
+
+    selected_semester = request.args.get('semester', curr_sem)
+    if selected_semester not in available_semesters:
+        selected_semester = curr_sem
+
     students = Student.query.all()
     faculties = Faculty.query.all()
     pre_courses = PreAdvisingCourse.query.all()
-    section_offerings = SectionOffering.query.filter_by(semester_id=next_sem).order_by(SectionOffering.course_code.asc(), SectionOffering.section_number.asc()).all()
-    windows = AdvisingWindow.query.filter_by(semester_id=curr_sem).all()
+    section_offerings = SectionOffering.query.filter_by(semester_id=selected_semester).order_by(SectionOffering.course_code.asc(), SectionOffering.section_number.asc()).all()
+    windows = AdvisingWindow.query.filter_by(semester_id=selected_semester).all()
     departments = Department.query.all()
     
     # Calculate Pre-Advising Demand
@@ -4517,7 +4531,6 @@ def admin_dashboard():
         return s.value == 'true' if s else False
 
     all_requests = AdvisingRequest.query.all()
-    # Grade list is empty on admin page load; loaded on-demand via /admin/student-grades/<id> API to keep payload lightweight
     all_grades = []
     
     # Build a map of user_id -> User for roster status display
@@ -4529,10 +4542,10 @@ def admin_dashboard():
 
     student_map = {s.id: s for s in students}
 
-    # Query 0-credit students efficiently (bulk query registrations and sections to eliminate N+1 SQL queries)
+    # Query 0-credit students efficiently
     students_0cr = Student.query.filter((Student.completed_credits == 0) | (Student.completed_credits == 0.0) | (Student.completed_credits == None)).all()
     all_next_sections = {so.id: so for so in section_offerings}
-    all_next_regs = Registration.query.filter_by(semester_id=next_sem).all()
+    all_next_regs = Registration.query.filter_by(semester_id=selected_semester).all()
     
     reg_credits_map = {}
     for r in all_next_regs:
@@ -4565,6 +4578,9 @@ def admin_dashboard():
         student_map=student_map,
         students_0cr=students_0cr,
         current_semester=curr_sem,
+        next_semester=next_sem,
+        selected_semester=selected_semester,
+        available_semesters=available_semesters,
         pre_advising_active=is_setting_true('pre_advising_active'),
         final_advising_active=is_setting_true('final_advising_active'),
         request_phase_active=is_setting_true('request_phase_active'),
@@ -4782,19 +4798,72 @@ def perform_rollover():
         
     curr_sem = get_current_semester()
     next_sem = get_next_semester()
-    
-    # Rollover: Move registrations from next semester to current semester
-    next_regs = Registration.query.filter_by(semester_id=next_sem).all()
-    for reg in next_regs:
-        reg.semester_id = next_sem # wait, old next_sem is the new current_sem!
+
+    # 1. Process results and stats for all students in curr_sem
+    all_students = Student.query.all()
+    for student in all_students:
+        # Sync StudentMark records into Grade table if needed
+        marks = StudentMark.query.filter_by(student_id=student.id).all()
+        for sm in marks:
+            sec = SectionOffering.query.get(sm.section_id)
+            if sec and sec.semester_id == curr_sem and sm.grade_letter:
+                save_grade_for_student(student.id, sec.course_code, sm.grade_letter, curr_sem)
         
-    # Get sequence sequence
-    sem_sequence = ['Spring2026', 'Summer2026', 'Fall2026', 'Spring2027']
-    try:
-        idx = sem_sequence.index(next_sem)
-        new_next_sem = sem_sequence[idx + 1] if idx + 1 < len(sem_sequence) else 'Spring2027'
-    except ValueError:
-        new_next_sem = 'Spring2027'
+        # Recalculate CGPA and completed credits
+        recalculate_student_stats(student.id)
+        
+        # Build passed courses string (section_id in Grade stores course_code)
+        all_grades = Grade.query.filter_by(student_id=student.id).all()
+        passed_list = [
+            f"{g.section_id}:{g.grade_letter}"
+            for g in all_grades
+            if g.grade_letter and g.grade_letter not in ('F', 'None', '')
+        ]
+        if passed_list:
+            student.completed_courses_and_grades = ", ".join(passed_list)
+
+        # Move registered next-semester courses to current_courses
+        next_regs = Registration.query.filter_by(student_id=student.id, semester_id=next_sem, status='registered').all()
+        next_ccodes = []
+        for r in next_regs:
+            sec_obj = SectionOffering.query.get(r.section_id)
+            if sec_obj:
+                next_ccodes.append(sec_obj.course_code)
+        if next_ccodes:
+            student.current_courses = ", ".join(next_ccodes)
+
+        # Reset next semester courses and advising status for new advising window
+        student.next_semester_courses = ""
+        student.advising_status = "not_started"
+
+        # Add notification for student
+        notif = Notification(
+            id=f"notif-rollover-{curr_sem}-{student.id}",
+            student_id=student.id,
+            title=f"🎓 Semester Results Released ({curr_sem})",
+            message=f"Results for {curr_sem} have been processed! Your completed credits ({student.completed_credits}) and CGPA ({student.cgpa:.2f}) are updated. Advising is now open for {next_sem}.",
+            is_read=False,
+            created_at=get_now()
+        )
+        db.session.add(notif)
+        
+    # 2. Advance semester sequence dynamically (Spring→Summer→Fall→next-year Spring...)
+    seasons = ['Spring', 'Summer', 'Fall']
+    def advance_semester(sem_str):
+        for season in seasons:
+            if sem_str.startswith(season):
+                try:
+                    year = int(sem_str[len(season):])
+                except ValueError:
+                    return 'Spring2027'
+                idx = seasons.index(season)
+                if idx + 1 < len(seasons):
+                    return f"{seasons[idx + 1]}{year}"
+                else:
+                    return f"Spring{year + 1}"
+        return 'Spring2027'
+
+    new_next_sem = advance_semester(next_sem)
         
     def save_setting(key, val):
         setting = SystemSetting.query.filter_by(key=key).first()
@@ -4818,7 +4887,7 @@ def perform_rollover():
     save_setting('next_semester_end', '')
     
     db.session.commit()
-    flash(f"Semester Rollover executed successfully! {next_sem} is now the Current Semester.", 'success')
+    flash(f"Semester Rollover executed successfully! Student results updated and {next_sem} is now the Current Semester.", 'success')
     return redirect(url_for('admin_dashboard') + '?tab=settings')
 
 @app.route('/admin/change-password', methods=['POST'])
@@ -6825,33 +6894,39 @@ def assign_faculty_section():
     if current_user.role != 'admin':
         return redirect(url_for('home'))
         
-    fac_id = request.form.get('faculty_id')
+    fac_id = request.form.get('faculty_id') or None
     sec_id = request.form.get('section_id')
+    sem_id = request.form.get('semester_id')
     
-    faculty = Faculty.query.get(fac_id)
     section = SectionOffering.query.get(sec_id)
-    
-    if not faculty:
-        flash('Faculty member not found.', 'error')
-        return redirect(url_for('admin_dashboard') + '?tab=faculty')
-        
     if not section:
         flash('Course section offering not found.', 'error')
-        return redirect(url_for('admin_dashboard') + '?tab=faculty')
-        
-    # Check for schedule conflicts
-    next_sem = get_next_semester()
-    assigned = SectionOffering.query.filter_by(faculty_id=fac_id, semester_id=next_sem).all()
-    for a in assigned:
-        if a.id != sec_id and schedules_conflict(a.schedule, section.schedule):
-            flash(f"Conflict detected! This section ({section.course_code} Sec {section.section_number}: {section.schedule}) conflicts with {a.course_code} Sec {a.section_number} ({a.schedule}) which is already assigned to {faculty.name}.", "error")
-            return redirect(url_for('admin_dashboard') + '?tab=faculty')
+        return redirect(url_for('admin_dashboard') + '?tab=course-management')
+
+    target_sem = sem_id or section.semester_id or get_current_semester()
+    
+    if fac_id:
+        faculty = Faculty.query.get(fac_id)
+        if not faculty:
+            flash('Faculty member not found.', 'error')
+            return redirect(url_for('admin_dashboard') + f'?tab=course-management&semester={target_sem}')
             
-    # Assign
-    section.faculty_id = fac_id
-    db.session.commit()
-    flash(f"Successfully assigned {section.course_code} Sec {section.section_number} ({section.schedule}) to {faculty.name}.", "success")
-    return redirect(url_for('admin_dashboard') + '?tab=faculty')
+        # Check for schedule conflicts in target semester
+        assigned = SectionOffering.query.filter_by(faculty_id=fac_id, semester_id=target_sem).all()
+        for a in assigned:
+            if a.id != sec_id and schedules_conflict(a.schedule, section.schedule):
+                flash(f"Conflict detected! Section ({section.course_code} Sec {section.section_number}: {section.schedule}) conflicts with {a.course_code} Sec {a.section_number} ({a.schedule}) assigned to {faculty.name}.", "error")
+                return redirect(url_for('admin_dashboard') + f'?tab=course-management&semester={target_sem}')
+                
+        section.faculty_id = fac_id
+        db.session.commit()
+        flash(f"Successfully assigned {section.course_code} Sec {section.section_number} ({section.schedule}) to {faculty.name}.", "success")
+    else:
+        section.faculty_id = None
+        db.session.commit()
+        flash(f"Unassigned faculty from {section.course_code} Sec {section.section_number}.", "info")
+
+    return redirect(url_for('admin_dashboard') + f'?tab=course-management&semester={target_sem}')
 
 @app.route('/admin/assign-faculty-sections-bulk', methods=['POST'])
 @login_required
@@ -6861,19 +6936,19 @@ def assign_faculty_sections_bulk():
         
     faculty_id = request.form.get('faculty_id')
     section_ids = request.form.getlist('section_ids')
+    semester_id = request.form.get('semester_id') or get_current_semester()
     
     faculty = Faculty.query.get(faculty_id)
     if not faculty:
         flash("Faculty member not found.", "error")
-        return redirect(url_for('admin_dashboard') + "?tab=faculty")
+        return redirect(url_for('admin_dashboard') + f"?tab=faculty&semester={semester_id}")
         
     if not section_ids:
         flash("No sections selected for assignment.", "error")
-        return redirect(url_for('admin_dashboard') + "?tab=faculty")
+        return redirect(url_for('admin_dashboard') + f"?tab=faculty&semester={semester_id}")
         
     success_count = 0
     conflict_count = 0
-    semester_id = get_next_semester()
     
     assigned_secs = SectionOffering.query.filter(
         SectionOffering.faculty_id == faculty_id,
@@ -6917,7 +6992,7 @@ def assign_faculty_sections_bulk():
     if conflict_count > 0:
         flash(f"{conflict_count} section(s) could not be assigned due to scheduling conflicts.", "error")
         
-    return redirect(url_for('admin_dashboard') + "?tab=faculty")
+    return redirect(url_for('admin_dashboard') + f"?tab=faculty&semester={semester_id}")
 
 @app.route('/admin/unassign-faculty-section/<sec_id>', methods=['POST'])
 @login_required
