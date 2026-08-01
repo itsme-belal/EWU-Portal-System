@@ -3656,18 +3656,7 @@ main canvas { color: var(--text-1); }
         {% endfor %}
     ];
 
-    const gradeData = [
-        {% for gr in all_grades %}
-        {
-            id: {{ gr.id | tojson }},
-            student_id: {{ gr.student_id | tojson }},
-            course_code: {{ gr.section_id | tojson }},
-            grade_letter: {{ gr.grade_letter | tojson }},
-            grade_point: {{ gr.grade_point or 0.0 }},
-            semester_id: {{ gr.semester_id | tojson }}
-        },
-        {% endfor %}
-    ];
+    const gradeData = [];
 
     function renderAcademicStudents(list) {
         const tbody = document.getElementById('academic-students-tbody');
@@ -3772,7 +3761,7 @@ main canvas { color: var(--text-1); }
         // Populate profile pic
         const picContainer = document.getElementById('modal-student-pic-container');
         if (picContainer) {
-            if (student.profile_pic) {
+            if (student.profile_pic && student.profile_pic !== '[Image]' && !student.profile_pic.includes('[')) {
                 const picUrl = (student.profile_pic.startsWith('http://') || student.profile_pic.startsWith('https://') || student.profile_pic.startsWith('//')) ? student.profile_pic : `/static/uploads/${student.profile_pic}`;
                 picContainer.innerHTML = `<img src="${picUrl}" class="w-full h-full object-cover">`;
             } else {
@@ -3830,34 +3819,45 @@ main canvas { color: var(--text-1); }
             advStatus.className = 'badge badge-neutral text-[0.6rem]';
         }
         
-        // Populate grades table
+        // Populate grades table on-demand via lightweight endpoint
         const tbody = document.getElementById('modal-grades-tbody');
-        tbody.innerHTML = '';
-        if (studentGrades.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-slate-500 py-4 text-xs">No grade entries found.</td></tr>`;
-        } else {
-            studentGrades.forEach(g => {
-                const tr = document.createElement('tr');
-                tr.className = 'border-b border-white/5';
-                
-                let badgeClass = 'badge-danger';
-                if (g.grade_point >= 3.0) badgeClass = 'badge-success';
-                else if (g.grade_point >= 2.0) badgeClass = 'badge-info';
-                
-                tr.innerHTML = `
-                    <td class="px-4 py-2.5 text-xs font-semibold text-slate-300">${g.course_code}</td>
-                    <td class="px-4 py-2.5 text-xs font-mono text-slate-400">${g.semester_id}</td>
-                    <td class="px-4 py-2.5 text-xs"><span class="badge ${badgeClass} text-[0.6rem] font-bold">${g.grade_letter}</span></td>
-                    <td class="px-4 py-2.5 text-xs font-bold text-slate-300">${g.grade_point.toFixed(2)}</td>
-                    <td class="px-4 py-2.5 text-xs text-right">
-                        <form action="/admin/delete-grade/${g.id}" method="POST" onsubmit="return confirm('Remove this grade record?')" class="inline">
-                            <button type="submit" class="text-red-400 hover:text-red-600 bg-none border-none p-1 rounded hover:bg-white/5 transition-all" title="Delete Grade">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </form>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-slate-500 py-4 text-xs">Loading grades...</td></tr>`;
+
+        fetch(`/admin/student-grades/${encodeURIComponent(studentId)}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(studentGrades => {
+                tbody.innerHTML = '';
+                if (!studentGrades || studentGrades.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-slate-500 py-4 text-xs">No grade entries found.</td></tr>`;
+                } else {
+                    studentGrades.forEach(g => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'border-b border-white/5';
+                        
+                        let badgeClass = 'badge-danger';
+                        if (g.grade_point >= 3.0) badgeClass = 'badge-success';
+                        else if (g.grade_point >= 2.0) badgeClass = 'badge-info';
+                        
+                        tr.innerHTML = `
+                            <td class="px-4 py-2.5 text-xs font-semibold text-slate-300">${escapeHtml(g.course_code || '')}</td>
+                            <td class="px-4 py-2.5 text-xs font-mono text-slate-400">${escapeHtml(g.semester_id || '')}</td>
+                            <td class="px-4 py-2.5 text-xs"><span class="badge ${badgeClass} text-[0.6rem] font-bold">${escapeHtml(g.grade_letter || 'N/A')}</span></td>
+                            <td class="px-4 py-2.5 text-xs font-bold text-slate-300">${(g.grade_point || 0.0).toFixed(2)}</td>
+                            <td class="px-4 py-2.5 text-xs text-right">
+                                <form action="/admin/delete-grade/${g.id}" method="POST" onsubmit="return confirm('Remove this grade record?')" class="inline">
+                                    <button type="submit" class="text-red-400 hover:text-red-600 bg-none border-none p-1 rounded hover:bg-white/5 transition-all" title="Delete Grade">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    if (window.lucide) window.lucide.createIcons();
+                }
+            })
+            .catch(() => {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-slate-500 py-4 text-xs">No grade entries found.</td></tr>`;
             });
         }
         
@@ -4100,7 +4100,7 @@ main canvas { color: var(--text-1); }
 
                     const initial = document.getElementById('edit-fac-initial');
                     const img = document.getElementById('edit-fac-avatar-img');
-                    if (data.profile_pic) {
+                    if (data.profile_pic && data.profile_pic !== '[Image]' && !data.profile_pic.includes('[')) {
                         const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : `/static/uploads/${data.profile_pic}`;
                         if (img) { img.src = picUrl; img.classList.remove('hidden'); }
                         if (initial) initial.classList.add('hidden');
@@ -4149,7 +4149,7 @@ main canvas { color: var(--text-1); }
 
                     const initial = document.getElementById('edit-std-initial');
                     const img = document.getElementById('edit-std-avatar-img');
-                    if (data.profile_pic) {
+                    if (data.profile_pic && data.profile_pic !== '[Image]' && !data.profile_pic.includes('[')) {
                         const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : `/static/uploads/${data.profile_pic}`;
                         if (img) { img.src = picUrl; img.classList.remove('hidden'); }
                         if (initial) initial.classList.add('hidden');

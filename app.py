@@ -58,13 +58,13 @@ if DATABASE_URL.startswith('sqlite'):
         'pool_pre_ping': True,
     }
 else:
-    # PostgreSQL / Supabase options (Optimized for Render Free Tier 512MB RAM & Supabase pooler)
+    # PostgreSQL / Supabase options (Optimized for Render Free Tier & Supabase pooler)
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_size': 2,
-        'max_overflow': 3,
-        'pool_recycle': 120,
+        'pool_size': 5,
+        'max_overflow': 10,
+        'pool_recycle': 180,
         'pool_pre_ping': True,
-        'pool_timeout': 15,
+        'pool_timeout': 30,
     }
 
 db.init_app(app)
@@ -109,18 +109,19 @@ def send_email_safe(subject, recipients, body, html=None):
             from email.mime.text import MIMEText
             from email.mime.multipart import MIMEMultipart
 
-            old_getaddrinfo = socket.getaddrinfo
-            def ipv4_getaddrinfo(*args, **kwargs):
-                res = old_getaddrinfo(*args, **kwargs)
-                ipv4_res = [r for r in res if r[0] == socket.AF_INET]
-                return ipv4_res if ipv4_res else res
-            socket.getaddrinfo = ipv4_getaddrinfo
-
             sender = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_DEFAULT_SENDER', mail_user)) or mail_user
             
             try:
-                # Fast direct SSL connection on Port 465 (delivers in 1-2 seconds on Render)
-                server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5)
+                # Direct SSL connection on Port 465 with IPv4 resolution (no global socket monkeypatching)
+                target_host = 'smtp.gmail.com'
+                try:
+                    addr_info = socket.getaddrinfo('smtp.gmail.com', 465, socket.AF_INET, socket.SOCK_STREAM)
+                    if addr_info and len(addr_info) > 0:
+                        target_host = addr_info[0][4][0]
+                except Exception:
+                    target_host = 'smtp.gmail.com'
+
+                server = smtplib.SMTP_SSL(target_host, 465, timeout=5, server_hostname='smtp.gmail.com')
                 server.login(mail_user, mail_pass)
 
                 mime_msg = MIMEMultipart('alternative')
@@ -143,8 +144,6 @@ def send_email_safe(subject, recipients, body, html=None):
                     print(f"[MAIL SUCCESS - Fallback] Notification email sent to {recipients}: {subject}")
                 except Exception as e2:
                     print(f"[MAIL WARNING] Failed sending email to {recipients}: {e}, fallback error: {e2}")
-            finally:
-                socket.getaddrinfo = old_getaddrinfo
 
     t = threading.Thread(target=send_async)
     t.daemon = True
@@ -4418,6 +4417,21 @@ def faculty_update_profile():
     return jsonify({'status': 'success', 'message': 'Profile updated successfully.'})
 
 # ADMIN VIEWS
+@app.route('/admin/student-grades/<student_id>')
+@login_required
+def admin_get_student_grades(student_id):
+    if current_user.role not in ['admin', 'faculty']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    grades = Grade.query.filter_by(student_id=student_id).all()
+    return jsonify([{
+        'id': g.id,
+        'student_id': g.student_id,
+        'course_code': g.section_id,
+        'grade_letter': g.grade_letter,
+        'grade_point': g.grade_point or 0.0,
+        'semester_id': g.semester_id
+    } for g in grades])
+
 @app.route('/admin')
 @login_required
 def admin_dashboard():
@@ -4425,16 +4439,18 @@ def admin_dashboard():
         return redirect(url_for('home'))
         
     fresh_login = session.pop('fresh_login', False)
+    next_sem = get_next_semester()
+    curr_sem = get_current_semester()
     students = Student.query.all()
     faculties = Faculty.query.all()
     pre_courses = PreAdvisingCourse.query.all()
-    section_offerings = SectionOffering.query.filter_by(semester_id=get_next_semester()).all()
-    windows = AdvisingWindow.query.filter_by(semester_id=get_current_semester()).all()
+    section_offerings = SectionOffering.query.filter_by(semester_id=next_sem).all()
+    windows = AdvisingWindow.query.filter_by(semester_id=curr_sem).all()
     departments = Department.query.all()
     
     # Calculate Pre-Advising Demand
     demand_counts = {}
-    plans = AdvisingPlan.query.filter_by(semester_id=get_next_semester()).all()
+    plans = AdvisingPlan.query.filter_by(semester_id=next_sem).all()
     for p in plans:
         for cCode in p.course_ids:
             demand_counts[cCode] = demand_counts.get(cCode, 0) + 1
@@ -4451,7 +4467,8 @@ def admin_dashboard():
         return s.value == 'true' if s else False
 
     all_requests = AdvisingRequest.query.all()
-    all_grades = Grade.query.all()
+    # Grade list is empty on admin page load; loaded on-demand via /admin/student-grades/<id> API to keep payload lightweight
+    all_grades = []
     
     # Build a map of user_id -> User for roster status display
     all_users = User.query.all()
@@ -4462,11 +4479,19 @@ def admin_dashboard():
 
     student_map = {s.id: s for s in students}
 
-    # Query 0-credit students
+    # Query 0-credit students efficiently (bulk query registrations and sections to eliminate N+1 SQL queries)
     students_0cr = Student.query.filter((Student.completed_credits == 0) | (Student.completed_credits == 0.0) | (Student.completed_credits == None)).all()
+    all_next_sections = {so.id: so for so in section_offerings}
+    all_next_regs = Registration.query.filter_by(semester_id=next_sem).all()
+    
+    reg_credits_map = {}
+    for r in all_next_regs:
+        sec = all_next_sections.get(r.section_id)
+        if sec and sec.credits:
+            reg_credits_map[r.student_id] = reg_credits_map.get(r.student_id, 0.0) + float(sec.credits)
+
     for s in students_0cr:
-        regs = Registration.query.filter_by(student_id=s.id, semester_id=get_next_semester()).all()
-        s.registered_credits = sum([SectionOffering.query.get(r.section_id).credits for r in regs if SectionOffering.query.get(r.section_id)])
+        s.registered_credits = reg_credits_map.get(s.id, 0.0)
         s.parsed_unassigned_courses = []
         if s.unassigned_courses:
             try:
@@ -4489,7 +4514,7 @@ def admin_dashboard():
         faculty_map=faculty_map,
         student_map=student_map,
         students_0cr=students_0cr,
-        current_semester=get_current_semester(),
+        current_semester=curr_sem,
         pre_advising_active=is_setting_true('pre_advising_active'),
         final_advising_active=is_setting_true('final_advising_active'),
         request_phase_active=is_setting_true('request_phase_active'),

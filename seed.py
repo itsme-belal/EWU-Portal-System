@@ -59,8 +59,24 @@ def seed_db():
 
     with app.app_context():
         print("Recreating database tables...")
-        db.drop_all()
+        if DATABASE_URL.startswith('postgresql'):
+            try:
+                db.session.execute(sa_text("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();"))
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+            try:
+                db.session.execute(sa_text("DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO public;"))
+                db.session.commit()
+                print("Cleaned PostgreSQL schema 'public' successfully.")
+            except Exception as e:
+                db.session.rollback()
+                print("DROP SCHEMA fallback, executing db.drop_all():", e)
+                db.drop_all()
+        else:
+            db.drop_all()
         db.create_all()
+        db.session.commit()
 
         default_admin_pass = os.environ.get('DEFAULT_ADMIN_PASSWORD', 'admin123')
         admin_pass_hash = generate_password_hash(default_admin_pass)
@@ -92,6 +108,7 @@ def seed_db():
         db.session.add(SystemSetting(key='pre_advising_active', value='true'))
         db.session.add(SystemSetting(key='final_advising_active', value='true'))
         db.session.add(SystemSetting(key='request_phase_active', value='true'))
+        db.session.commit()
 
         print("Seeding Departments...")
         departments = [
