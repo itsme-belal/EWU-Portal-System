@@ -2,8 +2,14 @@ import os
 import json
 import random
 import threading
-from datetime import datetime
-from dotenv import load_dotenv
+from datetime import datetime, timezone, timedelta
+
+# Bangladesh Standard Timezone (BST, UTC+6)
+BD_TZ = timezone(timedelta(hours=6))
+
+def get_now():
+    """Returns current naive datetime in Bangladesh Local Time (Asia/Dhaka, UTC+6)."""
+    return datetime.now(BD_TZ).replace(tzinfo=None)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -858,7 +864,7 @@ def save_grade_for_student(student_id, course_code, grade_letter, semester_id):
 def is_time_within_window(start_str, end_str):
     if not start_str or not end_str:
         return False
-    now = datetime.now()
+    now = get_now()
     try:
         start_dt = datetime.strptime(start_str[:16], '%Y-%m-%dT%H:%M')
         end_dt = datetime.strptime(end_str[:16], '%Y-%m-%dT%H:%M')
@@ -871,7 +877,7 @@ def is_time_within_window(start_str, end_str):
 def is_time_before_window(start_str):
     if not start_str:
         return False
-    now = datetime.now()
+    now = get_now()
     try:
         start_dt = datetime.strptime(start_str[:16], '%Y-%m-%dT%H:%M')
         return now < start_dt
@@ -1872,7 +1878,7 @@ def render_student_portal(active_tab):
     student_pre_window = next((w for w in all_windows if w.type == 'pre' and w.credit_min <= student.completed_credits <= w.credit_max), None)
     student_final_window = next((w for w in all_windows if w.type == 'final' and w.credit_min <= student.completed_credits <= w.credit_max), None)
 
-    now_iso = datetime.now().isoformat()
+    now_iso = get_now().isoformat()
     
     def format_window_time(dt_str):
         if not dt_str:
@@ -5744,7 +5750,7 @@ def create_window():
         flash('End date & time must be after Start date & time.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=timeline')
 
-    now_iso = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    now_iso = get_now().strftime('%Y-%m-%dT%H:%M')
     if end < now_iso:
         flash('Advising window end time cannot be set in the past.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=timeline')
