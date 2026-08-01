@@ -58,12 +58,13 @@ if DATABASE_URL.startswith('sqlite'):
         'pool_pre_ping': True,
     }
 else:
-    # PostgreSQL / Supabase options
+    # PostgreSQL / Supabase options (Optimized for Render Free Tier 512MB RAM & Supabase pooler)
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_size': 5,
-        'max_overflow': 10,
-        'pool_recycle': 300,
+        'pool_size': 2,
+        'max_overflow': 3,
+        'pool_recycle': 120,
         'pool_pre_ping': True,
+        'pool_timeout': 15,
     }
 
 db.init_app(app)
