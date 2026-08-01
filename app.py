@@ -6332,10 +6332,8 @@ def import_excel_students(file_source):
                 raise ValueError(f"Student ID '{std_id}' must be in the format 'YYYY-Semester-DeptCode-Number' (e.g., '2023-2-60-010').")
             dept_code = id_parts[2]
             expected_dept = dept_code_map.get(dept_code)
-            if not expected_dept:
-                raise ValueError(f"Invalid department code '{dept_code}' in Student ID '{std_id}'.")
-            if expected_dept != dept:
-                raise ValueError(f"Department mismatch: Student ID '{std_id}' contains department code '{dept_code}' ({expected_dept}), but Excel specified '{dept}'.")
+            if expected_dept:
+                dept = expected_dept
 
             credits = clean_float_excel(row[col_map['Completed Credit']]) if 'Completed Credit' in col_map else 0.0
             rem_credits = clean_float_excel(row[col_map['Remaining Credit']], 140.0) if 'Remaining Credit' in col_map else 140.0
