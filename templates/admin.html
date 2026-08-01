@@ -1824,7 +1824,7 @@ main canvas { color: var(--text-1); }
                                 </button>
                             </form>
                             {% endif %}
-                            <button onclick="openAdminEditStudentModal('{{ std.id }}')" class="text-[0.65rem] px-2 py-1 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm">Edit</button>
+                            <button type="button" onclick="openAdminEditStudentModal('{{ std.id }}'); return false;" class="text-[0.65rem] px-2 py-1 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm">Edit</button>
                             <form action="{{ url_for('admin_delete_student', std_id=std.id) }}" method="POST" onsubmit="return confirm('Delete student {{ std.id }}? This cannot be undone.')">
                                 <button type="submit" class="text-[0.65rem] px-2 py-1 font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded">Delete</button>
                             </form>
@@ -2073,7 +2073,7 @@ main canvas { color: var(--text-1); }
                                 </button>
                             </form>
                             {% endif %}
-                            <button onclick="openAdminEditFacultyModal('{{ fac.id }}')" class="text-[0.65rem] px-2 py-1 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm">Edit</button>
+                            <button type="button" onclick="openAdminEditFacultyModal('{{ fac.id }}'); return false;" class="text-[0.65rem] px-2 py-1 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm">Edit</button>
                             <form action="{{ url_for('admin_delete_faculty', fac_id=fac.id) }}" method="POST" onsubmit="return confirm('Delete faculty {{ fac.id }}? This cannot be undone.')">
                                 <button type="submit" class="text-[0.65rem] px-2 py-1 font-bold bg-red-100 hover:bg-red-200 text-red-700 rounded">Delete</button>
                             </form>
@@ -4118,13 +4118,26 @@ main canvas { color: var(--text-1); }
     }
 
     function openAdminEditFacultyModal(facId) {
-        fetch(`/admin/faculty-details/${facId}`)
-            .then(res => res.json())
+        // Show modal immediately with a loading state
+        const modal = document.getElementById('admin-edit-faculty-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
+        fetch(`/admin/faculty-details/${encodeURIComponent(facId)}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`);
+                return res.json();
+            })
             .then(data => {
                 if (data.status === 'success') {
                     const setVal = (id, val) => {
                         const el = document.getElementById(id);
-                        if (el) el.value = val;
+                        if (el) el.value = val ?? '';
                     };
                     setVal('edit-fac-id', data.id);
                     setVal('edit-fac-name', data.name);
@@ -4152,39 +4165,48 @@ main canvas { color: var(--text-1); }
                     }
 
                     const formEl = document.getElementById('admin-edit-faculty-form');
-                    if (formEl) formEl.action = `/admin/edit-faculty/${data.id}`;
-
-                    const modal = document.getElementById('admin-edit-faculty-modal');
-                    if (modal) {
-                        modal.classList.remove('hidden');
-                        modal.style.display = 'flex';
-                    }
+                    if (formEl) formEl.action = `/admin/edit-faculty/${encodeURIComponent(data.id)}`;
                 } else {
+                    closeAdminEditFacultyModal();
                     alert(data.message || 'Error fetching faculty details.');
                 }
             })
             .catch(err => {
+                closeAdminEditFacultyModal();
                 console.error('Error in openAdminEditFacultyModal:', err);
-                alert('Could not fetch faculty details: ' + (err.message || err));
+                alert('Could not load faculty details. Please try again.\n(' + (err.message || err) + ')');
             });
     }
 
     function openAdminEditStudentModal(stdId) {
-        fetch(`/admin/student-details/${encodeURIComponent(stdId)}`)
-            .then(res => res.json())
+        // Show modal immediately with a loading state
+        const modal = document.getElementById('admin-edit-student-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
+        fetch(`/admin/student-details/${encodeURIComponent(stdId)}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`);
+                return res.json();
+            })
             .then(data => {
                 if (data.status === 'success') {
                     const setVal = (id, val) => {
                         const el = document.getElementById(id);
-                        if (el) el.value = val;
+                        if (el) el.value = val ?? '';
                     };
                     setVal('edit-std-id', data.id);
                     setVal('edit-std-name', data.name);
                     setVal('edit-std-dept', data.department_id);
                     setVal('edit-std-phone', data.phone_number || '');
-                    setVal('edit-std-cgpa', data.cgpa || 0);
-                    setVal('edit-std-credits', data.completed_credits || 0);
-                    setVal('edit-std-balance', data.outstanding_balance || 0);
+                    setVal('edit-std-cgpa', data.cgpa ?? 0);
+                    setVal('edit-std-credits', data.completed_credits ?? 0);
+                    setVal('edit-std-balance', data.outstanding_balance ?? 0);
                     
                     const clearedChk = document.getElementById('edit-std-cleared');
                     if (clearedChk) clearedChk.checked = !!data.financial_cleared;
@@ -4208,20 +4230,16 @@ main canvas { color: var(--text-1); }
                     }
 
                     const formEl = document.getElementById('admin-edit-student-form');
-                    if (formEl) formEl.action = `/admin/edit-student/${data.id}`;
-
-                    const modal = document.getElementById('admin-edit-student-modal');
-                    if (modal) {
-                        modal.classList.remove('hidden');
-                        modal.style.display = 'flex';
-                    }
+                    if (formEl) formEl.action = `/admin/edit-student/${encodeURIComponent(data.id)}`;
                 } else {
+                    closeAdminEditStudentModal();
                     alert(data.message || 'Error fetching student details.');
                 }
             })
             .catch(err => {
+                closeAdminEditStudentModal();
                 console.error('Error in openAdminEditStudentModal:', err);
-                alert('Could not fetch student details: ' + (err.message || err));
+                alert('Could not load student details. Please try again.\n(' + (err.message || err) + ')');
             });
     }
 
