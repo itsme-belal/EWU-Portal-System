@@ -3375,8 +3375,14 @@ def submit_add_request_multi():
             semester_id=get_next_semester(),
             advisor_id=student.advisor_id
         )
-        db.session.add(req)
     db.session.commit()
+
+    courses_text = ", ".join(unique_course_codes)
+    send_advisor_request_email(student, "Course Add", courses_text, comments)
+    create_course_request_notifications(student, "Course Add", courses_text, comments)
+
+    flash('Course add request submitted successfully to your advisor.', 'success')
+    return redirect('/advising?tab=requests')
 
 def create_course_request_notifications(student, req_type, info_text, comments=""):
     ts = int(datetime.utcnow().timestamp())
