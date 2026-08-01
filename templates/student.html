@@ -1837,6 +1837,13 @@
 
     // Tab switching
     function switchTab(tabId, forceReload = false) {
+        if (forceReload) {
+            const targetUrl = new URL(window.location.href);
+            targetUrl.searchParams.set('tab', tabId);
+            window.location.href = targetUrl.toString();
+            return;
+        }
+
         sessionStorage.setItem('active_tab_id', tabId);
         localStorage.setItem('student_active_tab', tabId);
         if (tabId === 'profile') {
@@ -1844,32 +1851,36 @@
         } else if (tabId === 'slip') {
             tabId = 'schedule';
         }
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentTab = urlParams.get('tab');
-        if (currentTab !== tabId || forceReload) {
-            const targetUrl = new URL(window.location.href);
-            targetUrl.searchParams.set('tab', tabId);
-            window.location.href = targetUrl.toString();
-            return;
-        }
-        const target = document.getElementById(`tab-${tabId}`);
+
+        let target = document.getElementById(`tab-${tabId}`);
         if (!target) {
             tabId = 'dashboard';
+            target = document.getElementById('tab-dashboard');
         }
+
+        try {
+            const targetUrl = new URL(window.location.href);
+            if (targetUrl.searchParams.get('tab') !== tabId) {
+                targetUrl.searchParams.set('tab', tabId);
+                window.history.replaceState({}, '', targetUrl.toString());
+            }
+        } catch (e) {}
+
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        if (target) {
+            target.classList.remove('hidden');
+        }
 
         document.querySelectorAll('.nav-item, .nav-sub-item').forEach(el => el.classList.remove('active'));
         
-        // Highlight active sub-items or main items
         const mainBtn = document.getElementById(`nav-${tabId}`);
         if (mainBtn) {
             mainBtn.classList.add('active');
         }
 
-        if (tabId === 'advising') {
+        if (tabId === 'advising' && typeof showAdvisingHub === 'function') {
             showAdvisingHub();
-        } else if (tabId === 'requests') {
+        } else if (tabId === 'requests' && typeof toggleRequestForm === 'function') {
             const reqActive = {{ 'true' if request_phase_active else 'false' }};
             const dropActive = {{ 'true' if drop_withdraw_active else 'false' }};
             if (reqActive) {
@@ -1880,7 +1891,6 @@
         }
 
         updateBreadcrumbs(tabId);
-        localStorage.setItem('student_active_tab', tabId);
     }
 
     function toggleRequestForm(formId) {

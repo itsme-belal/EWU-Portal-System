@@ -3460,25 +3460,39 @@ main canvas { color: var(--text-1); }
     }
 
     function switchTab(tabId, forceReload = false) {
-        sessionStorage.setItem('active_tab_id', tabId);
-        localStorage.setItem('admin_active_tab', tabId);
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentTab = urlParams.get('tab');
-        if (currentTab !== tabId || forceReload) {
+        if (forceReload) {
             const targetUrl = new URL(window.location.href);
             targetUrl.searchParams.set('tab', tabId);
             window.location.href = targetUrl.toString();
             return;
         }
-        const tabEl = document.getElementById(`tab-${tabId}`);
-        if (!tabEl) return; 
+
+        let tabEl = document.getElementById(`tab-${tabId}`);
+        if (!tabEl) {
+            tabId = 'dashboard';
+            tabEl = document.getElementById('tab-dashboard');
+        }
+
+        sessionStorage.setItem('active_tab_id', tabId);
+        sessionStorage.setItem('admin_active_tab', tabId);
+        localStorage.setItem('admin_active_tab', tabId);
+
+        try {
+            const targetUrl = new URL(window.location.href);
+            if (targetUrl.searchParams.get('tab') !== tabId) {
+                targetUrl.searchParams.set('tab', tabId);
+                window.history.replaceState({}, '', targetUrl.toString());
+            }
+        } catch (e) {}
 
         if (typeof closeAdminEditSectionModal === 'function') {
             closeAdminEditSectionModal();
         }
 
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        tabEl.classList.remove('hidden');
+        if (tabEl) {
+            tabEl.classList.remove('hidden');
+        }
 
         // Remove active class from all nav items & sub items
         document.querySelectorAll('.adm-nav-item, .adm-sub-item').forEach(el => el.classList.remove('active'));
@@ -3509,7 +3523,6 @@ main canvas { color: var(--text-1); }
         });
 
         updateBreadcrumbs(tabId);
-        localStorage.setItem('admin_active_tab', tabId);
     }
 
     const isFreshLogin = {{ 'true' if fresh_login else 'false' }};
@@ -3527,7 +3540,13 @@ main canvas { color: var(--text-1); }
         savedTab = sessionStorage.getItem('admin_active_tab') || localStorage.getItem('admin_active_tab') || 'dashboard';
     }
 
-    switchTab(savedTab);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            switchTab(savedTab);
+        });
+    } else {
+        switchTab(savedTab);
+    }
 
     // ── LIVE CLOCK ───────────────────────────────────────────
     function updateClock() {

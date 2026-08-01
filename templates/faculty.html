@@ -1480,18 +1480,31 @@
     }
 
     function switchTab(tabId, forceReload = false) {
-        sessionStorage.setItem('active_tab_id', tabId);
-        localStorage.setItem('faculty_active_tab', tabId);
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentTab = urlParams.get('tab');
-        if (currentTab !== tabId || forceReload) {
+        if (forceReload) {
             const targetUrl = new URL(window.location.href);
             targetUrl.searchParams.set('tab', tabId);
             window.location.href = targetUrl.toString();
             return;
         }
+
+        sessionStorage.setItem('active_tab_id', tabId);
+        localStorage.setItem('faculty_active_tab', tabId);
+
+        let target = document.getElementById(`tab-${tabId}`);
+        if (!target) {
+            tabId = 'dashboard';
+            target = document.getElementById('tab-dashboard');
+        }
+
+        try {
+            const targetUrl = new URL(window.location.href);
+            if (targetUrl.searchParams.get('tab') !== tabId) {
+                targetUrl.searchParams.set('tab', tabId);
+                window.history.replaceState({}, '', targetUrl.toString());
+            }
+        } catch (e) {}
+
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        const target = document.getElementById(`tab-${tabId}`);
         if (target) {
             target.classList.remove('hidden');
         }
@@ -1508,7 +1521,6 @@
             const menu = document.getElementById('submenu-advising');
             if (menu) menu.classList.remove('hidden');
             const arrow = document.getElementById('submenu-advising-arrow');
-            if (arrow) arrow.rotate = '90'; // fallback
             if (arrow) arrow.classList.add('rotate-90');
             const subBtn = document.getElementById(`nav-${tabId}`);
             if (subBtn) subBtn.classList.add('active');
@@ -1525,14 +1537,14 @@
         }
 
         updateBreadcrumbs(tabId);
-        localStorage.setItem('faculty_active_tab', tabId);
         
         // Perform tab specific loads
-        if (tabId === 'messaging') {
+        if (tabId === 'messaging' && typeof loadMessagingThreads === 'function') {
             loadMessagingThreads();
-        } else if (tabId === 'reports') {
+        } else if (tabId === 'reports' && typeof loadReportsData === 'function') {
             loadReportsData();
         }
+    }        }
         
         if (window.lucide) lucide.createIcons();
     }
