@@ -5417,10 +5417,9 @@ def admin_delete_faculty(fac_id):
     if fac:
         user = User.query.get(fac.user_id) if fac.user_id else None
         
-        # Unassign faculty from sections, student advisees, and swap requests
+        # Unassign faculty from sections and student advisees
         SectionOffering.query.filter_by(faculty_id=fac.id).update({'faculty_id': None})
         Student.query.filter_by(advisor_id=fac.id).update({'advisor_id': None})
-        SwapRequest.query.filter_by(marked_by=fac.id).update({'marked_by': None})
         
         if user:
             Message.query.filter((Message.sender_id == user.id) | (Message.receiver_id == user.id)).delete()
@@ -5515,8 +5514,8 @@ def admin_delete_student(std_id):
         Registration.query.filter_by(student_id=std.id).delete()
         AdvisingRequest.query.filter_by(student_id=std.id).delete()
         AdvisingPlan.query.filter_by(student_id=std.id).delete()
-        DropRequest.query.filter_by(student_id=std.id).delete()
-        SwapRequest.query.filter_by(student_id=std.id).delete()
+        SemesterDropRequest.query.filter_by(student_id=std.id).delete()
+        AttendanceRecord.query.filter_by(student_id=std.id).delete()
         Grade.query.filter_by(student_id=std.id).delete()
         LedgerEntry.query.filter_by(student_id=std.id).delete()
         Installment.query.filter_by(student_id=std.id).delete()
