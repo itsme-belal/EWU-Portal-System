@@ -1782,7 +1782,7 @@ main canvas { color: var(--text-1); }
                             <div class="flex items-center gap-2.5">
                                 <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
                                     {% if std.profile_pic %}
-                                    <img src="/static/uploads/{{ std.profile_pic }}" class="w-full h-full object-cover">
+                                    <img src="{{ std.profile_pic | profile_pic_url }}" class="w-full h-full object-cover">
                                     {% else %}
                                     <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
                                     {% endif %}
@@ -2019,7 +2019,7 @@ main canvas { color: var(--text-1); }
                             <div class="flex items-center gap-2.5">
                                 <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
                                     {% if fac.profile_pic %}
-                                    <img src="/static/uploads/{{ fac.profile_pic }}" class="w-full h-full object-cover">
+                                    <img src="{{ fac.profile_pic | profile_pic_url }}" class="w-full h-full object-cover">
                                     {% else %}
                                     <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
                                     {% endif %}
@@ -3529,8 +3529,17 @@ main canvas { color: var(--text-1); }
         breadcrumbEl.innerHTML = mapping[tabId] || `${homeLink} / <span class="text-white font-semibold">${tabId}</span>`;
     }
 
-    function switchTab(tabId) {
+    function switchTab(tabId, forceReload = false) {
         sessionStorage.setItem('active_tab_id', tabId);
+        localStorage.setItem('admin_active_tab', tabId);
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentTab = urlParams.get('tab');
+        if (currentTab !== tabId || forceReload) {
+            const targetUrl = new URL(window.location.href);
+            targetUrl.searchParams.set('tab', tabId);
+            window.location.href = targetUrl.toString();
+            return;
+        }
         const tabEl = document.getElementById(`tab-${tabId}`);
         if (!tabEl) return; 
 
@@ -3829,7 +3838,8 @@ main canvas { color: var(--text-1); }
         const picContainer = document.getElementById('modal-student-pic-container');
         if (picContainer) {
             if (student.profile_pic) {
-                picContainer.innerHTML = `<img src="/static/uploads/${student.profile_pic}" class="w-full h-full object-cover">`;
+                const picUrl = (student.profile_pic.startsWith('http://') || student.profile_pic.startsWith('https://') || student.profile_pic.startsWith('//')) ? student.profile_pic : `/static/uploads/${student.profile_pic}`;
+                picContainer.innerHTML = `<img src="${picUrl}" class="w-full h-full object-cover">`;
             } else {
                 picContainer.innerHTML = `<i data-lucide="user" class="w-10 h-10 text-slate-500"></i>`;
             }
@@ -4152,7 +4162,8 @@ main canvas { color: var(--text-1); }
                     const initial = document.getElementById('edit-fac-initial');
                     const img = document.getElementById('edit-fac-avatar-img');
                     if (data.profile_pic) {
-                        if (img) { img.src = `/static/uploads/${data.profile_pic}`; img.classList.remove('hidden'); }
+                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : `/static/uploads/${data.profile_pic}`;
+                        if (img) { img.src = picUrl; img.classList.remove('hidden'); }
                         if (initial) initial.classList.add('hidden');
                     } else {
                         if (img) img.classList.add('hidden');
@@ -4190,7 +4201,8 @@ main canvas { color: var(--text-1); }
                     const initial = document.getElementById('edit-std-initial');
                     const img = document.getElementById('edit-std-avatar-img');
                     if (data.profile_pic) {
-                        if (img) { img.src = `/static/uploads/${data.profile_pic}`; img.classList.remove('hidden'); }
+                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : `/static/uploads/${data.profile_pic}`;
+                        if (img) { img.src = picUrl; img.classList.remove('hidden'); }
                         if (initial) initial.classList.add('hidden');
                     } else {
                         if (img) img.classList.add('hidden');

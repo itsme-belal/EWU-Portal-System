@@ -56,7 +56,7 @@
             <div class="relative group">
                 <div class="w-28 h-28 rounded-full bg-slate-800/80 border-4 border-blue-500/50 overflow-hidden flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-200">
                     {% if student.profile_pic %}
-                    <img src="{{ url_for('static', filename='uploads/' ~ student.profile_pic) }}" alt="{{ student.name }} profile picture" class="w-full h-full object-cover">
+                    <img src="{{ student.profile_pic | profile_pic_url }}" alt="{{ student.name }} profile picture" class="w-full h-full object-cover">
                     {% else %}
                     <span class="text-4xl font-black text-blue-300">{{ student.name[:1] | upper }}</span>
                     {% endif %}
@@ -1594,7 +1594,7 @@
             <div class="relative group">
                 <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border-2 border-blue-500/30 overflow-hidden flex items-center justify-center text-white font-black text-3xl shadow-xl flex-shrink-0">
                     {% if student.profile_pic %}
-                    <img src="{{ url_for('static', filename='uploads/' ~ student.profile_pic) }}" alt="{{ student.name }} profile picture" class="w-full h-full object-cover">
+                    <img src="{{ student.profile_pic | profile_pic_url }}" alt="{{ student.name }} profile picture" class="w-full h-full object-cover">
                     {% else %}
                     {{ student.name[:1] | upper }}
                     {% endif %}
@@ -1836,12 +1836,21 @@
     }
 
     // Tab switching
-    function switchTab(tabId) {
+    function switchTab(tabId, forceReload = false) {
         sessionStorage.setItem('active_tab_id', tabId);
+        localStorage.setItem('student_active_tab', tabId);
         if (tabId === 'profile') {
             tabId = 'settings';
         } else if (tabId === 'slip') {
             tabId = 'schedule';
+        }
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentTab = urlParams.get('tab');
+        if (currentTab !== tabId || forceReload) {
+            const targetUrl = new URL(window.location.href);
+            targetUrl.searchParams.set('tab', tabId);
+            window.location.href = targetUrl.toString();
+            return;
         }
         const target = document.getElementById(`tab-${tabId}`);
         if (!target) {

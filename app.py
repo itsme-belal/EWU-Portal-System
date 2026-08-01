@@ -15,6 +15,14 @@ from sqlalchemy import inspect, text, event
 from sqlalchemy.engine import Engine
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+
+try:
+    import cloudinary
+    import cloudinary.uploader
+    HAS_CLOUDINARY = True
+except ImportError:
+    HAS_CLOUDINARY = False
+
 from models import (
     db, User, Department, Faculty, Student, Admin,
     PreAdvisingCourse, SectionOffering, AdvisingWindow, AdvisingPlan, Registration,
@@ -442,8 +450,10 @@ def get_previous_semester():
     if curr == 'Spring2026': return 'Fall2025'
     return 'Summer2026'
 
-def save_profile_pic_upload(file_storage, owner_prefix):
-    if not file_storage or not file_storage.filename:
+def save_profile_pic_upload(file_storage, owner_prefix, required=False):
+    if not file_storage or not file_storage.filename or file_storage.filename.strip() == '':
+        if required:
+            raise ValueError('Profile image is mandatory for Student and Faculty.')
         return None
 
     raw_filename = secure_filename(file_storage.filename)
@@ -456,10 +466,46 @@ def save_profile_pic_upload(file_storage, owner_prefix):
         raise ValueError('Invalid image format. Allowed: png, jpg, jpeg, gif, webp.')
 
     safe_owner = secure_filename(owner_prefix) or 'profile'
+
+    # Attempt Cloudinary API Upload if credentials exist
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
+    api_key = os.environ.get('CLOUDINARY_API_KEY')
+    api_secret = os.environ.get('CLOUDINARY_API_SECRET')
+    cloudinary_url = os.environ.get('CLOUDINARY_URL')
+
+    if HAS_CLOUDINARY and (cloudinary_url or (cloud_name and api_key and api_secret)):
+        try:
+            if cloudinary_url:
+                cloudinary.config(cloudinary_url=cloudinary_url, secure=True)
+            else:
+                cloudinary.config(
+                    cloud_name=cloud_name,
+                    api_key=api_key,
+                    api_secret=api_secret,
+                    secure=True
+                )
+            file_storage.seek(0)
+            upload_result = cloudinary.uploader.upload(
+                file_storage,
+                folder="ewu_portal/profiles",
+                public_id=f"{safe_owner}_{int(datetime.utcnow().timestamp())}",
+                overwrite=True,
+                resource_type="image"
+            )
+            secure_url = upload_result.get('secure_url') or upload_result.get('url')
+            if secure_url:
+                return secure_url
+        except Exception as e:
+            print(f"[CLOUDINARY UPLOAD ERROR] {e}")
+            if cloudinary_url or (cloud_name and api_key and api_secret):
+                raise ValueError(f"Cloudinary upload failed: {str(e)}")
+
+    # Fallback to local upload directory if Cloudinary credentials are not present in .env
     safe_stem = stem or 'photo'
     timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
     unique_filename = f"{safe_owner}_{timestamp}_{random.randint(1000, 9999)}_{safe_stem}.{extension}"
     os.makedirs(PROFILE_UPLOAD_DIR, exist_ok=True)
+    file_storage.seek(0)
     file_storage.save(os.path.join(PROFILE_UPLOAD_DIR, unique_filename))
     return unique_filename
 
@@ -899,6 +945,14 @@ def inject_layout_variables():
         'next_semester_start_date': cal_dates['next_semester_start_date'],
         'next_semester_end_date': cal_dates['next_semester_end_date'],
     }
+
+@app.template_filter('profile_pic_url')
+def profile_pic_url_filter(path):
+    if not path:
+        return ''
+    if path.startswith('http://') or path.startswith('https://') or path.startswith('//'):
+        return path
+    return f"/static/uploads/{path}"
 
 # ROUTES
 @app.route('/')
@@ -2381,7 +2435,8 @@ def faculty_dashboard():
         schemes=schemes,
         student_marks=student_marks,
         system_announcements=system_announcements,
-        fresh_login=fresh_login
+        fresh_login=fresh_login,
+        notifications=Notification.query.filter((Notification.recipient_role == 'faculty') & (Notification.recipient_id == faculty.id)).order_by(Notification.created_at.desc()).limit(30).all()
     )
 
 # Faculty manually adds/drops courses for ANY student in department (All Student Advising)
@@ -3231,8 +3286,43 @@ def submit_add_request_multi():
         db.session.add(req)
     db.session.commit()
 
+def create_course_request_notifications(student, req_type, info_text, comments=""):
+    ts = int(datetime.utcnow().timestamp())
+    title_str = f"New {req_type} Request"
+    msg_str = f"Student {student.name} ({student.id}) submitted a {req_type} request for: {info_text}."
+    if comments:
+        msg_str += f" Reason: {comments}"
+
+    # Notification for Admin
+    admin_notif = Notification(
+        id=f"NTF-ADM-{student.id}-{ts}-{random.randint(1000, 9999)}",
+        student_id=student.id,
+        recipient_role='admin',
+        recipient_id='admin',
+        title=title_str,
+        message=msg_str
+    )
+    db.session.add(admin_notif)
+
+    # Notification for Faculty Advisor if assigned
+    if student.advisor_id:
+        fac_notif = Notification(
+            id=f"NTF-FAC-{student.id}-{ts}-{random.randint(1000, 9999)}",
+            student_id=student.id,
+            recipient_role='faculty',
+            recipient_id=student.advisor_id,
+            title=title_str,
+            message=msg_str
+        )
+        db.session.add(fac_notif)
+
+    db.session.commit()
+
     # Advisor Email Notification
-    send_advisor_request_email(student, "Course Add", ", ".join(unique_course_codes), comments)
+    send_advisor_request_email(student, req_type, info_text, comments)
+
+    # Advisor & Admin In-App Notifications
+    create_course_request_notifications(student, "Course Add", ", ".join(unique_course_codes), comments)
 
     flash('Course add request submitted successfully to advisor.', 'success')
     return redirect('/advising?tab=requests')
@@ -3315,6 +3405,7 @@ def submit_change_request_multi():
             requested_swaps.append(f"{cur_s.course_code}: Sec {cur_s.section_number} -> Sec {new_s.section_number}")
     swaps_text = ", ".join(requested_swaps)
     send_advisor_request_email(student, "Section Change", swaps_text, comments)
+    create_course_request_notifications(student, "Section Change", swaps_text, comments)
 
     flash('Section change swap request sent to academic advisor.', 'success')
     return redirect('/advising?tab=requests')
@@ -3417,6 +3508,7 @@ def submit_seat_increase_multi():
             requested_sections.append(f"{sec.course_code} Sec {sec.section_number}")
     sections_text = ", ".join(requested_sections)
     send_advisor_request_email(student, "Seat Increase", sections_text, comments)
+    create_course_request_notifications(student, "Seat Increase", sections_text, comments)
 
     flash('Seat increase requests submitted successfully to the Administrator.', 'success')
     return redirect('/advising?tab=requests')
@@ -4264,11 +4356,10 @@ def faculty_update_profile():
     
     file = request.files.get('profile_pic')
     if file and file.filename != '':
-        if file.filename.split('.')[-1].lower() in ALLOWED_PROFILE_IMAGE_EXTENSIONS:
-            filename = secure_filename(file.filename)
-            unique_fn = f"fac_{faculty.id}_{int(datetime.utcnow().timestamp())}_{filename}"
-            file.save(os.path.join(app.root_path, 'static', 'uploads', unique_fn))
-            faculty.profile_pic = unique_fn
+        try:
+            faculty.profile_pic = save_profile_pic_upload(file, f"faculty_{faculty.id}", required=False)
+        except Exception as exc:
+            return jsonify({'status': 'error', 'message': f'Image upload failed: {str(exc)}'}), 400
             
     if password:
         user = User.query.get(current_user.id)
@@ -4354,7 +4445,8 @@ def admin_dashboard():
         final_advising_active=is_setting_true('final_advising_active'),
         request_phase_active=is_setting_true('request_phase_active'),
         drop_withdraw_active=is_setting_true('drop_withdraw_active'),
-        fresh_login=fresh_login
+        fresh_login=fresh_login,
+        notifications=Notification.query.filter((Notification.recipient_role == 'admin') | (Notification.recipient_id == 'admin')).order_by(Notification.created_at.desc()).limit(30).all()
     )
 
 # Admin toggle settings

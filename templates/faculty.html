@@ -109,6 +109,39 @@
         </div>
     </div>
 
+    <!-- Notifications & Requests Feed -->
+    <div class="glass-card p-5 rounded-2xl border border-slate-700/40 bg-slate-900/60 shadow-xl space-y-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i data-lucide="bell" class="w-4 h-4 text-cyan-400"></i>
+                <h3 class="text-xs font-extrabold text-slate-100 uppercase tracking-wider">Advisee Course Requests & Notifications</h3>
+            </div>
+            <span class="text-[0.65rem] px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">
+                {{ notifications | length if notifications is defined else 0 }} Notifications
+            </span>
+        </div>
+        <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
+            {% if notifications is defined and notifications %}
+                {% for notif in notifications %}
+                    <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs flex items-start gap-3">
+                        <div class="p-1.5 rounded-full bg-cyan-500/20 text-cyan-400 shrink-0 mt-0.5">
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-bold text-slate-200">{{ notif.title }}</span>
+                                <span class="text-[0.62rem] text-slate-400 font-mono">{{ notif.created_at.strftime('%b %d, %H:%M') if notif.created_at else '' }}</span>
+                            </div>
+                            <p class="text-[0.68rem] text-slate-400 mt-1 leading-relaxed">{{ notif.message }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-xs text-slate-500 italic text-center py-4">No recent advisee requests or notifications.</p>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Quick Stats Cards & Actions -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Today's Schedule -->
@@ -1179,7 +1212,7 @@
             <div class="relative group">
                 <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 border-2 border-purple-500/30 overflow-hidden flex items-center justify-center text-white font-black text-3xl shadow-xl flex-shrink-0">
                     {% if faculty.profile_pic %}
-                    <img src="{{ url_for('static', filename='uploads/' ~ faculty.profile_pic) }}" alt="{{ faculty.name }} profile picture" class="w-full h-full object-cover">
+                    <img src="{{ faculty.profile_pic | profile_pic_url }}" alt="{{ faculty.name }} profile picture" class="w-full h-full object-cover">
                     {% else %}
                     {{ faculty.name[:1] | upper }}
                     {% endif %}
@@ -1446,8 +1479,17 @@
         breadcrumbEl.innerHTML = mapping[tabId] || `${homeLink} / <span class="text-white font-semibold">${tabId}</span>`;
     }
 
-    function switchTab(tabId) {
+    function switchTab(tabId, forceReload = false) {
         sessionStorage.setItem('active_tab_id', tabId);
+        localStorage.setItem('faculty_active_tab', tabId);
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentTab = urlParams.get('tab');
+        if (currentTab !== tabId || forceReload) {
+            const targetUrl = new URL(window.location.href);
+            targetUrl.searchParams.set('tab', tabId);
+            window.location.href = targetUrl.toString();
+            return;
+        }
         document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
         const target = document.getElementById(`tab-${tabId}`);
         if (target) {
