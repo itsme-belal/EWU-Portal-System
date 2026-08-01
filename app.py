@@ -5415,12 +5415,22 @@ def admin_delete_faculty(fac_id):
         
     fac = Faculty.query.get(fac_id)
     if fac:
-        user = User.query.get(fac.user_id)
+        user = User.query.get(fac.user_id) if fac.user_id else None
+        
+        # Unassign faculty from sections, student advisees, and swap requests
+        SectionOffering.query.filter_by(faculty_id=fac.id).update({'faculty_id': None})
+        Student.query.filter_by(advisor_id=fac.id).update({'advisor_id': None})
+        SwapRequest.query.filter_by(marked_by=fac.id).update({'marked_by': None})
+        
+        if user:
+            Message.query.filter((Message.sender_id == user.id) | (Message.receiver_id == user.id)).delete()
+            
         db.session.delete(fac)
         if user:
             db.session.delete(user)
+            
         db.session.commit()
-        flash(f"Faculty record '{fac_id}' removed.", 'success')
+        flash(f"Faculty record '{fac_id}' removed successfully.", 'success')
     else:
         flash('Faculty member not found.', 'error')
     return redirect(url_for('admin_dashboard') + '?tab=faculty')
@@ -5499,15 +5509,29 @@ def admin_delete_student(std_id):
         
     std = Student.query.get(std_id)
     if std:
-        user = User.query.get(std.user_id)
-        # Remove student registrations and requests
+        user = User.query.get(std.user_id) if std.user_id else None
+        
+        # Delete all records referencing this student to satisfy foreign key constraints
         Registration.query.filter_by(student_id=std.id).delete()
         AdvisingRequest.query.filter_by(student_id=std.id).delete()
+        AdvisingPlan.query.filter_by(student_id=std.id).delete()
+        DropRequest.query.filter_by(student_id=std.id).delete()
+        SwapRequest.query.filter_by(student_id=std.id).delete()
+        Grade.query.filter_by(student_id=std.id).delete()
+        LedgerEntry.query.filter_by(student_id=std.id).delete()
+        Installment.query.filter_by(student_id=std.id).delete()
+        Notification.query.filter_by(student_id=std.id).delete()
+        StudentMark.query.filter_by(student_id=std.id).delete()
+        
+        if user:
+            Message.query.filter((Message.sender_id == user.id) | (Message.receiver_id == user.id)).delete()
+        
         db.session.delete(std)
         if user:
             db.session.delete(user)
+            
         db.session.commit()
-        flash(f"Student record '{std_id}' removed.", 'success')
+        flash(f"Student record '{std_id}' and all associated records removed.", 'success')
     else:
         flash('Student record not found.', 'error')
     return redirect(url_for('admin_dashboard') + '?tab=students')
