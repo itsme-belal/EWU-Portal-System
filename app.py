@@ -5342,6 +5342,7 @@ def create_faculty():
         is_activated=False # Starts unactivated! First time activation flow.
     )
     db.session.add(user)
+    db.session.flush()
     
     faculty = Faculty(
         id=fac_id,
