@@ -537,22 +537,28 @@ def save_profile_pic_upload(file_storage, owner_prefix, required=False):
 
     raw_filename = secure_filename(file_storage.filename)
     if '.' not in raw_filename:
-        raise ValueError('Invalid image format. Allowed: png, jpg, jpeg, gif, webp.')
+        if required:
+            raise ValueError('Invalid image format. Allowed: png, jpg, jpeg, gif, webp.')
+        return None
 
     stem, extension = os.path.splitext(raw_filename)
     extension = extension.lstrip('.').lower()
     if extension not in ALLOWED_PROFILE_IMAGE_EXTENSIONS:
-        raise ValueError('Invalid image format. Allowed: png, jpg, jpeg, gif, webp.')
+        if required:
+            raise ValueError('Invalid image format. Allowed: png, jpg, jpeg, gif, webp.')
+        return None
 
     safe_owner = secure_filename(owner_prefix) or 'profile'
 
-    # Attempt Cloudinary API Upload if credentials exist
-    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
-    api_key = os.environ.get('CLOUDINARY_API_KEY')
-    api_secret = os.environ.get('CLOUDINARY_API_SECRET')
-    cloudinary_url = os.environ.get('CLOUDINARY_URL')
+    # Attempt Cloudinary API Upload if valid credentials exist
+    cloud_name = (os.environ.get('CLOUDINARY_CLOUD_NAME') or '').strip()
+    api_key = (os.environ.get('CLOUDINARY_API_KEY') or '').strip()
+    api_secret = (os.environ.get('CLOUDINARY_API_SECRET') or '').strip()
+    cloudinary_url = (os.environ.get('CLOUDINARY_URL') or '').strip()
 
-    if HAS_CLOUDINARY and (cloudinary_url or (cloud_name and api_key and api_secret)):
+    is_valid_cloud_name = cloud_name and ' ' not in cloud_name
+
+    if HAS_CLOUDINARY and (cloudinary_url or (is_valid_cloud_name and api_key and api_secret)):
         try:
             if cloudinary_url:
                 cloudinary.config(cloudinary_url=cloudinary_url, secure=True)
@@ -575,11 +581,9 @@ def save_profile_pic_upload(file_storage, owner_prefix, required=False):
             if secure_url:
                 return secure_url
         except Exception as e:
-            print(f"[CLOUDINARY UPLOAD ERROR] {e}")
-            if cloudinary_url or (cloud_name and api_key and api_secret):
-                raise ValueError(f"Cloudinary upload failed: {str(e)}")
+            print(f"[CLOUDINARY UPLOAD WARNING - Falling back to local storage] {e}")
 
-    # Fallback to local upload directory if Cloudinary credentials are not present in .env
+    # Fallback to local upload directory if Cloudinary is not used or fails
     safe_stem = stem or 'photo'
     timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
     unique_filename = f"{safe_owner}_{timestamp}_{random.randint(1000, 9999)}_{safe_stem}.{extension}"
@@ -5393,9 +5397,11 @@ def admin_edit_faculty(fac_id):
     pic = request.files.get('profile_pic')
     if pic and pic.filename != '':
         try:
-            fac.profile_pic = save_profile_pic_upload(pic, f"faculty_{fac_id}")
-        except Exception:
-            pass
+            new_pic = save_profile_pic_upload(pic, f"faculty_{fac_id}")
+            if new_pic:
+                fac.profile_pic = new_pic
+        except Exception as e:
+            print(f"[EDIT FACULTY PIC ERROR] {e}")
             
     db.session.commit()
     flash(f"Faculty profile for '{fac.name}' updated successfully by Admin.", 'success')
@@ -5475,9 +5481,11 @@ def admin_edit_student(std_id):
     pic = request.files.get('profile_pic')
     if pic and pic.filename != '':
         try:
-            std.profile_pic = save_profile_pic_upload(pic, f"student_{std_id}")
-        except Exception:
-            pass
+            new_pic = save_profile_pic_upload(pic, f"student_{std_id}")
+            if new_pic:
+                std.profile_pic = new_pic
+        except Exception as e:
+            print(f"[EDIT STUDENT PIC ERROR] {e}")
             
     db.session.commit()
     flash(f"Student profile for '{std.name}' updated successfully by Admin.", 'success')
