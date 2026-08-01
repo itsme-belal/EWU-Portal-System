@@ -110,29 +110,29 @@
     </div>
 
     <!-- Notifications & Requests Feed -->
-    <div class="glass-card p-5 rounded-2xl border border-slate-700/40 bg-slate-900/60 shadow-xl space-y-3">
+    <div class="glass-card p-5 rounded-2xl border border-slate-200 dark:border-slate-700/40 bg-white dark:bg-slate-900/60 shadow-lg space-y-3">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <i data-lucide="bell" class="w-4 h-4 text-cyan-400"></i>
-                <h3 class="text-xs font-extrabold text-slate-100 uppercase tracking-wider">Advisee Course Requests & Notifications</h3>
+                <i data-lucide="bell" class="w-4 h-4 text-cyan-600 dark:text-cyan-400"></i>
+                <h3 class="text-xs font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wider">Advisee Course Requests & Notifications</h3>
             </div>
-            <span class="text-[0.65rem] px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">
+            <span class="text-[0.65rem] px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold">
                 {{ notifications | length if notifications is defined else 0 }} Notifications
             </span>
         </div>
         <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
             {% if notifications is defined and notifications %}
                 {% for notif in notifications %}
-                    <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs flex items-start gap-3">
-                        <div class="p-1.5 rounded-full bg-cyan-500/20 text-cyan-400 shrink-0 mt-0.5">
+                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 text-xs flex items-start gap-3">
+                        <div class="p-1.5 rounded-full bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5">
                             <i data-lucide="info" class="w-3.5 h-3.5"></i>
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center justify-between gap-2">
-                                <span class="font-bold text-slate-200">{{ notif.title }}</span>
-                                <span class="text-[0.62rem] text-slate-400 font-mono">{{ notif.created_at.strftime('%b %d, %H:%M') if notif.created_at else '' }}</span>
+                                <span class="font-bold text-slate-800 dark:text-slate-200">{{ notif.title }}</span>
+                                <span class="text-[0.62rem] text-slate-500 dark:text-slate-400 font-mono">{{ notif.created_at.strftime('%b %d, %H:%M') if notif.created_at else '' }}</span>
                             </div>
-                            <p class="text-[0.68rem] text-slate-400 mt-1 leading-relaxed">{{ notif.message }}</p>
+                            <p class="text-[0.68rem] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{{ notif.message }}</p>
                         </div>
                     </div>
                 {% endfor %}
@@ -171,7 +171,7 @@
                         <i data-lucide="clipboard-list" class="w-4 h-4"></i>
                     </div>
                     <div class="flex-1">
-                        <p class="text-xs font-bold text-slate-850 dark:text-slate-250">Override Requests</p>
+                        <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Override Requests</p>
                         <p class="text-[0.7rem] text-slate-500 dark:text-slate-400">
                             {{ pending_count }} pending advisee seat/swap requests.
                         </p>
@@ -187,7 +187,7 @@
                         <i data-lucide="award" class="w-4 h-4"></i>
                     </div>
                     <div class="flex-1">
-                        <p class="text-xs font-bold text-slate-850 dark:text-slate-250">Pending Grades</p>
+                        <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Pending Grades</p>
                         <p class="text-[0.7rem] text-slate-500 dark:text-slate-400">
                             Publish grading for active courses.
                         </p>
@@ -203,7 +203,7 @@
                         <i data-lucide="megaphone" class="w-4 h-4"></i>
                     </div>
                     <div class="flex-1">
-                        <p class="text-xs font-bold text-slate-850 dark:text-slate-250">Latest Notices</p>
+                        <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Latest Notices</p>
                         {% if system_announcements %}
                         <p class="text-[0.7rem] text-slate-500 dark:text-slate-400 truncate">
                             "{{ system_announcements[0].title }}"

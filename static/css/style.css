@@ -1372,29 +1372,60 @@ select:focus-visible, textarea:focus-visible {
 .animate-progress {
   animation: erpProgressFill 0.6s ease-out forwards;
 }
-"],
-main [class*="dark:text-slate"] { color: var(--text-2); }
-main [class*="text-slate-400"],
-main [class*="text-slate-500"],
-main [class*="text-slate-600"] { color: var(--text-3); }
-main h1[class*="text-slate-"],
-main h2[class*="text-slate-"],
-main h3[class*="text-slate-"],
-main h4[class*="text-slate-"] { color: var(--text-1); }
 
-.dark { --text-2: #d5dfec; --text-3: #a9b8cb; --text-4: #8191a6; }
+/* ════════════════════════════════════════════════════════════════════════
+   LIGHT-THEME VISIBILITY OVERRIDES FOR HARDCODED DARK UTILITY CLASSES
+   Many template sections use hardcoded dark-palette Tailwind classes
+   (bg-slate-900, text-slate-100, etc.). These overrides ensure readable
+   contrast on the light theme without touching the HTML.
+   ════════════════════════════════════════════════════════════════════════ */
 
-main { max-width: 100%; padding: clamp(1.25rem, 2.5vw, 2rem); }
-
-button:focus-visible, a:focus-visible, input:focus-visible,
-select:focus-visible, textarea:focus-visible {
-  outline: 3px solid rgba(99,102,241,.45);
-  outline-offset: 2px;
+/* Dark text containers forced light */
+[data-theme="light"] .bg-slate-950\/70,
+[data-theme="light"] .bg-slate-950,
+[data-theme="light"] .bg-slate-900\/60,
+[data-theme="light"] .bg-slate-900\/40,
+[data-theme="light"] .bg-slate-900,
+[data-theme="light"] .bg-slate-800\/50,
+[data-theme="light"] .bg-slate-800 {
+  background-color: #f8fafc !important;
 }
 
-@media (max-width: 640px) {
-  header { padding-inline: 1rem !important; }
-  main { padding: 1rem; }
-  .card, .stitch-card, .stat-card, .chart-card { padding: 1rem; }
-  .modal-content, [role="dialog"] { max-width: calc(100vw - 1.5rem); }
+/* Dark border classes forced light */
+[data-theme="light"] .border-slate-700\/40,
+[data-theme="light"] .border-slate-800,
+[data-theme="light"] .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Light text on dark bg → dark text on light bg */
+[data-theme="light"] main .text-slate-100,
+[data-theme="light"] main .text-slate-200,
+[data-theme="light"] main .text-slate-300 {
+  color: #1e293b !important;
+}
+
+/* Muted text stays readable */
+[data-theme="light"] main .text-slate-400 {
+  color: #64748b !important;
+}
+[data-theme="light"] main .text-slate-500 {
+  color: #475569 !important;
+}
+
+/* Cyan accent — visible on white */
+[data-theme="light"] main .text-cyan-400 {
+  color: #0891b2 !important;
+}
+[data-theme="light"] main .bg-cyan-500\/20,
+[data-theme="light"] main .bg-cyan-500\/10 {
+  background-color: rgba(6, 182, 212, 0.1) !important;
+}
+
+/* Headings always high-contrast */
+[data-theme="light"] main h1,
+[data-theme="light"] main h2,
+[data-theme="light"] main h3,
+[data-theme="light"] main h4 {
+  color: var(--text-1) !important;
 }

@@ -47,21 +47,21 @@
         
         <!-- Header -->
         <div class="text-center pb-4 border-b border-white/10">
-            <h1 class="text-3xl font-black tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">Student Dashboard</h1>
+            <h1 class="text-3xl font-black tracking-tight bg-gradient-to-r from-blue-700 to-indigo-600 dark:from-blue-400 dark:to-indigo-300 bg-clip-text text-transparent">Student Dashboard</h1>
             <p class="text-xs text-slate-400 mt-1 uppercase tracking-widest font-mono">Academic Status Overview</p>
         </div>
 
         <div class="flex flex-col items-center mt-6 space-y-6">
             <!-- Student Photo (Middle) -->
             <div class="relative group">
-                <div class="w-28 h-28 rounded-full bg-slate-800/80 border-4 border-blue-500/50 overflow-hidden flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-200">
+                <div class="w-28 h-28 rounded-full bg-slate-100 dark:bg-slate-800/80 border-4 border-blue-500/50 overflow-hidden flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-200">
                     {% if student.profile_pic %}
                     <img src="{{ student.profile_pic | profile_pic_url }}" alt="{{ student.name }} profile picture" class="w-full h-full object-cover">
                     {% else %}
-                    <span class="text-4xl font-black text-blue-300">{{ student.name[:1] | upper }}</span>
+                    <span class="text-4xl font-black text-blue-600 dark:text-blue-300">{{ student.name[:1] | upper }}</span>
                     {% endif %}
                 </div>
-                <span class="absolute bottom-1.5 right-1.5 w-4 h-4 bg-green-500 border-2 border-slate-950 rounded-full animate-pulse"></span>
+                <span class="absolute bottom-1.5 right-1.5 w-4 h-4 bg-green-500 border-2 border-white dark:border-slate-950 rounded-full animate-pulse"></span>
             </div>
 
             <!-- Left, Center, Right Information Row -->
