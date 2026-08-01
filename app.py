@@ -115,31 +115,34 @@ def send_email_safe(subject, recipients, body, html=None):
                 ipv4_res = [r for r in res if r[0] == socket.AF_INET]
                 return ipv4_res if ipv4_res else res
             socket.getaddrinfo = ipv4_getaddrinfo
-            try:
-                app.config['MAIL_PASSWORD'] = mail_pass
-                sender = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_DEFAULT_SENDER', mail_user)) or mail_user
-                msg = MailMessage(subject=subject, recipients=recipients, body=body, html=html, sender=sender)
-                mail.send(msg)
-                print(f"[MAIL SUCCESS] Notification email sent to {recipients}: {subject}")
-            except Exception as e:
-                # SSL Port 465 fallback for cloud environments like Render blocking TLS Port 587
-                try:
-                    server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10)
-                    server.login(mail_user, mail_pass)
-                    
-                    mime_msg = MIMEMultipart('alternative')
-                    mime_msg['Subject'] = subject
-                    mime_msg['From'] = mail_user
-                    mime_msg['To'] = ", ".join(recipients)
-                    mime_msg.attach(MIMEText(body, 'plain'))
-                    if html:
-                        mime_msg.attach(MIMEText(html, 'html'))
 
-                    server.sendmail(mail_user, recipients, mime_msg.as_string())
-                    server.quit()
-                    print(f"[MAIL SUCCESS - SSL Fallback] Notification email sent to {recipients}: {subject}")
+            sender = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_DEFAULT_SENDER', mail_user)) or mail_user
+            
+            try:
+                # Fast direct SSL connection on Port 465 (delivers in 1-2 seconds on Render)
+                server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=5)
+                server.login(mail_user, mail_pass)
+
+                mime_msg = MIMEMultipart('alternative')
+                mime_msg['Subject'] = subject
+                mime_msg['From'] = sender
+                mime_msg['To'] = ", ".join(recipients)
+                mime_msg.attach(MIMEText(body, 'plain'))
+                if html:
+                    mime_msg.attach(MIMEText(html, 'html'))
+
+                server.sendmail(mail_user, recipients, mime_msg.as_string())
+                server.quit()
+                print(f"[MAIL SUCCESS] Instant email sent to {recipients} via SSL: {subject}")
+            except Exception as e:
+                # Fallback to Flask-Mail if SSL fails
+                try:
+                    app.config['MAIL_PASSWORD'] = mail_pass
+                    msg = MailMessage(subject=subject, recipients=recipients, body=body, html=html, sender=sender)
+                    mail.send(msg)
+                    print(f"[MAIL SUCCESS - Fallback] Notification email sent to {recipients}: {subject}")
                 except Exception as e2:
-                    print(f"[MAIL WARNING] Failed sending email to {recipients}: primary error: {e}, fallback error: {e2}")
+                    print(f"[MAIL WARNING] Failed sending email to {recipients}: {e}, fallback error: {e2}")
             finally:
                 socket.getaddrinfo = old_getaddrinfo
 
