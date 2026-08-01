@@ -271,50 +271,57 @@ ALLOWED_PROFILE_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 def ensure_runtime_schema():
     """Create tables and add lightweight columns needed by existing installs."""
-    db.create_all()
-    inspector = inspect(db.engine)
-    tables = set(inspector.get_table_names())
-    profile_columns = {
-        'students': {
-            'profile_pic': 'VARCHAR(255)', 
-            'about': 'VARCHAR(500)',
-            'phone_number': 'VARCHAR(50)',
-            'remaining_credits': 'FLOAT DEFAULT 0.0',
-            'present_address': 'VARCHAR(255)',
-            'permanent_address': 'VARCHAR(255)',
-            'completed_courses_and_grades': 'TEXT',
-            'current_courses': 'TEXT',
-            'current_course_credit': 'FLOAT DEFAULT 0.0',
-            'next_semester_courses': 'TEXT',
-            'next_semester_course_credit': 'FLOAT DEFAULT 0.0',
-            'unassigned_courses': 'TEXT'
-        },
-        'faculty': {
-            'profile_pic': 'VARCHAR(255)',
-            'about': 'VARCHAR(500)',
-            'post': 'VARCHAR(100)',
-            'present_address': 'VARCHAR(255)',
-            'permanent_address': 'VARCHAR(255)',
-            'office': 'VARCHAR(100)',
-            'phone': 'VARCHAR(50)',
-            'research_interests': 'VARCHAR(500)'
-        },
-        'users': {
-            'google_id': 'VARCHAR(100)',
-            'google_email': 'VARCHAR(100)'
-        },
-        'pre_advising_courses': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
-        'section_offerings': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
-    }
+    try:
+        db.create_all()
+        inspector = inspect(db.engine)
+        tables = set(inspector.get_table_names())
+        profile_columns = {
+            'students': {
+                'profile_pic': 'VARCHAR(255)', 
+                'about': 'VARCHAR(500)',
+                'phone_number': 'VARCHAR(50)',
+                'remaining_credits': 'FLOAT DEFAULT 0.0',
+                'present_address': 'VARCHAR(255)',
+                'permanent_address': 'VARCHAR(255)',
+                'completed_courses_and_grades': 'TEXT',
+                'current_courses': 'TEXT',
+                'current_course_credit': 'FLOAT DEFAULT 0.0',
+                'next_semester_courses': 'TEXT',
+                'next_semester_course_credit': 'FLOAT DEFAULT 0.0',
+                'unassigned_courses': 'TEXT'
+            },
+            'faculty': {
+                'profile_pic': 'VARCHAR(255)',
+                'about': 'VARCHAR(500)',
+                'post': 'VARCHAR(100)',
+                'present_address': 'VARCHAR(255)',
+                'permanent_address': 'VARCHAR(255)',
+                'office': 'VARCHAR(100)',
+                'phone': 'VARCHAR(50)',
+                'research_interests': 'VARCHAR(500)'
+            },
+            'users': {
+                'google_id': 'VARCHAR(100)',
+                'google_email': 'VARCHAR(100)'
+            },
+            'pre_advising_courses': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
+            'section_offerings': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
+        }
 
-    for table_name, columns in profile_columns.items():
-        if table_name not in tables:
-            continue
-        existing = {column['name'] for column in inspector.get_columns(table_name)}
-        for column_name, column_type in columns.items():
-            if column_name not in existing:
-                db.session.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'))
-    db.session.commit()
+        for table_name, columns in profile_columns.items():
+            if table_name not in tables:
+                continue
+            existing = {column['name'] for column in inspector.get_columns(table_name)}
+            for column_name, column_type in columns.items():
+                if column_name not in existing:
+                    try:
+                        db.session.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+    except Exception as e:
+        print("Note: ensure_runtime_schema skipped or encountered warning:", e)
+        db.session.rollback()
 
 with app.app_context():
     ensure_runtime_schema()
