@@ -3599,7 +3599,7 @@ main canvas { color: var(--text-1); }
     const dataValues = Object.values(deptCounts);
 
     const ctx = document.getElementById('enrollmentChart');
-    if (ctx) {
+    if (ctx && typeof Chart !== 'undefined') {
         // Create gradients
         const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
         gradient.addColorStop(0, 'rgba(16, 185, 129, 0.45)');
@@ -3878,8 +3878,7 @@ main canvas { color: var(--text-1); }
             .catch(() => {
                 tbody.innerHTML = `<tr><td colspan="5" class="text-center text-slate-500 py-4 text-xs">No grade entries found.</td></tr>`;
             });
-        }
-        
+
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
             lucide.createIcons();
         }
@@ -3887,11 +3886,13 @@ main canvas { color: var(--text-1); }
         // Show modal with animation
         const modal = document.getElementById('academic-report-modal');
         const content = document.getElementById('report-modal-content');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            content.classList.remove('scale-95', 'opacity-0');
-        }, 50);
+        if (modal && content) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+            }, 50);
+        }
     }
     
     function closeAcademicReportModal() {
@@ -3927,6 +3928,7 @@ main canvas { color: var(--text-1); }
     }
     
     function initReportsCharts() {
+        if (typeof Chart === 'undefined') return;
         const deptCgpaCanvas = document.getElementById('dept-cgpa-chart');
         const advisingCanvas = document.getElementById('advising-status-chart');
         if (!deptCgpaCanvas || !advisingCanvas) return;
