@@ -840,7 +840,7 @@ def get_active_window(student_credits, win_type):
                 return w
     return None
 
-def assign_advisor_for_student(student):
+def assign_advisor_for_student(student, fac_users_cache=None, fac_recs_cache=None):
     advisor_pools = {
         'CSE': [
             {'initial': 'MMAH', 'email': 'ahmedbhr2001@gmail.com', 'name': 'M. M. A. Hashem'},
@@ -852,10 +852,8 @@ def assign_advisor_for_student(student):
         ]
     }
     dept_key = (student.department_id or 'CSE').upper()
-    pool = advisor_pools.get(dept_key)
-    if not pool:
-        pool = advisor_pools['CSE']
-        
+    pool = advisor_pools.get(dept_key, advisor_pools['CSE'])
+    
     try:
         digits = ''.join(filter(str.isdigit, student.id))
         num = int(digits) if digits else 0
@@ -867,9 +865,12 @@ def assign_advisor_for_student(student):
     fac_email = selected['email']
     fac_name = selected['name']
     
-    fac_user = User.query.filter_by(email=fac_email).first()
-    if not fac_user:
-        fac_user = User.query.get('usr-' + fac_initial)
+    fac_user = None
+    if fac_users_cache is not None:
+        fac_user = fac_users_cache.get(fac_email.lower()) or fac_users_cache.get('id:' + 'usr-' + fac_initial)
+    else:
+        fac_user = User.query.filter_by(email=fac_email).first() or User.query.get('usr-' + fac_initial)
+
     if not fac_user:
         fac_user = User(
             id='usr-' + fac_initial,
@@ -881,8 +882,16 @@ def assign_advisor_for_student(student):
         )
         db.session.add(fac_user)
         db.session.flush()
+        if fac_users_cache is not None:
+            fac_users_cache[fac_email.lower()] = fac_user
+            fac_users_cache['id:' + fac_user.id] = fac_user
         
-    fac_rec = Faculty.query.get(fac_initial)
+    fac_rec = None
+    if fac_recs_cache is not None:
+        fac_rec = fac_recs_cache.get(fac_initial)
+    else:
+        fac_rec = Faculty.query.get(fac_initial)
+
     if not fac_rec:
         fac_rec = Faculty(
             id=fac_initial,
@@ -894,6 +903,8 @@ def assign_advisor_for_student(student):
         )
         db.session.add(fac_rec)
         db.session.flush()
+        if fac_recs_cache is not None:
+            fac_recs_cache[fac_initial] = fac_rec
         
     student.advisor_id = fac_initial
 
@@ -5895,7 +5906,7 @@ def import_excel_schedule(file_source):
         
     return imported_count
 
-def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_email=None, curr_sem_drop=False, student_dept='CSE'):
+def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_email=None, curr_sem_drop=False, student_dept='CSE', sections_cache=None, fac_users_cache=None, fac_recs_cache=None, regs_cache=None, pac_cache=None):
     import re
     if not schedule_str or str(schedule_str).strip().lower() in ('none', ''):
         return
@@ -5918,14 +5929,21 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
             new_sec_ids.add(sec_id)
             
     if not curr_sem_drop:
-        old_regs = Registration.query.filter_by(student_id=student_id, semester_id=current_sem).all()
+        if regs_cache is not None:
+            old_regs = [r for r in regs_cache.values() if r.student_id == student_id and r.semester_id == current_sem]
+        else:
+            old_regs = Registration.query.filter_by(student_id=student_id, semester_id=current_sem).all()
+
         for r in old_regs:
             if r.section_id not in new_sec_ids:
-                sec_offering = SectionOffering.query.get(r.section_id)
+                sec_offering = sections_cache.get(r.section_id) if sections_cache is not None else SectionOffering.query.get(r.section_id)
                 if sec_offering:
                     sec_offering.enrolled_count = max(0, sec_offering.enrolled_count - 1)
                 db.session.delete(r)
+                if regs_cache is not None and r.id in regs_cache:
+                    del regs_cache[r.id]
         db.session.flush()
+
     for item in items:
         item = item.strip()
         if not item: continue
@@ -5941,11 +5959,11 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
                 sec_num = sec_num_raw
                 
             sec_id = f"{ccode}-{sec_num}-{current_sem}"
-            sec = SectionOffering.query.get(sec_id)
+            sec = sections_cache.get(sec_id) if sections_cache is not None else SectionOffering.query.get(sec_id)
             if not sec:
                 c_title = ccode
                 c_credits = 3.0
-                pac = PreAdvisingCourse.query.filter_by(code=ccode).first()
+                pac = pac_cache.get(ccode) if pac_cache is not None else PreAdvisingCourse.query.filter_by(code=ccode).first()
                 if pac:
                     c_title = pac.title
                     c_credits = pac.credits
@@ -5964,13 +5982,18 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
                 )
                 db.session.add(sec)
                 db.session.flush()
+                if sections_cache is not None:
+                    sections_cache[sec_id] = sec
                 
             if fac_initial and fac_email:
                 s_dept = (student_dept or 'CSE').upper()
                 if ccode.upper().startswith(s_dept):
-                    fac_user = User.query.filter_by(email=fac_email).first()
-                    if not fac_user:
-                        fac_user = User.query.get('usr-' + fac_initial)
+                    fac_user = None
+                    if fac_users_cache is not None:
+                        fac_user = fac_users_cache.get(fac_email.lower()) or fac_users_cache.get('id:' + 'usr-' + fac_initial)
+                    else:
+                        fac_user = User.query.filter_by(email=fac_email).first() or User.query.get('usr-' + fac_initial)
+
                     if not fac_user:
                         fac_user = User(
                             id='usr-' + fac_initial,
@@ -5982,10 +6005,18 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
                         )
                         db.session.add(fac_user)
                         db.session.flush()
+                        if fac_users_cache is not None:
+                            fac_users_cache[fac_email.lower()] = fac_user
+                            fac_users_cache['id:' + fac_user.id] = fac_user
                     else:
                         fac_user.email = fac_email
                         
-                    fac_rec = Faculty.query.get(fac_initial)
+                    fac_rec = None
+                    if fac_recs_cache is not None:
+                        fac_rec = fac_recs_cache.get(fac_initial)
+                    else:
+                        fac_rec = Faculty.query.get(fac_initial)
+
                     if not fac_rec:
                         names_map = {
                             'MMAH': 'M. M. A. Hashem',
@@ -6004,11 +6035,13 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
                         )
                         db.session.add(fac_rec)
                         db.session.flush()
+                        if fac_recs_cache is not None:
+                            fac_recs_cache[fac_initial] = fac_rec
                     
                     sec.faculty_id = fac_initial
                 
             reg_id = f"REG-{student_id}-{sec.id}"
-            existing_reg = Registration.query.get(reg_id)
+            existing_reg = regs_cache.get(reg_id) if regs_cache is not None else Registration.query.get(reg_id)
             status_val = 'dropped' if curr_sem_drop else 'registered'
             if not existing_reg:
                 new_reg = Registration(
@@ -6021,6 +6054,8 @@ def parse_and_apply_schedule(student_id, schedule_str, fac_initial=None, fac_ema
                 db.session.add(new_reg)
                 if status_val == 'registered':
                     sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                if regs_cache is not None:
+                    regs_cache[reg_id] = new_reg
             else:
                 if existing_reg.status != status_val:
                     if existing_reg.status == 'registered' and status_val == 'dropped':
@@ -6093,6 +6128,19 @@ def import_excel_students(file_source):
             '40': 'ENG'
         }
 
+        # Bulk Cache Initial Database Lookups for Zero Query Overhead
+        users_by_email = {u.email.lower(): u for u in User.query.filter(User.email.isnot(None)).all()}
+        users_by_id = {u.id: u for u in User.query.all()}
+        fac_users_cache = dict(users_by_email)
+        fac_users_cache.update({'id:' + u.id: u for u in users_by_id.values()})
+        fac_recs_cache = {f.id: f for f in Faculty.query.all()}
+        students_by_id = {s.id: s for s in Student.query.all()}
+        grades_by_id = {g.id: g for g in Grade.query.all()}
+        sections_cache = {s.id: s for s in SectionOffering.query.all()}
+        sections_by_code_sem = {(s.course_code.upper(), s.semester_id): s for s in sections_cache.values()}
+        regs_cache = {r.id: r for r in Registration.query.all()}
+        pac_cache = {p.code: p for p in PreAdvisingCourse.query.all()}
+
         batch_counter = 0
         row_counter = 0
 
@@ -6135,9 +6183,7 @@ def import_excel_students(file_source):
             next_credit = clean_float_excel(row[col_map['Next Semester Course Credit']]) if 'Next Semester Course Credit' in col_map else 0.0
             prof_pic = clean_excel_val(row[col_map['Profile Picture']]) if 'Profile Picture' in col_map else None
 
-            user = User.query.filter_by(email=email).first()
-            if not user:
-                user = User.query.get('usr-' + std_id)
+            user = users_by_email.get(email.lower()) or users_by_id.get('usr-' + std_id)
             if not user:
                 user = User(
                     id='usr-' + std_id,
@@ -6149,10 +6195,12 @@ def import_excel_students(file_source):
                 )
                 db.session.add(user)
                 db.session.flush()
+                users_by_email[email.lower()] = user
+                users_by_id[user.id] = user
             else:
                 user.email = email
 
-            student = Student.query.get(std_id)
+            student = students_by_id.get(std_id)
             if not student:
                 student = Student(
                     id=std_id,
@@ -6176,6 +6224,8 @@ def import_excel_students(file_source):
                     about=''
                 )
                 db.session.add(student)
+                db.session.flush()
+                students_by_id[std_id] = student
             else:
                 student.name = name
                 student.department_id = dept
@@ -6193,7 +6243,7 @@ def import_excel_students(file_source):
                 if prof_pic:
                     student.profile_pic = prof_pic
 
-            assign_advisor_for_student(student)
+            assign_advisor_for_student(student, fac_users_cache, fac_recs_cache)
 
             if comp_courses_grades and comp_courses_grades.lower() != 'none':
                 parts = re.split(r'[,;\n\r]+', comp_courses_grades)
@@ -6213,7 +6263,7 @@ def import_excel_students(file_source):
                         gpoint = points_map.get(gletter.upper(), 0.0)
                         grade_id = f"GRD-{std_id}-{ccode}"
 
-                        existing_grade = Grade.query.get(grade_id)
+                        existing_grade = grades_by_id.get(grade_id)
                         if not existing_grade:
                             new_grade = Grade(
                                 id=grade_id,
@@ -6224,28 +6274,31 @@ def import_excel_students(file_source):
                                 semester_id='completed'
                             )
                             db.session.add(new_grade)
+                            grades_by_id[grade_id] = new_grade
                         else:
                             existing_grade.grade_letter = gletter.upper()
                             existing_grade.grade_point = gpoint
 
+            curr_sem = get_current_semester()
             if curr_courses and curr_courses.lower() != 'none':
                 ccodes = [c.strip() for c in re.split(r'[,;\s]+', curr_courses) if c.strip()]
                 for cc in ccodes:
                     if not cc: continue
-                    sec = SectionOffering.query.filter_by(course_code=cc, semester_id=get_current_semester()).first()
+                    sec = sections_by_code_sem.get((cc.upper(), curr_sem))
                     if sec:
                         reg_id = f"REG-{std_id}-{sec.id}"
-                        existing_reg = Registration.query.get(reg_id)
+                        existing_reg = regs_cache.get(reg_id)
                         if not existing_reg:
                             new_reg = Registration(
                                 id=reg_id,
                                 student_id=std_id,
                                 section_id=sec.id,
-                                semester_id=get_current_semester(),
+                                semester_id=curr_sem,
                                 status='registered'
                             )
                             db.session.add(new_reg)
                             sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                            regs_cache[reg_id] = new_reg
 
             sched_str = None
             if 'Current Course Schedule & Routine' in col_map:
@@ -6260,7 +6313,7 @@ def import_excel_students(file_source):
             curr_drop = (curr_drop_val.lower() == 'yes')
 
             if sched_str:
-                parse_and_apply_schedule(std_id, sched_str, fac_initial=fac_initial, fac_email=fac_email, curr_sem_drop=curr_drop, student_dept=dept)
+                parse_and_apply_schedule(std_id, sched_str, fac_initial=fac_initial, fac_email=fac_email, curr_sem_drop=curr_drop, student_dept=dept, sections_cache=sections_cache, fac_users_cache=fac_users_cache, fac_recs_cache=fac_recs_cache, regs_cache=regs_cache, pac_cache=pac_cache)
 
             next_drop_val = clean_excel_val(row[col_map['Next Semester Drop']]) or ''
             next_drop = (next_drop_val.lower() == 'yes')
@@ -6269,10 +6322,10 @@ def import_excel_students(file_source):
                 ccodes_next = [c.strip() for c in re.split(r'[,;\s]+', next_courses) if c.strip()]
                 for cc in ccodes_next:
                     if not cc: continue
-                    sec = SectionOffering.query.filter_by(course_code=cc, semester_id=next_sem).first()
+                    sec = sections_by_code_sem.get((cc.upper(), next_sem))
                     if sec:
                         reg_id = f"REG-{std_id}-{sec.id}"
-                        existing_reg = Registration.query.get(reg_id)
+                        existing_reg = regs_cache.get(reg_id)
                         status_next = 'dropped' if next_drop else 'registered'
                         if not existing_reg:
                             new_reg = Registration(
@@ -6285,6 +6338,7 @@ def import_excel_students(file_source):
                             db.session.add(new_reg)
                             if status_next == 'registered':
                                 sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
+                            regs_cache[reg_id] = new_reg
                         else:
                             if existing_reg.status != status_next:
                                 if existing_reg.status == 'registered' and status_next == 'dropped':
@@ -6302,12 +6356,10 @@ def import_excel_students(file_source):
 
             if batch_counter >= 100:
                 db.session.commit()
-                db.session.expunge_all()
                 batch_counter = 0
 
         if batch_counter > 0:
             db.session.commit()
-            db.session.expunge_all()
 
     except Exception as e:
         db.session.rollback()

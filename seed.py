@@ -115,27 +115,49 @@ def seed_db():
             db.session.add(d)
         db.session.commit()
 
-        # Seed excel files dynamically if present
-        print("Importing available Excel schedules...")
-        from app import import_excel_schedule
-        found_excel = False
-        search_dirs = ['.', 'static/uploads']
+        # Seed excel files dynamically from Data/ folder or root if present
+        print("Importing default Excel data files...")
+        from app import import_excel_faculty, import_excel_students, import_excel_schedule
+
+        search_dirs = ['Data', '.', 'static/uploads']
+
+        # 1. Faculty Records
         for sdir in search_dirs:
             if os.path.exists(sdir):
                 for fname in os.listdir(sdir):
-                    if fname.endswith('.xlsx') and not fname.startswith('~$'):
+                    if fname.endswith('.xlsx') and not fname.startswith('~$') and 'faculty' in fname.lower():
+                        fpath = os.path.join(sdir, fname)
+                        try:
+                            count = import_excel_faculty(fpath)
+                            print(f"Imported {count} faculty records from: {fname}")
+                        except Exception as e:
+                            print(f"Note: Could not import faculty {fname}: {e}")
+
+        # 2. Student Records
+        for sdir in search_dirs:
+            if os.path.exists(sdir):
+                for fname in os.listdir(sdir):
+                    if fname.endswith('.xlsx') and not fname.startswith('~$') and 'student' in fname.lower():
+                        fpath = os.path.join(sdir, fname)
+                        try:
+                            count = import_excel_students(fpath)
+                            print(f"Imported {count} student records from: {fname}")
+                        except Exception as e:
+                            print(f"Note: Could not import student {fname}: {e}")
+
+        # 3. Schedules
+        for sdir in search_dirs:
+            if os.path.exists(sdir):
+                for fname in os.listdir(sdir):
+                    if fname.endswith('.xlsx') and not fname.startswith('~$') and 'schedule' in fname.lower():
                         fpath = os.path.join(sdir, fname)
                         try:
                             import_excel_schedule(fpath)
                             print(f"Imported schedule file: {fname}")
-                            found_excel = True
                         except Exception as e:
-                            print(f"Note: Could not import {fname}: {e}")
+                            print(f"Note: Could not import schedule {fname}: {e}")
 
-        if not found_excel:
-            print("No local Excel schedule files found. Schedules can be uploaded via Admin Portal.")
-
-        print("Database successfully initialized and seeded. Done.")
+        print("Database successfully initialized and seeded with default Data. Done.")
 
 if __name__ == '__main__':
     seed_db()
