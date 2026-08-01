@@ -71,8 +71,9 @@ db.init_app(app)
 
 # Flask-Mail configuration (Set MAIL_USERNAME & MAIL_PASSWORD in environment or .env)
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', 'on', '1']
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 465))
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'true').lower() in ['true', 'on', '1']
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'false').lower() in ['true', 'on', '1']
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '').strip()
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '').replace(' ', '')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME', 'EWU Portal System <no-reply@ewubd.edu>'))
@@ -84,7 +85,7 @@ def get_email_for_student(student_id):
     u = db.session.get(User, f"usr-{student_id}") or db.session.get(User, student_id)
     if u and u.email and '@' in u.email:
         return u.email
-    return f"{student_id}@std.ewubd.edu"
+    return None
 
 def get_email_for_faculty(faculty_id):
     if not faculty_id:
@@ -95,8 +96,8 @@ def get_email_for_faculty(faculty_id):
     return None
 
 def send_email_safe(subject, recipients, body, html=None):
-    mail_user = os.environ.get('MAIL_USERNAME', app.config['MAIL_USERNAME']).strip()
-    mail_pass = os.environ.get('MAIL_PASSWORD', app.config['MAIL_PASSWORD']).replace(' ', '')
+    mail_user = os.environ.get('MAIL_USERNAME', app.config.get('MAIL_USERNAME', '')).strip()
+    mail_pass = os.environ.get('MAIL_PASSWORD', app.config.get('MAIL_PASSWORD', '')).replace(' ', '')
 
     if not mail_user or not mail_pass:
         print(f"[MAIL LOG] SMTP credentials not set (MAIL_USERNAME/MAIL_PASSWORD). Email to {recipients} skipped.")
@@ -104,7 +105,10 @@ def send_email_safe(subject, recipients, body, html=None):
 
     def send_async():
         with app.app_context():
-            import socket
+            import socket, smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+
             old_getaddrinfo = socket.getaddrinfo
             def ipv4_getaddrinfo(*args, **kwargs):
                 res = old_getaddrinfo(*args, **kwargs)
@@ -113,12 +117,29 @@ def send_email_safe(subject, recipients, body, html=None):
             socket.getaddrinfo = ipv4_getaddrinfo
             try:
                 app.config['MAIL_PASSWORD'] = mail_pass
-                sender = os.environ.get('MAIL_DEFAULT_SENDER', app.config['MAIL_DEFAULT_SENDER']) or mail_user
+                sender = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_DEFAULT_SENDER', mail_user)) or mail_user
                 msg = MailMessage(subject=subject, recipients=recipients, body=body, html=html, sender=sender)
                 mail.send(msg)
                 print(f"[MAIL SUCCESS] Notification email sent to {recipients}: {subject}")
             except Exception as e:
-                print(f"[MAIL WARNING] Failed sending email to {recipients}: {e}")
+                # SSL Port 465 fallback for cloud environments like Render blocking TLS Port 587
+                try:
+                    server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10)
+                    server.login(mail_user, mail_pass)
+                    
+                    mime_msg = MIMEMultipart('alternative')
+                    mime_msg['Subject'] = subject
+                    mime_msg['From'] = mail_user
+                    mime_msg['To'] = ", ".join(recipients)
+                    mime_msg.attach(MIMEText(body, 'plain'))
+                    if html:
+                        mime_msg.attach(MIMEText(html, 'html'))
+
+                    server.sendmail(mail_user, recipients, mime_msg.as_string())
+                    server.quit()
+                    print(f"[MAIL SUCCESS - SSL Fallback] Notification email sent to {recipients}: {subject}")
+                except Exception as e2:
+                    print(f"[MAIL WARNING] Failed sending email to {recipients}: primary error: {e}, fallback error: {e2}")
             finally:
                 socket.getaddrinfo = old_getaddrinfo
 
