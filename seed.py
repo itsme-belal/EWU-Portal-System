@@ -1,5 +1,8 @@
 import os
 import json
+from dotenv import load_dotenv
+load_dotenv()
+
 from sqlalchemy import create_engine, text as sa_text, event
 from sqlalchemy.engine import Engine
 from werkzeug.security import generate_password_hash
@@ -70,6 +73,7 @@ def seed_db():
             is_activated=True
         )
         db.session.add(admin_user1)
+        db.session.flush()
 
         admin_profile1 = Admin(
             id='A001',

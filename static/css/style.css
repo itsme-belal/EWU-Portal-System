@@ -1134,6 +1134,12 @@ select:focus-visible, textarea:focus-visible {
   justify-content: center !important;
 }
 
+#admin-edit-section-modal:not(.hidden),
+#admin-edit-student-modal:not(.hidden),
+#admin-edit-faculty-modal:not(.hidden) {
+  display: flex !important;
+}
+
 #admin-edit-section-modal.hidden,
 #admin-edit-student-modal.hidden,
 #admin-edit-faculty-modal.hidden,

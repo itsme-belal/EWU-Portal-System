@@ -993,7 +993,7 @@ main canvas { color: var(--text-1); }
                                         <div class="capacity-readout">
                                             <span class="enrolled-number">{{ enr }}</span>
                                             <span class="divider">/</span>
-                                            <input type="number" id="cap-input-{{ sec.id }}" name="capacity" value="{{ cap }}" min="1" max="500" onchange="this.form.submit()" class="capacity-pill-input" title="Click or type to edit capacity directly">
+                                            <input type="number" id="cap-input-{{ sec.id }}" name="capacity" value="{{ cap }}" min="0" max="500" onchange="this.form.submit()" onkeydown="if(event.key==='Enter'){this.blur();this.form.submit();}" class="capacity-pill-input" title="Click or type to edit capacity directly">
                                         </div>
 
                                         <button type="button" onclick="adjustCapacity('{{ sec.id }}', 1)" class="capacity-btn-plus" title="Increase Capacity (+1)">+</button>
@@ -1126,7 +1126,7 @@ main canvas { color: var(--text-1); }
                         <div class="capacity-readout">
                             <span class="enrolled-number">{{ enr }}</span>
                             <span class="divider">/</span>
-                            <input type="number" id="card-cap-input-{{ sec.id }}" name="capacity" value="{{ cap }}" min="1" max="500" onchange="this.form.submit()" class="capacity-pill-input" title="Click or type to edit capacity directly">
+                            <input type="number" id="card-cap-input-{{ sec.id }}" name="capacity" value="{{ cap }}" min="0" max="500" onchange="this.form.submit()" onkeydown="if(event.key==='Enter'){this.blur();this.form.submit();}" class="capacity-pill-input" title="Click or type to edit capacity directly">
                         </div>
 
                         <button type="button" onclick="adjustCapacity('{{ sec.id }}', 1)" class="capacity-btn-plus" title="Increase Capacity (+1)">+</button>
@@ -1320,23 +1320,23 @@ main canvas { color: var(--text-1); }
 
         <!-- Demand Metrics Column -->
         <div class="glass-card p-6 space-y-4">
-            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-white/5 pb-2">Pre-Advising Demand Statistics</h3>
+            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-white/10 pb-2">Pre-Advising Demand Statistics</h3>
             
             <div class="space-y-4 max-h-[700px] overflow-y-auto pr-2">
                 {% set total_req = demand_data | map(attribute=1) | sum %}
                 {% for course_code, count in demand_data %}
                 {% set percentage = (count / total_req * 100) if total_req > 0 else 0 %}
-                <div class="p-3 bg-slate-900/40 border border-white/5 rounded-xl space-y-2 hover:border-indigo-500/30 transition-all">
+                <div class="p-3.5 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 rounded-xl space-y-2 hover:border-indigo-500/40 transition-all shadow-sm">
                     <div class="flex justify-between items-center text-xs">
-                        <span class="font-black text-white tracking-wide text-xs">{{ course_code }}</span>
-                        <span class="px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                        <span class="font-black text-slate-900 dark:text-white tracking-wide text-xs">{{ course_code }}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
                             {{ count }} requests
                         </span>
                     </div>
-                    <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-white/5">
+                    <div class="w-full bg-slate-200 dark:bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-300 dark:border-white/5">
                         <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500" style="width: {{ [percentage, 2] | max }}%"></div>
                     </div>
-                    <div class="flex justify-between text-[0.62rem] text-slate-500 font-semibold uppercase">
+                    <div class="flex justify-between text-[0.68rem] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
                         <span>Share of Demand</span>
                         <span>{{ "%.1f"|format(percentage) }}%</span>
                     </div>
@@ -2688,25 +2688,25 @@ main canvas { color: var(--text-1); }
 </div>
 
 <!-- Academic Report Modal -->
-<div id="academic-report-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4 transition-all">
-    <div class="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl transition-all scale-95 opacity-0 duration-300" id="report-modal-content">
+<div id="academic-report-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all">
+    <div class="bg-[#0b0f19] border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl transition-all scale-95 opacity-0 duration-300" id="report-modal-content">
         <!-- Modal Header -->
-        <div class="flex justify-between items-center p-6 border-b border-white/5 bg-slate-950/20">
+        <div class="flex justify-between items-center p-6 border-b border-slate-800 bg-slate-950/40">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                     <i data-lucide="user-check" class="w-5 h-5"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-white">Student Profile & Academic Progress</h3>
+                    <h3 class="text-lg font-extrabold text-white tracking-tight">Student Profile & Academic Progress</h3>
                     <p class="text-xs text-slate-400">Official Portal Student Profile & Routine Report</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 <a href="#" id="modal-advising-action-btn" target="_blank" 
-                   class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl inline-flex items-center gap-1.5 transition-all shadow-md">
+                   class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl inline-flex items-center gap-1.5 transition-all shadow-md shadow-blue-500/20">
                     <i data-lucide="sliders" class="w-4 h-4"></i> Open Academic Advising Panel
                 </a>
-                <button onclick="closeAcademicReportModal()" class="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all">
+                <button onclick="closeAcademicReportModal()" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -2715,32 +2715,32 @@ main canvas { color: var(--text-1); }
         <!-- Modal Body -->
         <div class="p-6 space-y-6">
             <!-- Student Profile Card -->
-            <div class="flex flex-col md:flex-row gap-4 p-4 rounded-xl bg-white/3 border border-white/5 items-center md:items-start">
-                <div class="w-20 h-20 rounded-xl overflow-hidden border border-white/10 bg-slate-900 flex-shrink-0 flex items-center justify-center" id="modal-student-pic-container">
+            <div class="flex flex-col md:flex-row gap-4 p-5 rounded-2xl bg-slate-900/80 border border-slate-800 items-center md:items-start">
+                <div class="w-20 h-20 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 flex-shrink-0 flex items-center justify-center" id="modal-student-pic-container">
                     <i data-lucide="user" class="w-10 h-10 text-slate-500"></i>
                 </div>
                 <div class="flex-1 w-full space-y-3">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                            <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">Student Name</p>
-                            <p class="text-sm font-semibold text-slate-200 mt-0.5" id="modal-student-name">-</p>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Student Name</p>
+                            <p class="text-sm font-extrabold text-white mt-0.5" id="modal-student-name">-</p>
                         </div>
                         <div>
-                            <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">Student ID</p>
-                            <p class="text-sm font-semibold text-mono text-slate-200 mt-0.5" id="modal-student-id">-</p>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Student ID</p>
+                            <p class="text-sm font-bold font-mono text-blue-400 mt-0.5" id="modal-student-id">-</p>
                         </div>
                         <div>
-                            <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">Department</p>
-                            <p class="text-sm font-semibold text-slate-200 mt-0.5" id="modal-student-dept">-</p>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Department</p>
+                            <p class="text-sm font-bold text-white mt-0.5" id="modal-student-dept">-</p>
                         </div>
                         <div>
-                            <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">Academic CGPA</p>
-                            <p class="text-sm font-bold text-emerald-400 mt-0.5" id="modal-student-cgpa">-</p>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">Academic CGPA</p>
+                            <p class="text-sm font-black text-emerald-400 mt-0.5" id="modal-student-cgpa">-</p>
                         </div>
                     </div>
                     <!-- About section inside the modal -->
-                    <div class="pt-2 border-t border-white/5 hidden" id="modal-student-about-container">
-                        <p class="text-[0.65rem] font-bold text-slate-500 uppercase tracking-wider">About / Bio</p>
+                    <div class="pt-2 border-t border-slate-800 hidden" id="modal-student-about-container">
+                        <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">About / Bio</p>
                         <p class="text-xs text-slate-300 mt-1 italic" id="modal-student-about">-</p>
                     </div>
                 </div>
@@ -2748,38 +2748,38 @@ main canvas { color: var(--text-1); }
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- Credits Breakdown -->
-                <div class="p-4 rounded-xl bg-white/3 border border-white/5">
-                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Degree Progress</h4>
+                <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                    <h4 class="text-xs font-black text-slate-300 uppercase tracking-wider">Degree Progress</h4>
                     <div class="space-y-2">
                         <div class="flex justify-between text-xs">
-                            <span class="text-slate-400">Completed Credits</span>
-                            <span class="text-slate-200 font-bold" id="modal-credits-completed">0.0 CR</span>
+                            <span class="text-slate-400 font-medium">Completed Credits</span>
+                            <span class="text-white font-bold" id="modal-credits-completed">0.0 CR</span>
                         </div>
                         <div class="flex justify-between text-xs">
-                            <span class="text-slate-400">Remaining Credits</span>
-                            <span class="text-slate-200 font-bold" id="modal-credits-remaining">0.0 CR</span>
+                            <span class="text-slate-400 font-medium">Remaining Credits</span>
+                            <span class="text-white font-bold" id="modal-credits-remaining">0.0 CR</span>
                         </div>
-                        <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden mt-2">
+                        <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800 mt-2">
                             <div class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full" id="modal-progress-bar" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Financial standing -->
-                <div class="p-4 rounded-xl bg-white/3 border border-white/5">
-                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Portal Standing</h4>
+                <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                    <h4 class="text-xs font-black text-slate-300 uppercase tracking-wider">Portal Standing</h4>
                     <div class="space-y-2">
-                        <div class="flex justify-between text-xs col-span-2">
-                            <span class="text-slate-400">Financial Clearance</span>
-                            <span class="badge text-[0.6rem]" id="modal-financial-status">Cleared</span>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400 font-medium">Financial Clearance</span>
+                            <span class="badge text-[0.65rem] font-bold" id="modal-financial-status">Cleared</span>
                         </div>
-                        <div class="flex justify-between text-xs col-span-2">
-                            <span class="text-slate-400">Outstanding Balance</span>
-                            <span class="text-slate-200 font-bold" id="modal-outstanding-balance">0 Tk</span>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400 font-medium">Outstanding Balance</span>
+                            <span class="text-white font-bold" id="modal-outstanding-balance">0 Tk</span>
                         </div>
-                        <div class="flex justify-between text-xs col-span-2">
-                            <span class="text-slate-400">Advising Status</span>
-                            <span class="badge text-[0.6rem]" id="modal-advising-status">Not Started</span>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400 font-medium">Advising Status</span>
+                            <span class="badge text-[0.65rem] font-bold" id="modal-advising-status">Not Started</span>
                         </div>
                     </div>
                 </div>
@@ -2789,15 +2789,15 @@ main canvas { color: var(--text-1); }
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Grades Table (2/3 width) -->
                 <div class="space-y-2 lg:col-span-2">
-                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <h4 class="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                         <i data-lucide="award" class="w-4 h-4 text-emerald-400"></i> Academic Grade Ledger
                     </h4>
-                    <div class="bg-white/2 border border-white/5 rounded-xl overflow-hidden">
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
                         <div class="table-wrap max-h-60 overflow-y-auto">
                             <table class="w-full">
                                 <thead>
-                                    <tr class="border-b border-white/5 bg-slate-950/20">
-                                        <th class="px-4 py-2.5 text-left text-xs text-slate-400">Course</th>
+                                    <tr class="border-b border-slate-800 bg-slate-950/60">
+                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-400">Course</th>
                                         <th class="px-4 py-2.5 text-left text-xs text-slate-400">Semester</th>
                                         <th class="px-4 py-2.5 text-left text-xs text-slate-400">Letter Grade</th>
                                         <th class="px-4 py-2.5 text-left text-xs text-slate-400">Points</th>
@@ -2959,21 +2959,21 @@ main canvas { color: var(--text-1); }
     </div>
 
     <!-- Section Utilization Details -->
-    <div class="card bg-slate-900/40 border border-white/5 rounded-2xl p-6 space-y-4">
-        <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Offered Section Fill Rates</h3>
+    <div class="glass-card p-6 space-y-4">
+        <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-white/10 pb-2">Offered Section Fill Rates</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
             {% for sec in section_offerings %}
             {% set pct = (sec.enrolled_count / sec.capacity * 100) | round | int if sec.capacity > 0 else 0 %}
-            <div class="p-4 rounded-xl border border-white/5 bg-slate-950/40 flex justify-between items-center text-xs hover:border-white/10 transition-all duration-250">
+            <div class="p-4 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-slate-900/60 flex justify-between items-center text-xs hover:border-indigo-500/40 transition-all shadow-sm">
                 <div>
-                    <p class="font-bold text-slate-200">{{ sec.course_code }} - Sec {{ sec.section_number }}</p>
-                    <p class="text-[0.68rem] text-slate-400 mt-0.5">Faculty: {{ sec.faculty_id or 'Unassigned' }}</p>
+                    <p class="font-black text-slate-900 dark:text-slate-100 text-xs">{{ sec.course_code }} - Sec {{ sec.section_number }}</p>
+                    <p class="text-[0.7rem] font-semibold text-slate-600 dark:text-slate-400 mt-0.5">Faculty: <strong class="text-slate-800 dark:text-slate-200">{{ sec.faculty_id or 'Unassigned' }}</strong></p>
                 </div>
                 <div class="flex items-center gap-3 w-48 justify-end">
-                    <div class="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                        <div class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full" style="width: {{ pct }}%"></div>
+                    <div class="flex-1 h-2.5 bg-slate-200 dark:bg-slate-950 rounded-full overflow-hidden border border-slate-300 dark:border-white/5">
+                        <div class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full transition-all duration-500" style="width: {{ pct }}%"></div>
                     </div>
-                    <span class="font-mono font-bold text-emerald-400">{{ sec.enrolled_count }}/{{ sec.capacity }} ({{ pct }}%)</span>
+                    <span class="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">{{ sec.enrolled_count }}/{{ sec.capacity }} ({{ pct }}%)</span>
                 </div>
             </div>
             {% else %}
@@ -3156,79 +3156,9 @@ main canvas { color: var(--text-1); }
         </button>
 
         <!-- Profile Header -->
-        <div class="flex flex-col sm:flex-row items-center gap-5 border-b border-white/5 pb-5">
-            <div id="fac-modal-pic-container" class="w-20 h-20 rounded-full overflow-hidden border-2 border-violet-500/30 bg-slate-800 flex items-center justify-center">
-                <!-- Image or default user icon dynamically loaded -->
-            </div>
-            <div class="text-center sm:text-left flex-1">
-                <h2 id="fac-modal-name" class="text-xl font-black text-white"></h2>
-                <p id="fac-modal-id-dept" class="text-xs text-violet-400 font-bold uppercase tracking-wider mt-1"></p>
-                <p id="fac-modal-about" class="text-xs text-slate-400 mt-2 italic max-w-xl"></p>
-            </div>
-            <!-- Quick Stats -->
-            <div class="grid grid-cols-2 gap-3 bg-slate-900/50 p-3.5 rounded-xl border border-white/5">
-                <div class="text-center">
-                    <p class="text-[0.6rem] text-slate-500 font-bold uppercase tracking-wider">Courses Taught</p>
-                    <p id="fac-modal-courses-count" class="text-lg font-black text-emerald-400 mt-0.5"></p>
-                </div>
-                <div class="text-center">
-                    <p class="text-[0.6rem] text-slate-500 font-bold uppercase tracking-wider">Total Advisees</p>
-                    <p id="fac-modal-advisees-count" class="text-lg font-black text-indigo-400 mt-0.5"></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Details Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Faculty Information & Email -->
-            <div class="space-y-4">
-                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pb-1">
-                    <i data-lucide="info" class="w-4 h-4 text-violet-400"></i> Faculty Information
-                </h3>
-                <div class="text-xs space-y-2">
-                    <div>
-                        <span class="text-slate-500">Email Address:</span>
-                        <p id="fac-modal-email" class="font-semibold text-slate-200 mt-0.5 break-all"></p>
-                    </div>
-                    <div>
-                        <span class="text-slate-500">Designation / Post:</span>
-                        <p id="fac-modal-post" class="font-semibold text-slate-200 mt-0.5"></p>
-                    </div>
-                    <div>
-                        <span class="text-slate-500">Present Address:</span>
-                        <p id="fac-modal-present-address" class="font-semibold text-slate-200 mt-0.5"></p>
-                    </div>
-                    <div>
-                        <span class="text-slate-500">Permanent Address:</span>
-                        <p id="fac-modal-permanent-address" class="font-semibold text-slate-200 mt-0.5"></p>
-                    </div>
-                </div>
-
-                <!-- Faculty Advisees -->
-                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pt-2 pb-1">
-                    <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i> Advisees List
-                </h3>
-                <div id="fac-modal-advisees" class="space-y-2 max-h-48 overflow-y-auto text-xs pr-1">
-                    <!-- Dynamic list -->
-                </div>
-            </div>
-
-            <!-- Faculty Course Offerings -->
-            <div class="space-y-4">
-                <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-white/5 pb-1">
-                    <i data-lucide="book-open" class="w-4 h-4 text-emerald-400"></i> Active Assigned Sections
-                </h3>
-                <div id="fac-modal-sections" class="space-y-2 max-h-60 overflow-y-auto text-xs pr-1">
-                    <!-- Dynamic list -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ADMIN EDIT FACULTY MODAL -->
-<div id="admin-edit-faculty-modal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden" onclick="if(event.target===this) this.classList.add('hidden')">
-    <div class="bg-[#0b0f19] border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl space-y-6 p-6 sm:p-8" onclick="event.stopPropagation()">
+        <div class="fle<!-- ADMIN EDIT FACULTY MODAL -->
+<div id="admin-edit-faculty-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden" onclick="if(event.target===this) this.classList.add('hidden')">
+    <div class="relative bg-[#0b0f19] border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl space-y-6 p-6 sm:p-8 my-auto" onclick="event.stopPropagation()">
         
         <!-- Header Banner -->
         <div class="flex justify-between items-start border-b border-slate-800 pb-5">
@@ -3255,7 +3185,7 @@ main canvas { color: var(--text-1); }
         <form id="admin-edit-faculty-form" method="POST" enctype="multipart/form-data" class="space-y-6">
             
             <!-- SECTION 1: PROFILE & ACADEMIC POST -->
-            <div class="space-y-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80">
+            <div class="space-y-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800">
                 <h4 class="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
                     <i data-lucide="user-check" class="w-4 h-4"></i> Profile & Academic Credentials
                 </h4>
@@ -3266,11 +3196,11 @@ main canvas { color: var(--text-1); }
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Full Name *</label>
-                        <input type="text" id="edit-fac-name" name="name" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-fac-name" name="name" required class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Department *</label>
-                        <select id="edit-fac-dept" name="department_id" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <select id="edit-fac-dept" name="department_id" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                             {% for dept in departments %}
                             <option value="{{ dept.id }}">{{ dept.name }}</option>
                             {% endfor %}
@@ -3278,54 +3208,54 @@ main canvas { color: var(--text-1); }
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Designation / Post</label>
-                        <input type="text" id="edit-fac-post" name="post" placeholder="e.g. Professor, Dept. Chair" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-fac-post" name="post" placeholder="e.g. Professor, Dept. Chair" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Office Room</label>
-                        <input type="text" id="edit-fac-office" name="office" placeholder="e.g. Room 502, AB-1" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-fac-office" name="office" placeholder="e.g. Room 502, AB-1" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Phone Number</label>
-                        <input type="text" id="edit-fac-phone" name="phone" placeholder="+880 1711-XXXXXX" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-fac-phone" name="phone" placeholder="+880 1711-XXXXXX" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                 </div>
             </div>
 
             <!-- SECTION 2: RESEARCH & BIO -->
-            <div class="space-y-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80">
-                <h4 class="text-xs font-black uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+            <div class="space-y-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800">
+                <h4 class="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
                     <i data-lucide="book-open" class="w-4 h-4"></i> Research & Bio
                 </h4>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Research Interests</label>
-                        <input type="text" id="edit-fac-research" name="research_interests" placeholder="e.g. Machine Learning, Distributed Systems" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-fac-research" name="research_interests" placeholder="e.g. Machine Learning, Distributed Systems" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Academic Bio / About</label>
-                        <textarea id="edit-fac-about" name="about" rows="3" placeholder="Brief academic summary & experience..." class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-medium transition-all"></textarea>
+                        <textarea id="edit-fac-about" name="about" rows="3" placeholder="Brief academic summary & experience..." class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-medium transition-all"></textarea>
                     </div>
                 </div>
             </div>
 
             <!-- SECTION 3: ADDRESSES & AVATAR -->
-            <div class="space-y-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80">
+            <div class="space-y-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800">
                 <h4 class="text-xs font-black uppercase tracking-wider text-sky-400 flex items-center gap-2">
                     <i data-lucide="map-pin" class="w-4 h-4"></i> Contact Addresses & Avatar
                 </h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Present Address</label>
-                        <input type="text" id="edit-fac-present" name="present_address" placeholder="Aftabnagar, Dhaka" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-fac-present" name="present_address" placeholder="Aftabnagar, Dhaka" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Permanent Address</label>
-                        <input type="text" id="edit-fac-permanent" name="permanent_address" placeholder="Home District Address" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-fac-permanent" name="permanent_address" placeholder="Home District Address" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Update Profile Photo (Optional)</label>
-                    <input type="file" name="profile_pic" accept="image/*" class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-500/20 file:text-purple-300 hover:file:bg-purple-500/30 file:cursor-pointer">
+                    <input type="file" name="profile_pic" accept="image/*" class="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-500/20 file:text-purple-300 hover:file:bg-purple-500/30 file:cursor-pointer">
                 </div>
             </div>
 
@@ -3343,8 +3273,8 @@ main canvas { color: var(--text-1); }
 </div>
 
 <!-- ADMIN EDIT STUDENT MODAL -->
-<div id="admin-edit-student-modal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden" onclick="if(event.target===this) this.classList.add('hidden')">
-    <div class="bg-[#0b0f19] border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl space-y-6 p-6 sm:p-8" onclick="event.stopPropagation()">
+<div id="admin-edit-student-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden" onclick="if(event.target===this) this.classList.add('hidden')">
+    <div class="relative bg-[#0b0f19] border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl space-y-6 p-6 sm:p-8 my-auto" onclick="event.stopPropagation()">
         
         <!-- Header Banner -->
         <div class="flex justify-between items-start border-b border-slate-800 pb-5">
@@ -3371,7 +3301,7 @@ main canvas { color: var(--text-1); }
         <form id="admin-edit-student-form" method="POST" enctype="multipart/form-data" class="space-y-6">
             
             <!-- SECTION 1: PROFILE & ACADEMIC STATS -->
-            <div class="space-y-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80">
+            <div class="space-y-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800">
                 <h4 class="text-xs font-black uppercase tracking-wider text-blue-400 flex items-center gap-2">
                     <i data-lucide="graduation-cap" class="w-4 h-4"></i> Student Credentials & Stats
                 </h4>
@@ -3382,11 +3312,11 @@ main canvas { color: var(--text-1); }
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Full Name *</label>
-                        <input type="text" id="edit-std-name" name="name" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-std-name" name="name" required class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Department *</label>
-                        <select id="edit-std-dept" name="department_id" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <select id="edit-std-dept" name="department_id" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                             {% for dept in departments %}
                             <option value="{{ dept.id }}">{{ dept.name }}</option>
                             {% endfor %}
@@ -3394,28 +3324,28 @@ main canvas { color: var(--text-1); }
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Phone Number</label>
-                        <input type="text" id="edit-std-phone" name="phone_number" placeholder="+880 1711-XXXXXX" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-std-phone" name="phone_number" placeholder="+880 1711-XXXXXX" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Cumulative GPA (CGPA)</label>
-                        <input type="number" step="0.01" min="0" max="4" id="edit-std-cgpa" name="cgpa" placeholder="4.00" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white font-mono outline-none font-bold transition-all">
+                        <input type="number" step="0.01" min="0" max="4" id="edit-std-cgpa" name="cgpa" placeholder="4.00" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white font-mono outline-none font-bold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Completed Credits (CR)</label>
-                        <input type="number" step="0.5" id="edit-std-credits" name="completed_credits" placeholder="0.0" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white font-mono outline-none font-bold transition-all">
+                        <input type="number" step="0.5" id="edit-std-credits" name="completed_credits" placeholder="0.0" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white font-mono outline-none font-bold transition-all">
                     </div>
                 </div>
             </div>
 
             <!-- SECTION 2: FINANCIAL ACCOUNT & STATUS -->
-            <div class="space-y-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80">
+            <div class="space-y-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800">
                 <h4 class="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2">
                     <i data-lucide="dollar-sign" class="w-4 h-4"></i> Financial Account & Holds
                 </h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Outstanding Dues / Balance (BDT)</label>
-                        <input type="number" id="edit-std-balance" name="outstanding_balance" placeholder="0" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl text-xs text-emerald-400 font-mono outline-none font-bold transition-all">
+                        <input type="number" id="edit-std-balance" name="outstanding_balance" placeholder="0" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl text-xs text-emerald-400 font-mono outline-none font-bold transition-all">
                     </div>
                     <div class="pt-2 sm:pt-6">
                         <label class="flex items-center gap-3 cursor-pointer p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-emerald-500/40 transition-all">
@@ -3430,27 +3360,27 @@ main canvas { color: var(--text-1); }
             </div>
 
             <!-- SECTION 3: ADDRESSES & AVATAR -->
-            <div class="space-y-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80">
+            <div class="space-y-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800">
                 <h4 class="text-xs font-black uppercase tracking-wider text-sky-400 flex items-center gap-2">
                     <i data-lucide="map-pin" class="w-4 h-4"></i> Contact Addresses & Avatar
                 </h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Present Address</label>
-                        <input type="text" id="edit-std-present" name="present_address" placeholder="Aftabnagar, Dhaka" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-std-present" name="present_address" placeholder="Aftabnagar, Dhaka" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Permanent Address</label>
-                        <input type="text" id="edit-std-permanent" name="permanent_address" placeholder="Home District Address" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
+                        <input type="text" id="edit-std-permanent" name="permanent_address" placeholder="Home District Address" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-semibold transition-all">
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Biography / Student Notes</label>
-                    <textarea id="edit-std-about" name="about" rows="2" placeholder="Academic notes or bio..." class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-medium transition-all"></textarea>
+                    <textarea id="edit-std-about" name="about" rows="2" placeholder="Academic notes or bio..." class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-xl text-xs text-white outline-none font-medium transition-all"></textarea>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Update Profile Photo (Optional)</label>
-                    <input type="file" name="profile_pic" accept="image/*" class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-500/20 file:text-blue-300 hover:file:bg-blue-500/30 file:cursor-pointer">
+                    <input type="file" name="profile_pic" accept="image/*" class="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-500/20 file:text-blue-300 hover:file:bg-blue-500/30 file:cursor-pointer">
                 </div>
             </div>
 
@@ -3831,6 +3761,11 @@ main canvas { color: var(--text-1); }
         if (formStudentIdInput) {
             formStudentIdInput.value = studentId;
         }
+
+        const advisingBtn = document.getElementById('modal-advising-action-btn');
+        if (advisingBtn) {
+            advisingBtn.href = `/admin/view-student-profile/${studentId}`;
+        }
         
         const studentGrades = gradeData.filter(g => g.student_id === studentId);
         
@@ -4145,16 +4080,20 @@ main canvas { color: var(--text-1); }
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    document.getElementById('edit-fac-id').value = data.id;
-                    document.getElementById('edit-fac-name').value = data.name;
-                    document.getElementById('edit-fac-dept').value = data.department_id;
-                    document.getElementById('edit-fac-post').value = data.post || '';
-                    document.getElementById('edit-fac-office').value = data.office || '';
-                    document.getElementById('edit-fac-phone').value = data.phone || '';
-                    document.getElementById('edit-fac-research').value = data.research_interests || '';
-                    document.getElementById('edit-fac-about').value = data.about || '';
-                    document.getElementById('edit-fac-present').value = data.present_address || '';
-                    document.getElementById('edit-fac-permanent').value = data.permanent_address || '';
+                    const setVal = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = val;
+                    };
+                    setVal('edit-fac-id', data.id);
+                    setVal('edit-fac-name', data.name);
+                    setVal('edit-fac-dept', data.department_id);
+                    setVal('edit-fac-post', data.post || '');
+                    setVal('edit-fac-office', data.office || '');
+                    setVal('edit-fac-phone', data.phone || '');
+                    setVal('edit-fac-research', data.research_interests || '');
+                    setVal('edit-fac-about', data.about || '');
+                    setVal('edit-fac-present', data.present_address || '');
+                    setVal('edit-fac-permanent', data.permanent_address || '');
                     
                     const headerName = document.getElementById('edit-fac-header-name');
                     if (headerName) headerName.textContent = data.name ? `Edit Profile: ${data.name}` : 'Edit Faculty Profile';
@@ -4170,11 +4109,21 @@ main canvas { color: var(--text-1); }
                         if (initial) { initial.textContent = (data.name ? data.name[0] : 'F').toUpperCase(); initial.classList.remove('hidden'); }
                     }
 
-                    document.getElementById('admin-edit-faculty-form').action = `/admin/edit-faculty/${data.id}`;
-                    document.getElementById('admin-edit-faculty-modal').classList.remove('hidden');
+                    const formEl = document.getElementById('admin-edit-faculty-form');
+                    if (formEl) formEl.action = `/admin/edit-faculty/${data.id}`;
+
+                    const modal = document.getElementById('admin-edit-faculty-modal');
+                    if (modal) {
+                        modal.classList.remove('hidden');
+                        modal.style.display = 'flex';
+                    }
                 } else {
                     alert(data.message || 'Error fetching faculty details.');
                 }
+            })
+            .catch(err => {
+                console.error('Error in openAdminEditFacultyModal:', err);
+                alert('Could not fetch faculty details: ' + (err.message || err));
             });
     }
 
@@ -4380,7 +4329,7 @@ main canvas { color: var(--text-1); }
         if (!input || !form) return;
         let current = parseInt(input.value || "30", 10);
         let nextVal = current + delta;
-        if (nextVal < 1) nextVal = 1;
+        if (nextVal < 0) nextVal = 0;
         if (nextVal > 500) nextVal = 500;
         input.value = nextVal;
         form.submit();

@@ -3320,12 +3320,7 @@ def create_course_request_notifications(student, req_type, info_text, comments="
 
     # Advisor Email Notification
     send_advisor_request_email(student, req_type, info_text, comments)
-
-    # Advisor & Admin In-App Notifications
-    create_course_request_notifications(student, "Course Add", ", ".join(unique_course_codes), comments)
-
-    flash('Course add request submitted successfully to advisor.', 'success')
-    return redirect('/advising?tab=requests')
+    # In-app notifications already created above for admin and advisor.
 
 # Submit Section Change Requests (Batch)
 @app.route('/student/submit-change-request-multi', methods=['POST'])
@@ -5257,7 +5252,11 @@ def admin_edit_faculty(fac_id):
     present_address = request.form.get('present_address', '').strip()
     permanent_address = request.form.get('permanent_address', '').strip()
     
-    if name: fac.name = name
+    if name: 
+        fac.name = name
+        usr = User.query.get(fac.user_id) if fac.user_id else None
+        if usr:
+            usr.name = name
     if dept: fac.department_id = dept
     fac.office = office
     fac.phone = phone
@@ -5380,7 +5379,7 @@ def edit_section_capacity(sec_id):
         flash(f"Section '{sec_id}' capacity updated to {cap}.", 'success')
     else:
         flash('Section offering not found.', 'error')
-    return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('admin_dashboard') + '?tab=courses')
 
 @app.route('/admin/toggle-status/<user_id>', methods=['POST'])
 @login_required
@@ -6999,6 +6998,9 @@ def admin_faculty_details(fac_id):
         'about': faculty.about or '',
         'profile_pic': faculty.profile_pic or '',
         'post': faculty.post or '',
+        'office': faculty.office or '',
+        'phone': faculty.phone or '',
+        'research_interests': faculty.research_interests or '',
         'present_address': faculty.present_address or '',
         'permanent_address': faculty.permanent_address or '',
         'sections': sections_list,
