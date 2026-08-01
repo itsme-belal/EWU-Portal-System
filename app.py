@@ -96,54 +96,86 @@ def get_email_for_faculty(faculty_id):
     return None
 
 def send_email_safe(subject, recipients, body, html=None):
+    brevo_key = os.environ.get('BREVO_API_KEY', app.config.get('BREVO_API_KEY', '')).strip()
     mail_user = os.environ.get('MAIL_USERNAME', app.config.get('MAIL_USERNAME', '')).strip()
     mail_pass = os.environ.get('MAIL_PASSWORD', app.config.get('MAIL_PASSWORD', '')).replace(' ', '')
+    
+    sender_raw = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_DEFAULT_SENDER', mail_user or 'itsmebelalhossain@gmail.com')).strip()
+    sender_email = sender_raw
+    if '<' in sender_raw and '>' in sender_raw:
+        sender_email = sender_raw.split('<')[1].split('>')[0].strip()
 
-    if not mail_user or not mail_pass:
-        print(f"[MAIL LOG] SMTP credentials not set (MAIL_USERNAME/MAIL_PASSWORD). Email to {recipients} skipped.")
+    if not brevo_key and (not mail_user or not mail_pass):
+        print(f"[MAIL LOG] Neither BREVO_API_KEY nor SMTP credentials set. Email to {recipients} skipped.")
         return False
 
     def send_async():
         with app.app_context():
-            import socket, smtplib
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
-
-            sender = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_DEFAULT_SENDER', mail_user)) or mail_user
-            
-            try:
-                # Direct SSL connection on Port 465 with IPv4 resolution (no global socket monkeypatching)
-                target_host = 'smtp.gmail.com'
+            # 1. Primary: Try Brevo REST API if BREVO_API_KEY is provided (100% reliable on Render/Cloud hosts)
+            if brevo_key:
                 try:
-                    addr_info = socket.getaddrinfo('smtp.gmail.com', 465, socket.AF_INET, socket.SOCK_STREAM)
-                    if addr_info and len(addr_info) > 0:
-                        target_host = addr_info[0][4][0]
-                except Exception:
+                    import requests
+                    payload = {
+                        "sender": {"name": "EWU Academic Portal", "email": sender_email or mail_user or "itsmebelalhossain@gmail.com"},
+                        "to": [{"email": r} for r in recipients],
+                        "subject": subject,
+                        "textContent": body
+                    }
+                    if html:
+                        payload["htmlContent"] = html
+
+                    headers = {
+                        "accept": "application/json",
+                        "api-key": brevo_key,
+                        "content-type": "application/json"
+                    }
+                    resp = requests.post("https://api.brevo.com/v3/smtp/email", json=payload, headers=headers, timeout=10)
+                    if resp.status_code in [200, 201, 202]:
+                        print(f"[MAIL SUCCESS - Brevo API] Email sent to {recipients}: {subject}")
+                        return True
+                    else:
+                        print(f"[MAIL WARNING - Brevo API] Brevo returned status {resp.status_code}: {resp.text}")
+                except Exception as e_brevo:
+                    print(f"[MAIL WARNING - Brevo API] Brevo request failed: {e_brevo}")
+
+            # 2. Fallback: Try SMTP / Flask-Mail if SMTP credentials exist
+            if mail_user and mail_pass:
+                import socket, smtplib
+                from email.mime.text import MIMEText
+                from email.mime.multipart import MIMEMultipart
+
+                sender = sender_raw or mail_user
+                try:
                     target_host = 'smtp.gmail.com'
+                    try:
+                        addr_info = socket.getaddrinfo('smtp.gmail.com', 465, socket.AF_INET, socket.SOCK_STREAM)
+                        if addr_info and len(addr_info) > 0:
+                            target_host = addr_info[0][4][0]
+                    except Exception:
+                        target_host = 'smtp.gmail.com'
 
-                server = smtplib.SMTP_SSL(target_host, 465, timeout=5, server_hostname='smtp.gmail.com')
-                server.login(mail_user, mail_pass)
+                    server = smtplib.SMTP_SSL(target_host, 465, timeout=5, server_hostname='smtp.gmail.com')
+                    server.login(mail_user, mail_pass)
 
-                mime_msg = MIMEMultipart('alternative')
-                mime_msg['Subject'] = subject
-                mime_msg['From'] = sender
-                mime_msg['To'] = ", ".join(recipients)
-                mime_msg.attach(MIMEText(body, 'plain'))
-                if html:
-                    mime_msg.attach(MIMEText(html, 'html'))
+                    mime_msg = MIMEMultipart('alternative')
+                    mime_msg['Subject'] = subject
+                    mime_msg['From'] = sender
+                    mime_msg['To'] = ", ".join(recipients)
+                    mime_msg.attach(MIMEText(body, 'plain'))
+                    if html:
+                        mime_msg.attach(MIMEText(html, 'html'))
 
-                server.sendmail(mail_user, recipients, mime_msg.as_string())
-                server.quit()
-                print(f"[MAIL SUCCESS] Instant email sent to {recipients} via SSL: {subject}")
-            except Exception as e:
-                # Fallback to Flask-Mail if SSL fails
-                try:
-                    app.config['MAIL_PASSWORD'] = mail_pass
-                    msg = MailMessage(subject=subject, recipients=recipients, body=body, html=html, sender=sender)
-                    mail.send(msg)
-                    print(f"[MAIL SUCCESS - Fallback] Notification email sent to {recipients}: {subject}")
-                except Exception as e2:
-                    print(f"[MAIL WARNING] Failed sending email to {recipients}: {e}, fallback error: {e2}")
+                    server.sendmail(mail_user, recipients, mime_msg.as_string())
+                    server.quit()
+                    print(f"[MAIL SUCCESS - SMTP] Email sent to {recipients} via SSL: {subject}")
+                except Exception as e:
+                    try:
+                        app.config['MAIL_PASSWORD'] = mail_pass
+                        msg = MailMessage(subject=subject, recipients=recipients, body=body, html=html, sender=sender)
+                        mail.send(msg)
+                        print(f"[MAIL SUCCESS - Fallback] Notification email sent to {recipients}: {subject}")
+                    except Exception as e2:
+                        print(f"[MAIL WARNING] Failed sending email to {recipients}: {e}, fallback error: {e2}")
 
     t = threading.Thread(target=send_async)
     t.daemon = True
