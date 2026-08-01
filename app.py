@@ -6888,6 +6888,27 @@ def admin_edit_section(sec_id):
     flash(f"Section offering '{sec.course_code} Sec {sec.section_number}' updated successfully.", 'success')
     return redirect(url_for('admin_dashboard') + '?tab=course-management')
 
+def is_faculty_dept_matching(faculty, section):
+    if not faculty or not section:
+        return False
+    fac_dept = (faculty.department_id or '').strip().upper()
+    sec_code = (section.course_code or '').strip().upper()
+    
+    # 1. Direct course code prefix match (e.g. 'CSE103' starts with 'CSE')
+    if sec_code.startswith(fac_dept):
+        return True
+
+    # 2. Check PreAdvisingCourse database record
+    course = PreAdvisingCourse.query.filter_by(code=section.course_code).first()
+    if course and course.department_id and course.department_id.strip().upper() == fac_dept:
+        return True
+
+    # 3. Check dedicated departments
+    if fac_dept in [d.upper() for d in (section.dedicated_departments or [])]:
+        return True
+
+    return False
+
 @app.route('/admin/assign-faculty-section', methods=['POST'])
 @login_required
 def assign_faculty_section():
@@ -6897,11 +6918,12 @@ def assign_faculty_section():
     fac_id = request.form.get('faculty_id') or None
     sec_id = request.form.get('section_id')
     sem_id = request.form.get('semester_id')
+    redirect_tab = request.form.get('redirect_tab') or 'course-management'
     
     section = SectionOffering.query.get(sec_id)
     if not section:
         flash('Course section offering not found.', 'error')
-        return redirect(url_for('admin_dashboard') + '?tab=course-management')
+        return redirect(url_for('admin_dashboard') + f'?tab={redirect_tab}')
 
     target_sem = sem_id or section.semester_id or get_current_semester()
     
@@ -6909,14 +6931,19 @@ def assign_faculty_section():
         faculty = Faculty.query.get(fac_id)
         if not faculty:
             flash('Faculty member not found.', 'error')
-            return redirect(url_for('admin_dashboard') + f'?tab=course-management&semester={target_sem}')
+            return redirect(url_for('admin_dashboard') + f'?tab={redirect_tab}&semester={target_sem}')
+
+        # Enforce Department Match: Faculty can ONLY teach courses from their own department!
+        if not is_faculty_dept_matching(faculty, section):
+            flash(f"Department Mismatch! Faculty {faculty.name} ({faculty.department_id}) can only teach courses in the {faculty.department_id} department. ({section.course_code} belongs to another department)", "error")
+            return redirect(url_for('admin_dashboard') + f'?tab={redirect_tab}&semester={target_sem}')
             
         # Check for schedule conflicts in target semester
         assigned = SectionOffering.query.filter_by(faculty_id=fac_id, semester_id=target_sem).all()
         for a in assigned:
             if a.id != sec_id and schedules_conflict(a.schedule, section.schedule):
                 flash(f"Conflict detected! Section ({section.course_code} Sec {section.section_number}: {section.schedule}) conflicts with {a.course_code} Sec {a.section_number} ({a.schedule}) assigned to {faculty.name}.", "error")
-                return redirect(url_for('admin_dashboard') + f'?tab=course-management&semester={target_sem}')
+                return redirect(url_for('admin_dashboard') + f'?tab={redirect_tab}&semester={target_sem}')
                 
         section.faculty_id = fac_id
         db.session.commit()
@@ -6926,7 +6953,7 @@ def assign_faculty_section():
         db.session.commit()
         flash(f"Unassigned faculty from {section.course_code} Sec {section.section_number}.", "info")
 
-    return redirect(url_for('admin_dashboard') + f'?tab=course-management&semester={target_sem}')
+    return redirect(url_for('admin_dashboard') + f'?tab={redirect_tab}&semester={target_sem}')
 
 @app.route('/admin/assign-faculty-sections-bulk', methods=['POST'])
 @login_required
@@ -6963,6 +6990,12 @@ def assign_faculty_sections_bulk():
         sec = SectionOffering.query.get(sec_id)
         if not sec:
             continue
+
+        # Enforce Department Match: Faculty can ONLY teach courses from their own department!
+        if not is_faculty_dept_matching(faculty, sec):
+            conflict_count += 1
+            flash(f"Department Mismatch: Section {sec.course_code}-Sec{sec.section_number} cannot be assigned to {faculty.name} ({faculty.department_id}) as it belongs to a different department.", "error")
+            continue
             
         has_conflict = False
         for aid, asched, acode in current_schedule_list:
@@ -6988,9 +7021,9 @@ def assign_faculty_sections_bulk():
     db.session.commit()
     
     if success_count > 0:
-        flash(f"Successfully assigned {success_count} section(s) to {faculty.name}.", "success")
+        flash(f"Successfully assigned {success_count} section(s) to {faculty.name} for {semester_id}.", "success")
     if conflict_count > 0:
-        flash(f"{conflict_count} section(s) could not be assigned due to scheduling conflicts.", "error")
+        flash(f"{conflict_count} section(s) could not be assigned due to schedule conflicts or department mismatch.", "error")
         
     return redirect(url_for('admin_dashboard') + f"?tab=faculty&semester={semester_id}")
 
@@ -7001,9 +7034,12 @@ def unassign_faculty_section(sec_id):
         return redirect(url_for('home'))
         
     section = SectionOffering.query.get(sec_id)
+    sem_id = request.form.get('semester_id') or (section.semester_id if section else get_current_semester())
+    redirect_tab = request.form.get('redirect_tab') or 'faculty'
+    
     if not section:
         flash('Course section offering not found.', 'error')
-        return redirect(url_for('admin_dashboard') + '?tab=faculty')
+        return redirect(url_for('admin_dashboard') + f'?tab={redirect_tab}&semester={sem_id}')
         
     fac_id = section.faculty_id
     faculty = Faculty.query.get(fac_id) if fac_id else None
@@ -7012,7 +7048,7 @@ def unassign_faculty_section(sec_id):
     section.faculty_id = None
     db.session.commit()
     flash(f"Successfully unassigned {section.course_code} Sec {section.section_number} from {fac_name}.", "success")
-    return redirect(url_for('admin_dashboard') + '?tab=faculty')
+    return redirect(url_for('admin_dashboard') + f'?tab={redirect_tab}&semester={sem_id}')
 
 @app.route('/admin/delete-window/<win_id>', methods=['POST'])
 @login_required

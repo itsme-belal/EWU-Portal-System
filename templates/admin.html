@@ -1862,9 +1862,29 @@ main canvas { color: var(--text-1); }
 
 <!-- FACULTY MANAGEMENT TAB -->
 <div id="tab-faculty" class="tab-content hidden space-y-6">
-    <div class="pb-4 mb-2 border-b border-white/5">
-        <h1 class="tab-title">Faculty Management</h1>
-        <p class="text-xs text-slate-500 mt-1">Create faculty accounts, assign departments, and manage portal access</p>
+    <div class="pb-4 mb-2 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="tab-title">Faculty Management</h1>
+            <p class="text-xs text-slate-500 mt-1">Create faculty accounts, assign departments, and manage portal access</p>
+        </div>
+        <div class="flex items-center gap-2 bg-slate-900/80 px-4 py-2 rounded-xl border border-violet-500/20">
+            <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="calendar" class="w-3.5 h-3.5 text-violet-400"></i> Semester:
+            </span>
+            <select onchange="window.location.href='/admin?tab=faculty&semester=' + this.value" class="bg-slate-800 text-white text-xs px-3 py-1 rounded-lg border border-white/10 font-bold focus:outline-none focus:ring-1 focus:ring-violet-500">
+                <option value="{{ current_semester }}" {% if selected_semester == current_semester %}selected{% endif %}>
+                    ☀️ Current: {{ current_semester }}
+                </option>
+                <option value="{{ next_semester }}" {% if selected_semester == next_semester %}selected{% endif %}>
+                    🍁 Next: {{ next_semester }}
+                </option>
+                {% for sem in available_semesters %}
+                    {% if sem != current_semester and sem != next_semester %}
+                    <option value="{{ sem }}" {% if selected_semester == sem %}selected{% endif %}>{{ sem }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
     </div>
 
     <!-- Faculty Ingestion Section -->
@@ -1956,28 +1976,33 @@ main canvas { color: var(--text-1); }
 
     <!-- Assign Course Sections to Faculty -->
     <div class="glass-card p-6 space-y-4">
-        <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2 flex items-center gap-2">
-            <i data-lucide="book-user" class="w-4 h-4 text-violet-400"></i>
-            Assign Course Sections to Faculty (Bulk)
-        </h3>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[#e2e8f0] dark:border-[#1e293b] pb-2">
+            <h3 class="font-bold text-sm uppercase tracking-wider text-[#94a3b8] flex items-center gap-2">
+                <i data-lucide="book-user" class="w-4 h-4 text-violet-400"></i>
+                Assign Course Sections to Faculty (Bulk)
+            </h3>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                Semester: {{ selected_semester }}
+            </span>
+        </div>
         <p class="text-xs text-slate-400 mb-2">
-            Select a faculty member, search sections, and check all course section offerings you wish to assign to them at once. Conflict validations will run automatically.
+            Select a faculty member. The section list automatically filters to courses matching their department. Check sections to assign. Conflict & department validations run automatically.
         </p>
         <form action="/admin/assign-faculty-sections-bulk" method="POST" class="space-y-4">
             <input type="hidden" name="semester_id" value="{{ selected_semester }}">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Faculty Member</label>
-                    <select name="faculty_id" required class="input text-xs w-full">
+                    <select name="faculty_id" id="bulk-fac-select" required onchange="filterBulkSectionsByFacultyDept(this)" class="input text-xs w-full">
                         <option value="">-- Choose Faculty --</option>
                         {% for fac in faculties %}
-                        <option value="{{ fac.id }}">{{ fac.name }} ({{ fac.id }}) [{{ fac.department_id }}]</option>
+                        <option value="{{ fac.id }}" data-dept="{{ fac.department_id }}">{{ fac.name }} ({{ fac.id }}) [Dept: {{ fac.department_id }}]</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div>
                     <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Search Sections</label>
-                    <input type="text" id="bulk-section-search" oninput="filterBulkSections()" placeholder="Search course code or schedule..." class="input text-xs w-full">
+                    <input type="text" id="bulk-section-search" oninput="filterBulkSectionsByFacultyDept(document.getElementById('bulk-fac-select'))" placeholder="Search course code or schedule..." class="input text-xs w-full">
                 </div>
             </div>
             
@@ -1985,14 +2010,18 @@ main canvas { color: var(--text-1); }
                 <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Course Section Offerings (Check all to assign)</label>
                 <div class="border border-[#e2e8f0] dark:border-[#1e293b] rounded-xl max-h-60 overflow-y-auto p-3 space-y-2 bg-[#f8fafc] dark:bg-[#0f172a]" id="bulk-sections-container">
                     {% for sec in section_offerings %}
-                    <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-pointer transition-colors bulk-section-item" data-code="{{ sec.course_code }}" data-sched="{{ sec.schedule }}">
+                    {% set c_dept = sec.course_code[:3] if sec.course_code | length >= 3 else '' %}
+                    <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 cursor-pointer transition-colors bulk-section-item" data-code="{{ sec.course_code }}" data-dept="{{ c_dept }}" data-sched="{{ sec.schedule }}">
                         <input type="checkbox" name="section_ids" value="{{ sec.id }}" class="w-4 h-4 rounded text-violet-600 focus:ring-violet-500">
-                        <div class="text-xs">
-                            <span class="font-extrabold text-violet-500 dark:text-violet-400">{{ sec.course_code }}</span> - Sec <span class="font-bold">{{ sec.section_number }}</span>
-                            <span class="text-slate-400 ml-2">({{ sec.schedule }}) [{{ sec.room }}]</span>
-                            {% if sec.faculty_id %}
-                            <span class="ml-2 px-1.5 py-0.5 text-[0.6rem] font-bold rounded bg-amber-500/10 text-amber-500">Currently: {{ sec.faculty_id }}</span>
-                            {% endif %}
+                        <div class="text-xs flex-1 flex items-center justify-between">
+                            <div>
+                                <span class="font-extrabold text-violet-500 dark:text-violet-400">{{ sec.course_code }}</span> - Sec <span class="font-bold">{{ sec.section_number }}</span>
+                                <span class="text-slate-400 ml-2">({{ sec.schedule }}) [{{ sec.room }}]</span>
+                                {% if sec.faculty_id %}
+                                <span class="ml-2 px-1.5 py-0.5 text-[0.6rem] font-bold rounded bg-amber-500/10 text-amber-500">Currently: {{ sec.faculty_id }}</span>
+                                {% endif %}
+                            </div>
+                            <span class="px-1.5 py-0.5 text-[0.6rem] font-bold rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">{{ c_dept }}</span>
                         </div>
                     </label>
                     {% endfor %}
@@ -2002,7 +2031,7 @@ main canvas { color: var(--text-1); }
             <div class="flex justify-end">
                 <button type="submit" class="btn-primary py-2 px-6 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700">
                     <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
-                    Assign Selected Sections
+                    Assign Selected Sections for {{ selected_semester }}
                 </button>
             </div>
         </form>
@@ -2076,6 +2105,8 @@ main canvas { color: var(--text-1); }
                                         <span class="inline-flex items-center gap-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded text-[0.62rem] font-bold">
                                             {{ sec.course_code }} Sec {{ sec.section_number }}
                                             <form action="/admin/unassign-faculty-section/{{ sec.id }}" method="POST" class="inline" onsubmit="return confirm('Remove assignment of {{ sec.course_code }} section {{ sec.section_number }} from {{ fac.name }}?')">
+                                                <input type="hidden" name="semester_id" value="{{ selected_semester }}">
+                                                <input type="hidden" name="redirect_tab" value="faculty">
                                                 <button type="submit" class="hover:text-red-400 focus:outline-none ml-0.5" title="Unassign">
                                                     <i data-lucide="x" class="w-2.5 h-2.5"></i>
                                                 </button>
@@ -2087,7 +2118,10 @@ main canvas { color: var(--text-1); }
                                 <span class="text-slate-500 italic text-[0.7rem]">None assigned</span>
                             {% endif %}
                         </td>
-                        <td class="flex gap-2 items-center">
+                        <td class="flex gap-2 items-center flex-wrap">
+                            <button type="button" onclick="openQuickAssignFacultyModal('{{ fac.id }}', '{{ fac.name|escape }}', '{{ fac.department_id }}')" class="text-[0.65rem] px-2 py-1 font-bold bg-violet-600 hover:bg-violet-700 text-white rounded shadow-sm flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3 h-3"></i> Assign Course
+                            </button>
                             {% if usr %}
                             <form action="{{ url_for('toggle_user_status', user_id=fac.user_id) }}" method="POST">
                                 <button type="submit" class="text-[0.65rem] px-2 py-1 font-bold rounded transition-colors {% if usr.is_active %}bg-amber-100 hover:bg-amber-200 text-amber-700{% else %}bg-green-100 hover:bg-green-200 text-green-700{% endif %}">
@@ -4489,5 +4523,112 @@ main canvas { color: var(--text-1); }
         const savedView = localStorage.getItem('ewu_course_view') || 'table';
         toggleCourseView(savedView);
     });
+</script>
+
+<!-- Quick Assign Course to Faculty Modal -->
+<div id="quick-assign-faculty-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="glass-card max-w-md w-full p-6 space-y-4">
+        <div class="flex justify-between items-center border-b border-white/10 pb-3">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <i data-lucide="book-open" class="w-4 h-4 text-violet-400"></i>
+                Assign Course Section ({{ selected_semester }})
+            </h3>
+            <button type="button" onclick="closeQuickAssignFacultyModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        
+        <form action="{{ url_for('assign_faculty_section') }}" method="POST" class="space-y-4">
+            <input type="hidden" name="faculty_id" id="qa-fac-id">
+            <input type="hidden" name="semester_id" value="{{ selected_semester }}">
+            <input type="hidden" name="redirect_tab" value="faculty">
+            
+            <div>
+                <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Faculty Member</label>
+                <div class="p-2.5 bg-slate-900 rounded-lg border border-white/10 text-xs font-bold text-violet-400 flex justify-between items-center">
+                    <span id="qa-fac-name">--</span>
+                    <span id="qa-fac-dept-badge" class="badge badge-neutral text-[0.65rem]">--</span>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Available Course Section (Faculty Department Only)</label>
+                <select name="section_id" id="qa-section-select" required class="input text-xs w-full">
+                    <option value="">-- Select Course Section Offering --</option>
+                    {% for sec in section_offerings %}
+                    {% set c_dept = sec.course_code[:3] if sec.course_code | length >= 3 else '' %}
+                    <option value="{{ sec.id }}" data-dept="{{ c_dept }}" data-code="{{ sec.course_code }}">
+                        {{ sec.course_code }} - Sec {{ sec.section_number }} ({{ sec.schedule }}) [{{ sec.room }}] {% if sec.faculty_id %}[Currently: {{ sec.faculty_id }}]{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="text-[0.68rem] text-slate-400 mt-1.5 flex items-center gap-1">
+                    <i data-lucide="shield-alert" class="w-3 h-3 text-amber-400"></i>
+                    <span>Faculty can only be assigned to courses of their own department.</span>
+                </p>
+            </div>
+            
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeQuickAssignFacultyModal()" class="btn-secondary text-xs py-1.5 px-4 rounded-lg">Cancel</button>
+                <button type="submit" class="btn-primary text-xs py-1.5 px-4 rounded-lg bg-violet-600 hover:bg-violet-700 font-bold flex items-center gap-1">
+                    <i data-lucide="user-check" class="w-3.5 h-3.5"></i> Assign Section
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function filterBulkSectionsByFacultyDept(selectElem) {
+        if (!selectElem) return;
+        const selectedOption = selectElem.options[selectElem.selectedIndex];
+        const facDept = selectedOption ? (selectedOption.dataset.dept || '').toUpperCase() : '';
+        const textFilter = (document.getElementById('bulk-section-search')?.value || '').toLowerCase();
+
+        document.querySelectorAll('.bulk-section-item').forEach(item => {
+            const secCode = (item.dataset.code || '').toLowerCase();
+            const secSched = (item.dataset.sched || '').toLowerCase();
+            const secDept = (item.dataset.dept || '').toUpperCase();
+
+            const matchesText = !textFilter || secCode.includes(textFilter) || secSched.includes(textFilter);
+            const matchesDept = !facDept || secCode.toUpperCase().startsWith(facDept) || secDept === facDept;
+
+            if (matchesText && matchesDept) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function openQuickAssignFacultyModal(facId, facName, facDept) {
+        document.getElementById('qa-fac-id').value = facId;
+        document.getElementById('qa-fac-name').textContent = facName;
+        document.getElementById('qa-fac-dept-badge').textContent = facDept;
+
+        const select = document.getElementById('qa-section-select');
+        if (select) {
+            for (let i = 0; i < select.options.length; i++) {
+                const opt = select.options[i];
+                if (!opt.value) continue;
+                const secDept = opt.dataset.dept || '';
+                const secCode = opt.dataset.code || '';
+                if (secDept.toUpperCase() === facDept.toUpperCase() || secCode.toUpperCase().startsWith(facDept.toUpperCase())) {
+                    opt.style.display = 'block';
+                    opt.disabled = false;
+                } else {
+                    opt.style.display = 'none';
+                    opt.disabled = true;
+                }
+            }
+            select.value = '';
+        }
+
+        const modal = document.getElementById('quick-assign-faculty-modal');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeQuickAssignFacultyModal() {
+        const modal = document.getElementById('quick-assign-faculty-modal');
+        if (modal) modal.classList.add('hidden');
+    }
 </script>
 {% endblock %}
