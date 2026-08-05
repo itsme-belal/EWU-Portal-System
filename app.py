@@ -380,17 +380,83 @@ def ensure_runtime_schema():
             'section_offerings': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
         }
 
-        for table_name, columns in profile_columns.items():
-            if table_name not in tables:
-                continue
-            existing = {column['name'] for column in inspector.get_columns(table_name)}
-            for column_name, column_type in columns.items():
-                if column_name not in existing:
-                    try:
-                        db.session.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'))
-                        db.session.commit()
-                    except Exception:
-                        db.session.rollback()
+        # Ensure default admin user & essential settings exist if database is empty
+        try:
+            from werkzeug.security import generate_password_hash
+            from models import User, Admin, SystemSetting, Department
+
+            if User.query.filter_by(role='admin').count() == 0:
+                default_pass = os.environ.get('DEFAULT_ADMIN_PASSWORD', 'admin123')
+                pass_hash = generate_password_hash(default_pass)
+
+                u1 = User.query.get('admin_u1')
+                if not u1:
+                    u1 = User(
+                        id='admin_u1',
+                        email='itsmebelalhossain@gmail.com',
+                        password_hash=pass_hash,
+                        role='admin',
+                        is_active=True,
+                        is_activated=True
+                    )
+                    db.session.add(u1)
+
+                u2 = User.query.get('A001')
+                if not u2:
+                    u2 = User(
+                        id='A001',
+                        email='admin@ewubd.edu',
+                        password_hash=pass_hash,
+                        role='admin',
+                        is_active=True,
+                        is_activated=True
+                    )
+                    db.session.add(u2)
+
+                db.session.flush()
+
+                a1 = Admin.query.get('A001')
+                if not a1:
+                    a1 = Admin(id='A001', user_id='admin_u1', name='Registrar')
+                    db.session.add(a1)
+
+                db.session.commit()
+                print("Default admin account (A001 / admin123) initialized successfully.")
+
+            # Seed default system settings if missing
+            default_settings = [
+                ('current_semester', 'Spring2026'),
+                ('next_semester', 'Summer2026'),
+                ('current_semester_start', '2026-01-05'),
+                ('current_semester_end', '2026-04-20'),
+                ('next_semester_start', '2026-05-10'),
+                ('next_semester_end', '2026-08-25'),
+                ('pre_advising_active', 'true'),
+                ('final_advising_active', 'true'),
+                ('request_phase_active', 'true')
+            ]
+            for key, val in default_settings:
+                if not SystemSetting.query.get(key):
+                    db.session.add(SystemSetting(key=key, value=val))
+            db.session.commit()
+
+            # Seed essential departments if missing
+            dept_list = [
+                ('ICE', 'ICE'), ('CSE', 'CSE'), ('EEE', 'EEE'), ('PHR', 'Pharmacy'),
+                ('GEB', 'GEB'), ('CEN', 'Civil Engineering'), ('MAT', 'Mathematics'),
+                ('DSA', 'Data Science'), ('BBA', 'BBA'), ('ECO', 'Economics'),
+                ('ENG', 'English'), ('SOC', 'Sociology'), ('INF', 'Information Studies'),
+                ('LAW', 'Law'), ('PPHS', 'Population and Public Health')
+            ]
+            for did, dname in dept_list:
+                if not Department.query.get(did):
+                    db.session.add(Department(id=did, name=dname))
+            db.session.commit()
+
+        except Exception as seed_err:
+            db.session.rollback()
+            print("Note: ensure_runtime_schema default seeding warning:", seed_err)
+
     except Exception as e:
         print("Note: ensure_runtime_schema skipped or encountered warning:", e)
         db.session.rollback()
@@ -1089,6 +1155,10 @@ def do_login():
         faculty = Faculty.query.filter((Faculty.id == identifier) | (Faculty.id == id_prefix)).first()
         if faculty:
             user = User.query.get(faculty.user_id) or User.query.get(faculty.id)
+    if not user:
+        admin_rec = Admin.query.filter((Admin.id == identifier) | (Admin.id == id_prefix)).first()
+        if admin_rec:
+            user = User.query.get(admin_rec.user_id) or User.query.get(admin_rec.id)
 
     if user:
         if not user.is_active:
