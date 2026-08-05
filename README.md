@@ -243,23 +243,28 @@ Beyond registration, the portal consolidates major academic and administrative s
 
 | Login & Authentication | Student Dashboard |
 | :---: | :---: |
-| ![Login Page](docs/screenshots/login.png) | ![Student Dashboard](docs/screenshots/student_dashboard.png) |
+| ![Login Page](docs/login.png) | ![Student Dashboard](docs/student_dashboard.png) |
 
-| Final Advising Engine | Faculty Grade Entry |
+| Faculty Dashboard | Admin Dashboard |
 | :---: | :---: |
-| ![Advising Engine](docs/screenshots/advising_engine.png) | ![Faculty Grading](docs/screenshots/faculty_grading.png) |
+| ![Faculty Dashboard](docs/faculty_dashboard.png) | ![Admin Dashboard](docs/admin_dashboard.png) |
+
+| Advising Panel | Faculty Grade Entry |
+| :---: | :---: |
+| ![Advising Panel](docs/advising_panel.png) | ![Final Advising Panel](docs/final_advising.png) |
 
 | Admin Window Control | Academic Transcript |
 | :---: | :---: |
-| ![Admin Control](docs/screenshots/admin_control.png) | ![Transcript View](docs/screenshots/transcript.png) |
+| ![Course Management](docs/course_management.png) | ![Faculty Approving](docs/faculty_approving.png) |
 
 ---
 
 ## 🎬 Demo
 
-- **Live Hosted Application**: [https://ewu-portal-system.vercel.app](https://ewu-portal.onrender.app) *(Example Link)*
-- **Full Video Demonstration**: [Watch YouTube Walkthrough](https://youtube.com) *(Example Link)*
-- **Demo Credentials** (Password for all accounts: `password123`):
+- **Live Hosted Application**: [https://ewubd-portal.onrender.com](https://ewubd-portal.onrender.app)
+- **Demo Video **: [Watch YouTube Walkthrough](https://youtu.be/ralzK9LL7T8?si=g82UFJZWQRV1C7Md) 
+- **Full Video Demonstration**: [Watch YouTube Walkthrough]((https://youtu.be/1BW0NEam_HI?si=1eF-7Gl6EUTy8K4P)) 
+- **Demo Credentials** :
 
 | Role | Email | User ID |
 | :--- | :--- | :--- |
