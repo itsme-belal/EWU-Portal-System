@@ -247,7 +247,7 @@ Beyond registration, the portal consolidates major academic and administrative s
 
 | Faculty Dashboard | Admin Dashboard |
 | :---: | :---: |
-| ![Faculty Dashboard](docs/faculty_dashboard.png) | ![Admin Dashboard](docs/admin_dashboard.png) |
+| ![Faculty Dashboard](docs/faculty_dashboard.png) | ![Admin Dashboard](doc/admin_dashboard.png) |
 
 | Advising Panel | Faculty Grade Entry |
 | :---: | :---: |
