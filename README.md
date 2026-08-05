@@ -266,11 +266,11 @@ Beyond registration, the portal consolidates major academic and administrative s
 - **Full Video Demonstration**: [Watch Full Demonstration Video](https://youtu.be/1BW0NEam_HI?si=1eF-7Gl6EUTy8K4P) 
 - **Demo Credentials** :
 
-| Role | Email | User ID |
+| Role | Email | Password |
 | :--- | :--- | :--- |
-| **Student (Regular)** | `2023-2-60-010@std.ewubd.edu` | `2023-2-60-010` |
-| **Faculty / Advisor** | `ahmedbhr2001@gmail.com` | `MMAH` |
-| **System Admin** | `itsmebelalhossain@gmail.com` | `NONE` |
+| **Student (Regular)** | `2023-2-60-010@std.ewubd.edu` | `123456` |
+| **Faculty / Advisor** | `ahmedbhr2001@gmail.com` | `123456` |
+| **System Admin** | `itsmebelalhossain@gmail.com` | `admin123` |
 
 ---
 
