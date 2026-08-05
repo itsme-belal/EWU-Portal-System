@@ -433,7 +433,27 @@ main canvas { color: var(--text-1); }
     </div>
   </div>
 
-
+  <!-- ── BATCH MULTI-EXCEL UPLOAD CARD ─────────────────────────────────── -->
+  <div class="glass-card p-5 space-y-3 border border-emerald-500/20 bg-emerald-950/10 dark:bg-emerald-950/20">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-emerald-500/15 pb-3">
+      <div>
+        <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i>
+          Batch Multi-Excel Ingestion (Students, Faculty & Schedules)
+        </h3>
+        <p class="text-[0.7rem] text-slate-500 dark:text-slate-400 mt-0.5">
+          Select multiple Excel files at once (e.g. <code>Student_Records.xlsx</code>, <code>Faculty_Records.xlsx</code>, <code>Non_Departmental_Schedule.xlsx</code>). The system automatically detects file schemas and imports all records in one batch.
+        </p>
+      </div>
+      <span class="px-2.5 py-1 text-[0.62rem] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Auto-Detect Schemas</span>
+    </div>
+    <form action="/admin/upload-multi-excel" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row items-center gap-3">
+      <input type="file" name="excel_files" multiple accept=".xlsx" required class="w-full text-xs text-slate-600 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 file:cursor-pointer">
+      <button type="submit" class="w-full sm:w-auto text-xs px-5 py-2 font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 flex-shrink-0 shadow font-semibold">
+        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload & Import Batch
+      </button>
+    </form>
+  </div>
 
   <!-- ── MAIN GRID: Chart + System Status ──────────────────── -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -515,13 +535,11 @@ main canvas { color: var(--text-1); }
       </div>
       <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
         {% for course_code, count in demand_data[:8] %}
-        {% set max_d = demand_data[0][1] if (demand_data and demand_data[0][1] > 0) else 1 %}
-        {% set d_pct = [((count / max_d) * 100) | round | int, 100] | min %}
         <div class="flex items-center gap-3">
           <span class="font-mono text-[0.7rem] font-bold text-slate-300 w-20 flex-shrink-0">{{ course_code }}</span>
           <div class="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-              <div class="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-700"
-                  data-progress-width="{{ d_pct }}"></div>
+            <div class="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-700"
+                 style="width: {{ [((count / (demand_data[0][1] if (demand_data and demand_data[0][1] > 0) else 1)) * 100) | round | int, 100] | min }}%"></div>
           </div>
           <span class="text-[0.68rem] font-bold text-amber-400 w-6 text-right flex-shrink-0">{{ count }}</span>
         </div>
@@ -661,10 +679,8 @@ main canvas { color: var(--text-1); }
                 <i data-lucide="pie-chart" class="w-4 h-4 text-violet-400"></i>
             </div>
             <p class="text-xl font-black text-slate-900 dark:text-white">{{ fill_rate }}%</p>
-            {% set fill_cls = 'bg-emerald-500' if fill_rate < 85 else ('bg-amber-500' if fill_rate < 100 else 'bg-red-500') %}
-            {% set fill_w = [fill_rate, 100] | min %}
             <div class="capacity-progress-track mt-1.5 bg-slate-200 dark:bg-white/10">
-                <div class="capacity-progress-fill {{ fill_cls }}" data-progress-width="{{ fill_w }}"></div>
+                <div class="capacity-progress-fill {{ 'bg-emerald-500' if fill_rate < 85 else ('bg-amber-500' if fill_rate < 100 else 'bg-red-500') }}" style="width: {{ fill_rate if fill_rate <= 100 else 100 }}%"></div>
             </div>
         </div>
 
@@ -699,14 +715,14 @@ main canvas { color: var(--text-1); }
         </div>
     </div>
 
-    <!-- Enhanced Batch JSON Upload Zone Dropzone -->
+    <!-- Enhanced Batch Excel Upload Zone Dropzone -->
     <div class="glass-card p-6 space-y-4 rounded-2xl border border-slate-200 dark:border-white/10">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200 dark:border-white/10 pb-3">
             <div>
                 <h3 class="font-extrabold text-sm uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i> Import Course Schedule (JSON Upload)
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i> Import Course Schedule (Batch Excel Upload)
                 </h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Upload department, common, or non-departmental schedule JSON files for bulk section ingestion</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Upload department, common, or non-departmental schedule spreadsheets (.xlsx) for bulk section ingestion</p>
             </div>
             <div class="flex items-center gap-2">
                 <span class="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[0.65rem] font-bold flex items-center gap-1">
@@ -716,15 +732,15 @@ main canvas { color: var(--text-1); }
         </div>
 
         <form action="{{ url_for('upload_schedule') }}" method="POST" enctype="multipart/form-data" class="space-y-3">
-            <div class="border-2 border-dashed border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-xl p-5 text-center transition-all bg-slate-50/50 dark:bg-slate-900/30 group cursor-pointer" onclick="document.getElementById('json-schedule-input').click()">
-                <input type="file" id="json-schedule-input" name="file" accept=".json" required class="hidden" onchange="document.getElementById('file-chosen-name').textContent = this.files[0] ? this.files[0].name : 'No file chosen'">
+            <div class="border-2 border-dashed border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-xl p-5 text-center transition-all bg-slate-50/50 dark:bg-slate-900/30 group cursor-pointer" onclick="document.getElementById('excel-schedule-input').click()">
+                <input type="file" id="excel-schedule-input" name="file" accept=".xlsx" required class="hidden" onchange="document.getElementById('file-chosen-name').textContent = this.files[0] ? this.files[0].name : 'No file chosen'">
                 <div class="flex flex-col items-center gap-2">
                     <div class="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                         <i data-lucide="upload-cloud" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Click to browse or drag JSON file here</span>
-                        <p class="text-[0.68rem] text-slate-400 mt-0.5" id="file-chosen-name">Supported files: *_Schedule.json</p>
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Click to browse or drag Excel file here</span>
+                        <p class="text-[0.68rem] text-slate-400 mt-0.5" id="file-chosen-name">Supported files: Schedules.xlsx, Faculty_Records.xlsx, Student_Records.xlsx</p>
                     </div>
                     <div class="flex flex-wrap items-center justify-center gap-1.5 mt-1">
                         <span class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[0.62rem] font-mono">Course Code</span>
@@ -1015,10 +1031,8 @@ main canvas { color: var(--text-1); }
                                 </div>
 
                                 <!-- Progress Bar -->
-                                {% set pct_cls = 'bg-emerald-500' if pct < 85 else ('bg-amber-500' if pct < 100 else 'bg-red-500') %}
-                                {% set pct_w = [pct, 100] | min %}
                                 <div class="capacity-progress-track">
-                                    <div class="capacity-progress-fill {{ pct_cls }}" data-progress-width="{{ pct_w }}"></div>
+                                    <div class="capacity-progress-fill {{ 'bg-emerald-500' if pct < 85 else ('bg-amber-500' if pct < 100 else 'bg-red-500') }}" style="width: {{ pct if pct <= 100 else 100 }}%"></div>
                                 </div>
                                 <div class="flex items-center justify-between text-[0.62rem] text-slate-400">
                                     <span>{{ pct }}% Filled</span>
@@ -1139,10 +1153,8 @@ main canvas { color: var(--text-1); }
                         <button type="button" onclick="adjustCapacity('{{ sec.id }}', 1)" class="capacity-btn-plus" title="Increase Capacity (+1)">+</button>
                     </form>
                 </div>
-                {% set sec_pct_cls = 'bg-emerald-500' if pct < 85 else ('bg-amber-500' if pct < 100 else 'bg-red-500') %}
-                {% set sec_pct_w = [pct, 100] | min %}
                 <div class="capacity-progress-track">
-                    <div class="capacity-progress-fill {{ sec_pct_cls }}" data-progress-width="{{ sec_pct_w }}"></div>
+                    <div class="capacity-progress-fill {{ 'bg-emerald-500' if pct < 85 else ('bg-amber-500' if pct < 100 else 'bg-red-500') }}" style="width: {{ pct if pct <= 100 else 100 }}%"></div>
                 </div>
             </div>
 
@@ -1342,9 +1354,8 @@ main canvas { color: var(--text-1); }
                             {{ count }} requests
                         </span>
                     </div>
-                    {% set bar_w = [percentage, 2] | max %}
                     <div class="w-full bg-slate-200 dark:bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-300 dark:border-white/5">
-                        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500" data-progress-width="{{ bar_w }}"></div>
+                        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500" style="width: {{ [percentage, 2] | max }}%"></div>
                     </div>
                     <div class="flex justify-between text-[0.68rem] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
                         <span>Share of Demand</span>
@@ -1587,14 +1598,14 @@ main canvas { color: var(--text-1); }
 
     <!-- Student Ingestion Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- JSON Upload Card -->
+        <!-- Excel Upload Card -->
         <div class="lg:col-span-1 glass-card p-6 space-y-4">
-            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Bulk JSON Ingestion</h3>
-            <p class="text-xs text-slate-500">Upload a JSON file of students containing all profile fields (Student ID, Name, Email, Phone, Dept, CGPA, Addresses, etc.) to batch-create accounts instantly.</p>
+            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Bulk Excel Ingestion</h3>
+            <p class="text-xs text-slate-500">Upload a spreadsheet of students containing all profile fields (Student ID, Name, Email, Phone, Dept, CGPA, Addresses, etc.) to batch-create accounts instantly.</p>
             <form action="{{ url_for('upload_students') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
                 <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Student JSON File (.json)</label>
-                    <input type="file" name="student_file" accept=".json" required class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Student Excel File (.xlsx)</label>
+                    <input type="file" name="student_file" accept=".xlsx" required class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
                 </div>
                 <button type="submit" class="btn-primary w-full rounded-lg text-xs py-2">
                     <i data-lucide="upload" class="w-4 h-4"></i> Upload & Import Students
@@ -1792,7 +1803,7 @@ main canvas { color: var(--text-1); }
                             <div class="flex items-center gap-2.5">
                                 <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
                                     {% if std.profile_pic %}
-                                    <img src="{{ std.profile_pic | profile_pic_url }}" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML+='<i data-lucide=&quot;user&quot; class=&quot;w-4 h-4 text-slate-400&quot;></i>';if(window.lucide)lucide.createIcons();">
+                                    <img src="{{ std.profile_pic | profile_pic_url }}" class="w-full h-full object-cover">
                                     {% else %}
                                     <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
                                     {% endif %}
@@ -1878,14 +1889,14 @@ main canvas { color: var(--text-1); }
 
     <!-- Faculty Ingestion Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- JSON Upload Card -->
+        <!-- Excel Upload Card -->
         <div class="lg:col-span-1 glass-card p-6 space-y-4">
-            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Bulk JSON Ingestion</h3>
-            <p class="text-xs text-slate-500">Upload a JSON file of faculty containing all profile fields (Faculty Initial, Name, Email, Department, Post, Present Address, Permanent Address, Profile Pic) to batch-create accounts instantly.</p>
+            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Bulk Excel Ingestion</h3>
+            <p class="text-xs text-slate-500">Upload a spreadsheet of faculty containing all profile fields (Faculty Initial, Name, Email, Department, Post, Present Address, Permanent Address, Profile Pic) to batch-create accounts instantly.</p>
             <form action="{{ url_for('upload_faculty') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
                 <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Faculty JSON File (.json)</label>
-                    <input type="file" name="faculty_file" accept=".json" required class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Faculty Excel File (.xlsx)</label>
+                    <input type="file" name="faculty_file" accept=".xlsx" required class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
                 </div>
                 <button type="submit" class="btn-primary w-full rounded-lg text-xs py-2">
                     <i data-lucide="upload" class="w-4 h-4"></i> Upload & Import Faculty
@@ -2059,7 +2070,7 @@ main canvas { color: var(--text-1); }
                             <div class="flex items-center gap-2.5">
                                 <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
                                     {% if fac.profile_pic %}
-                                    <img src="{{ fac.profile_pic | profile_pic_url }}" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML+='<i data-lucide=&quot;user&quot; class=&quot;w-4 h-4 text-slate-400&quot;></i>';if(window.lucide)lucide.createIcons();">
+                                    <img src="{{ fac.profile_pic | profile_pic_url }}" class="w-full h-full object-cover">
                                     {% else %}
                                     <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
                                     {% endif %}
@@ -3020,7 +3031,7 @@ main canvas { color: var(--text-1); }
                 </div>
                 <div class="flex items-center gap-3 w-48 justify-end">
                     <div class="flex-1 h-2.5 bg-slate-200 dark:bg-slate-950 rounded-full overflow-hidden border border-slate-300 dark:border-white/5">
-                        <div class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full transition-all duration-500" data-progress-width="{{ pct }}"></div>
+                        <div class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full transition-all duration-500" style="width: {{ pct }}%"></div>
                     </div>
                     <span class="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">{{ sec.enrolled_count }}/{{ sec.capacity }} ({{ pct }}%)</span>
                 </div>
@@ -3047,7 +3058,7 @@ main canvas { color: var(--text-1); }
                 <i data-lucide="sun" class="w-6 h-6"></i>
             </div>
             <div>
-                <h3 class="font-extrabold text-sm" style="color: var(--text-1);">Campus Light</h3>
+                <h3 class="font-extrabold text-sm" style="color:var(--text-1)">Campus Light</h3>
                 <p class="text-[0.7rem] text-slate-500 mt-1">A bright editorial workspace with calm indigo accents and spacious academic hierarchy.</p>
             </div>
         </button>
@@ -3205,7 +3216,7 @@ main canvas { color: var(--text-1); }
             <div class="flex items-center gap-4">
                 <div id="edit-fac-avatar-container" class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-black text-2xl flex items-center justify-center border-2 border-slate-700 overflow-hidden shadow-lg shadow-purple-500/20 flex-shrink-0">
                     <span id="edit-fac-initial">F</span>
-                    <img id="edit-fac-avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" class="w-full h-full object-cover hidden">
+                    <img id="edit-fac-avatar-img" src="" class="w-full h-full object-cover hidden">
                 </div>
                 <div>
                     <div class="flex items-center gap-2 flex-wrap">
@@ -3321,7 +3332,7 @@ main canvas { color: var(--text-1); }
             <div class="flex items-center gap-4">
                 <div id="edit-std-avatar-container" class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-2xl flex items-center justify-center border-2 border-slate-700 overflow-hidden shadow-lg shadow-blue-500/20 flex-shrink-0">
                     <span id="edit-std-initial">S</span>
-                    <img id="edit-std-avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" class="w-full h-full object-cover hidden">
+                    <img id="edit-std-avatar-img" src="" class="w-full h-full object-cover hidden">
                 </div>
                 <div>
                     <div class="flex items-center gap-2 flex-wrap">
@@ -3436,27 +3447,10 @@ main canvas { color: var(--text-1); }
         </form>
     </div>
 </div>
-<div id="admin-template-data" hidden data-fresh-login="{{ 'true' if fresh_login else 'false' }}">
-    {% for student in students %}
-    <span class="admin-student-data"
-          data-id="{{ student.id }}"
-          data-name="{{ student.name }}"
-          data-department-id="{{ student.department_id }}"
-          data-completed-credits="{{ student.completed_credits or 0.0 }}"
-          data-cgpa="{{ student.cgpa or 0.0 }}"
-          data-outstanding-balance="{{ student.outstanding_balance or 0 }}"
-          data-financial-cleared="{{ 'true' if student.financial_cleared else 'false' }}"
-          data-advising-status="{{ student.advising_status or 'not_started' }}"
-          data-profile-pic="{{ student.profile_pic or '' }}"
-          data-about="{{ student.about or '' }}"></span>
-    {% endfor %}
-</div>
+
+
 
 <script>
-    document.querySelectorAll('[data-progress-width]').forEach(element => {
-        element.style.width = `${element.dataset.progressWidth}%`;
-    });
-
     function validateSectionForm(form) {
         // Validate building name AB1, AB2, AB3, FUB, Main
         const room = form.room.value.trim();
@@ -3582,8 +3576,7 @@ main canvas { color: var(--text-1); }
         updateBreadcrumbs(tabId);
     }
 
-    const adminTemplateData = document.getElementById('admin-template-data');
-    const isFreshLogin = adminTemplateData.dataset.freshLogin === 'true';
+    const isFreshLogin = {{ 'true' if fresh_login else 'false' }};
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
 
@@ -3649,8 +3642,9 @@ main canvas { color: var(--text-1); }
 
     // ── CHART.JS ENROLLMENT DISTRIBUTION ─────────────────────
     const deptCounts = {};
-    const rawDepts = Array.from(document.querySelectorAll('.admin-student-data'), student => student.dataset.departmentId);
-    rawDepts.forEach(d => { if (d) deptCounts[d] = (deptCounts[d] || 0) + 1; });
+    {% for s in students %}
+        deptCounts["{{ s.department_id }}"] = (deptCounts["{{ s.department_id }}"] || 0) + 1;
+    {% endfor %}
 
     const labels = Object.keys(deptCounts);
     const dataValues = Object.values(deptCounts);
@@ -3715,18 +3709,22 @@ main canvas { color: var(--text-1); }
         'SOC': 130.0, 'INF': 130.0, 'PPHS': 130.0
     };
 
-    const studentData = Array.from(document.querySelectorAll('.admin-student-data'), student => ({
-        id: student.dataset.id,
-        name: student.dataset.name,
-        department_id: student.dataset.departmentId,
-        completed_credits: Number(student.dataset.completedCredits),
-        cgpa: Number(student.dataset.cgpa),
-        outstanding_balance: Number(student.dataset.outstandingBalance),
-        financial_cleared: student.dataset.financialCleared === 'true',
-        advising_status: student.dataset.advisingStatus,
-        profile_pic: student.dataset.profilePic,
-        about: student.dataset.about
-    }));
+    const studentData = [
+        {% for std in students %}
+        {
+            id: {{ std.id | tojson }},
+            name: {{ std.name | tojson }},
+            department_id: {{ std.department_id | tojson }},
+            completed_credits: {{ std.completed_credits or 0.0 }},
+            cgpa: {{ std.cgpa or 0.0 }},
+            outstanding_balance: {{ std.outstanding_balance or 0 }},
+            financial_cleared: {{ 'true' if std.financial_cleared else 'false' }},
+            advising_status: {{ (std.advising_status or 'not_started') | tojson }},
+            profile_pic: {{ (std.profile_pic or '') | tojson }},
+            about: {{ (std.about or '') | tojson }}
+        },
+        {% endfor %}
+    ];
 
     const gradeData = [];
 
@@ -3833,9 +3831,9 @@ main canvas { color: var(--text-1); }
         // Populate profile pic
         const picContainer = document.getElementById('modal-student-pic-container');
         if (picContainer) {
-            if (student.profile_pic && (student.profile_pic.startsWith('http://') || student.profile_pic.startsWith('https://') || student.profile_pic.startsWith('//'))) {
-                const picUrl = (student.profile_pic.startsWith('http://') || student.profile_pic.startsWith('https://') || student.profile_pic.startsWith('//')) ? student.profile_pic : '';
-                picContainer.innerHTML = picUrl ? `<img src="${picUrl}" class="w-full h-full object-cover">` : `<i data-lucide="user" class="w-10 h-10 text-slate-500"></i>`;
+            if (student.profile_pic && student.profile_pic !== '[Image]' && !student.profile_pic.includes('[')) {
+                const picUrl = (student.profile_pic.startsWith('http://') || student.profile_pic.startsWith('https://') || student.profile_pic.startsWith('//')) ? student.profile_pic : `/static/uploads/${student.profile_pic}`;
+                picContainer.innerHTML = `<img src="${picUrl}" class="w-full h-full object-cover">`;
             } else {
                 picContainer.innerHTML = `<i data-lucide="user" class="w-10 h-10 text-slate-500"></i>`;
             }
@@ -4203,10 +4201,10 @@ main canvas { color: var(--text-1); }
 
                     const initial = document.getElementById('edit-fac-initial');
                     const img = document.getElementById('edit-fac-avatar-img');
-                    if (data.profile_pic && (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//'))) {
-                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : '';
-                        if (img && picUrl) { img.src = picUrl; img.classList.remove('hidden'); }
-                        if (initial && picUrl) initial.classList.add('hidden');
+                    if (data.profile_pic && data.profile_pic !== '[Image]' && !data.profile_pic.includes('[')) {
+                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : `/static/uploads/${data.profile_pic}`;
+                        if (img) { img.src = picUrl; img.classList.remove('hidden'); }
+                        if (initial) initial.classList.add('hidden');
                     } else {
                         if (img) img.classList.add('hidden');
                         if (initial) { initial.textContent = (data.name ? data.name[0] : 'F').toUpperCase(); initial.classList.remove('hidden'); }
@@ -4268,10 +4266,10 @@ main canvas { color: var(--text-1); }
 
                     const initial = document.getElementById('edit-std-initial');
                     const img = document.getElementById('edit-std-avatar-img');
-                    if (data.profile_pic && (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//'))) {
-                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : '';
-                        if (img && picUrl) { img.src = picUrl; img.classList.remove('hidden'); }
-                        if (initial && picUrl) initial.classList.add('hidden');
+                    if (data.profile_pic && data.profile_pic !== '[Image]' && !data.profile_pic.includes('[')) {
+                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : `/static/uploads/${data.profile_pic}`;
+                        if (img) { img.src = picUrl; img.classList.remove('hidden'); }
+                        if (initial) initial.classList.add('hidden');
                     } else {
                         if (img) img.classList.add('hidden');
                         if (initial) { initial.textContent = (data.name ? data.name[0] : 'S').toUpperCase(); initial.classList.remove('hidden'); }

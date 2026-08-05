@@ -56,7 +56,7 @@
             <div class="relative group">
                 <div class="w-28 h-28 rounded-full bg-slate-100 dark:bg-slate-800/80 border-4 border-blue-500/50 overflow-hidden flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-200">
                     {% if student.profile_pic %}
-                    <img src="{{ student.profile_pic | profile_pic_url }}" alt="{{ student.name }} profile picture" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML='<span class=&quot;text-4xl font-black text-blue-600 dark:text-blue-300&quot;>{{ student.name[:1] | upper }}</span>';">
+                    <img src="{{ student.profile_pic | profile_pic_url }}" alt="{{ student.name }} profile picture" class="w-full h-full object-cover">
                     {% else %}
                     <span class="text-4xl font-black text-blue-600 dark:text-blue-300">{{ student.name[:1] | upper }}</span>
                     {% endif %}
@@ -1594,7 +1594,7 @@
             <div class="relative group">
                 <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border-2 border-blue-500/30 overflow-hidden flex items-center justify-center text-white font-black text-3xl shadow-xl flex-shrink-0">
                     {% if student.profile_pic %}
-                    <img src="{{ student.profile_pic | profile_pic_url }}" alt="{{ student.name }} profile picture" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML='{{ student.name[:1] | upper }}';">
+                    <img src="{{ student.profile_pic | profile_pic_url }}" alt="{{ student.name }} profile picture" class="w-full h-full object-cover">
                     {% else %}
                     {{ student.name[:1] | upper }}
                     {% endif %}
@@ -4086,11 +4086,9 @@
     }
 
     // Live Real-Time Advising Polling (Every 3s)
-    let liveAdvisingRequestInFlight = false;
     setInterval(() => {
         const advisingTab = document.getElementById('tab-advising');
-        if (advisingTab && !advisingTab.classList.contains('hidden') && !liveAdvisingRequestInFlight) {
-            liveAdvisingRequestInFlight = true;
+        if (advisingTab && !advisingTab.classList.contains('hidden')) {
             fetch('/api/live-advising-status')
             .then(res => res.json())
             .then(data => {
@@ -4108,8 +4106,7 @@
                     });
                 }
             })
-            .catch(() => {})
-            .finally(() => { liveAdvisingRequestInFlight = false; });
+            .catch(() => {});
         }
     }, 3000);
 

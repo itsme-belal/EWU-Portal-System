@@ -2,8 +2,6 @@ import os
 import json
 import random
 import threading
-import tempfile
-import time
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
@@ -17,7 +15,7 @@ def get_now():
 # Load environment variables from .env file
 load_dotenv()
 
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session, g
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from sqlalchemy import inspect, text, event
@@ -48,11 +46,6 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.close()
 
-@event.listens_for(Engine, "before_cursor_execute")
-def count_admin_dashboard_queries(conn, cursor, statement, parameters, context, executemany):
-    if hasattr(g, 'admin_dashboard_query_count'):
-        g.admin_dashboard_query_count += 1
-
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'ewu_secret_key_123')
 
@@ -82,20 +75,6 @@ else:
     }
 
 db.init_app(app)
-
-@app.before_request
-def start_admin_dashboard_measurement():
-    if request.path == '/admin' and request.args.get('tab') == 'dashboard':
-        g.admin_dashboard_start = time.perf_counter()
-        g.admin_dashboard_query_count = 0
-        print('[ADMIN DASHBOARD] Request start')
-
-@app.after_request
-def finish_admin_dashboard_measurement(response):
-    if hasattr(g, 'admin_dashboard_start'):
-        elapsed = (time.perf_counter() - g.admin_dashboard_start) * 1000
-        print(f'[ADMIN DASHBOARD] Response returned; total execution time={elapsed:.2f} ms; SQL queries={g.admin_dashboard_query_count}')
-    return response
 
 # Flask-Mail configuration (Set MAIL_USERNAME & MAIL_PASSWORD in environment or .env)
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
@@ -401,83 +380,17 @@ def ensure_runtime_schema():
             'section_offerings': {'completed_credit_requirement': 'INTEGER DEFAULT 0'},
         }
 
-        # Ensure default admin user & essential settings exist if database is empty
-        try:
-            from werkzeug.security import generate_password_hash
-            from models import User, Admin, SystemSetting, Department
-
-            if User.query.filter_by(role='admin').count() == 0:
-                default_pass = os.environ.get('DEFAULT_ADMIN_PASSWORD', 'admin123')
-                pass_hash = generate_password_hash(default_pass)
-
-                u1 = User.query.get('admin_u1')
-                if not u1:
-                    u1 = User(
-                        id='admin_u1',
-                        email='itsmebelalhossain@gmail.com',
-                        password_hash=pass_hash,
-                        role='admin',
-                        is_active=True,
-                        is_activated=True
-                    )
-                    db.session.add(u1)
-
-                u2 = User.query.get('A001')
-                if not u2:
-                    u2 = User(
-                        id='A001',
-                        email='admin@ewubd.edu',
-                        password_hash=pass_hash,
-                        role='admin',
-                        is_active=True,
-                        is_activated=True
-                    )
-                    db.session.add(u2)
-
-                db.session.flush()
-
-                a1 = Admin.query.get('A001')
-                if not a1:
-                    a1 = Admin(id='A001', user_id='admin_u1', name='Registrar')
-                    db.session.add(a1)
-
-                db.session.commit()
-                print("Default admin account (A001 / admin123) initialized successfully.")
-
-            # Seed default system settings if missing
-            default_settings = [
-                ('current_semester', 'Spring2026'),
-                ('next_semester', 'Summer2026'),
-                ('current_semester_start', '2026-01-05'),
-                ('current_semester_end', '2026-04-20'),
-                ('next_semester_start', '2026-05-10'),
-                ('next_semester_end', '2026-08-25'),
-                ('pre_advising_active', 'true'),
-                ('final_advising_active', 'true'),
-                ('request_phase_active', 'true')
-            ]
-            for key, val in default_settings:
-                if not SystemSetting.query.get(key):
-                    db.session.add(SystemSetting(key=key, value=val))
-            db.session.commit()
-
-            # Seed essential departments if missing
-            dept_list = [
-                ('ICE', 'ICE'), ('CSE', 'CSE'), ('EEE', 'EEE'), ('PHR', 'Pharmacy'),
-                ('GEB', 'GEB'), ('CEN', 'Civil Engineering'), ('MAT', 'Mathematics'),
-                ('DSA', 'Data Science'), ('BBA', 'BBA'), ('ECO', 'Economics'),
-                ('ENG', 'English'), ('SOC', 'Sociology'), ('INF', 'Information Studies'),
-                ('LAW', 'Law'), ('PPHS', 'Population and Public Health')
-            ]
-            for did, dname in dept_list:
-                if not Department.query.get(did):
-                    db.session.add(Department(id=did, name=dname))
-            db.session.commit()
-
-        except Exception as seed_err:
-            db.session.rollback()
-            print("Note: ensure_runtime_schema default seeding warning:", seed_err)
-
+        for table_name, columns in profile_columns.items():
+            if table_name not in tables:
+                continue
+            existing = {column['name'] for column in inspector.get_columns(table_name)}
+            for column_name, column_type in columns.items():
+                if column_name not in existing:
+                    try:
+                        db.session.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
     except Exception as e:
         print("Note: ensure_runtime_schema skipped or encountered warning:", e)
         db.session.rollback()
@@ -668,7 +581,7 @@ def save_profile_pic_upload(file_storage, owner_prefix, required=False):
             if secure_url:
                 return secure_url
         except Exception as e:
-            raise ValueError(f"Cloudinary upload failed: {e}") from e
+            print(f"[CLOUDINARY UPLOAD WARNING - Falling back to local storage] {e}")
 
     # Fallback to local upload directory if Cloudinary is not used or fails
     safe_stem = stem or 'photo'
@@ -1135,12 +1048,6 @@ def profile_pic_url_filter(path):
         return ''
     if path.startswith('http://') or path.startswith('https://') or path.startswith('//'):
         return path
-    cloud_name = (os.environ.get('CLOUDINARY_CLOUD_NAME') or '').strip()
-    cloudinary_url = (os.environ.get('CLOUDINARY_URL') or '').strip()
-    api_key = (os.environ.get('CLOUDINARY_API_KEY') or '').strip()
-    api_secret = (os.environ.get('CLOUDINARY_API_SECRET') or '').strip()
-    if HAS_CLOUDINARY and (cloudinary_url or (cloud_name and api_key and api_secret)):
-        return ''
     return f"/static/uploads/{path}"
 
 # ROUTES
@@ -1182,10 +1089,6 @@ def do_login():
         faculty = Faculty.query.filter((Faculty.id == identifier) | (Faculty.id == id_prefix)).first()
         if faculty:
             user = User.query.get(faculty.user_id) or User.query.get(faculty.id)
-    if not user:
-        admin_rec = Admin.query.filter((Admin.id == identifier) | (Admin.id == id_prefix)).first()
-        if admin_rec:
-            user = User.query.get(admin_rec.user_id) or User.query.get(admin_rec.id)
 
     if user:
         if not user.is_active:
@@ -5569,8 +5472,7 @@ def admin_edit_faculty(fac_id):
             if new_pic:
                 fac.profile_pic = new_pic
         except Exception as e:
-            flash(f"Faculty profile image upload failed: {e}", 'error')
-            return redirect(url_for('admin_dashboard') + '?tab=faculty')
+            print(f"[EDIT FACULTY PIC ERROR] {e}")
             
     db.session.commit()
     flash(f"Faculty profile for '{fac.name}' updated successfully by Admin.", 'success')
@@ -5663,8 +5565,7 @@ def admin_edit_student(std_id):
             if new_pic:
                 std.profile_pic = new_pic
         except Exception as e:
-            flash(f"Student profile image upload failed: {e}", 'error')
-            return redirect(url_for('admin_dashboard') + '?tab=students')
+            print(f"[EDIT STUDENT PIC ERROR] {e}")
             
     db.session.commit()
     flash(f"Student profile for '{std.name}' updated successfully by Admin.", 'success')
@@ -6828,477 +6729,6 @@ def import_excel_faculty(file_source):
 
     return imported_count
 
-# ── JSON IMPORT FUNCTIONS ────────────────────────────────────────────────────
-# These mirror the Excel import functions but read from JSON files in Data/.
-# Used by seed.py for fast, dependency-free database seeding.
-
-def import_json_faculty(json_path):
-    """Import faculty records from a JSON file (same schema as Faculty_Records.json)."""
-    import json as _json
-    import logging
-
-    imported_count = 0
-    try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = _json.load(f)
-
-        # The JSON may have any top-level key; grab the first list value
-        rows = None
-        for v in data.values():
-            if isinstance(v, list):
-                rows = v
-                break
-        if not rows:
-            return 0
-
-        batch_counter = 0
-        for row in rows:
-            fac_id   = str(row.get('Faculty Initial', '') or '').strip()
-            name     = str(row.get('Name', '') or '').strip()
-            email    = str(row.get('Email', '') or '').strip()
-
-            if not fac_id or not name or not email:
-                continue
-
-            dept             = str(row.get('Department', 'CSE') or 'CSE').strip()
-            post             = str(row.get('Post', '') or '').strip() or None
-            present_address  = str(row.get('Present Address', '') or '').strip() or None
-            permanent_address = str(row.get('Permanent Address', '') or '').strip() or None
-            prof_pic         = str(row.get('Profile Pic', '') or '').strip() or None
-            if prof_pic and prof_pic.lower() in ('none', '[image]', ''):
-                prof_pic = None
-
-            user = User.query.filter_by(email=email).first() or User.query.get('usr-' + fac_id)
-            if not user:
-                user = User(
-                    id='usr-' + fac_id,
-                    email=email,
-                    password_hash=generate_password_hash('password123'),
-                    role='faculty',
-                    is_active=True,
-                    is_activated=False
-                )
-                db.session.add(user)
-                db.session.flush()
-            else:
-                user.email = email
-
-            faculty = Faculty.query.get(fac_id)
-            if not faculty:
-                faculty = Faculty(
-                    id=fac_id,
-                    user_id=user.id,
-                    name=name,
-                    department_id=dept,
-                    post=post,
-                    present_address=present_address,
-                    permanent_address=permanent_address,
-                    profile_pic=prof_pic,
-                    about=''
-                )
-                db.session.add(faculty)
-            else:
-                faculty.name = name
-                faculty.department_id = dept
-                faculty.post = post
-                faculty.present_address = present_address
-                faculty.permanent_address = permanent_address
-                if prof_pic:
-                    faculty.profile_pic = prof_pic
-
-            imported_count += 1
-            batch_counter += 1
-            if batch_counter >= 100:
-                db.session.commit()
-                db.session.expunge_all()
-                batch_counter = 0
-
-        if batch_counter > 0:
-            db.session.commit()
-            db.session.expunge_all()
-
-    except Exception as e:
-        db.session.rollback()
-        import logging
-        logging.error(f"Error in import_json_faculty: {e}")
-        raise e
-
-    return imported_count
-
-
-def import_json_students(json_path):
-    """Import student records from a JSON file (same schema as Student_Records.json)."""
-    import json as _json
-    import re
-    import logging
-
-    imported_count = 0
-
-    def cv(val):
-        if val is None: return None
-        s = str(val).strip()
-        return None if s.lower() in ('none', '') else s
-
-    def cf(val, default=0.0):
-        v = cv(val)
-        if v is None: return default
-        try: return float(v)
-        except ValueError: return default
-
-    dept_code_map = {'60': 'CSE', '50': 'ICE', '80': 'EEE', '40': 'ENG'}
-
-    try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = _json.load(f)
-
-        rows = None
-        for v in data.values():
-            if isinstance(v, list):
-                rows = v
-                break
-        if not rows:
-            return 0
-
-        # Build caches
-        users_by_email = {u.email.lower(): u for u in User.query.filter(User.email.isnot(None)).all()}
-        users_by_id    = {u.id: u for u in User.query.all()}
-        fac_users_cache = dict(users_by_email)
-        fac_users_cache.update({'id:' + u.id: u for u in users_by_id.values()})
-        fac_recs_cache = {f.id: f for f in Faculty.query.all()}
-        students_by_id = {s.id: s for s in Student.query.all()}
-        grades_by_id   = {g.id: g for g in Grade.query.all()}
-        sections_cache = {s.id: s for s in SectionOffering.query.all()}
-        sections_by_code_sem = {(s.course_code.upper(), s.semester_id): s for s in sections_cache.values()}
-        regs_cache     = {r.id: r for r in Registration.query.all()}
-        pac_cache      = {p.code: p for p in PreAdvisingCourse.query.all()}
-
-        batch_counter = 0
-        for row in rows:
-            std_id = cv(row.get('Student ID'))
-            name   = cv(row.get('Name'))
-            email  = cv(row.get('Student Email'))
-            if not std_id or not name or not email:
-                continue
-
-            phone  = cv(row.get('Phone Number'))
-            dept   = cv(row.get('Department')) or 'CSE'
-
-            id_parts = std_id.split('-')
-            if len(id_parts) == 4:
-                dept = dept_code_map.get(id_parts[2], dept)
-
-            credits       = cf(row.get('Completed Credit'))
-            rem_credits   = cf(row.get('Remaining Credit'), 140.0)
-            cgpa          = cf(row.get('CGPA'))
-            present_addr  = cv(row.get('Present Address'))
-            perm_addr     = cv(row.get('Permanent Address'))
-            comp_cg       = cv(row.get('Completed Courses and Grades'))
-            curr_courses  = cv(row.get('Current Courses'))
-            curr_credit   = cf(row.get('Current Course Credit'))
-            next_courses  = cv(row.get('Next Semester Courses'))
-            next_credit   = cf(row.get('Next Semester Course Credit'))
-            prof_pic      = cv(row.get('Profile Picture'))
-            if prof_pic and prof_pic.lower() in ('[image]', 'none'):
-                prof_pic = None
-            sched_str     = cv(row.get('Current Course Schedule & Routine'))
-            fac_initial   = cv(row.get('Faculty Initial'))
-            fac_email     = cv(row.get('faculty Email'))
-            curr_drop     = str(row.get('Current Semester Drop', '') or '').strip().lower() == 'yes'
-            next_drop_raw = str(row.get('Next Semester Drop ', '') or row.get('Next Semester Drop', '') or '').strip().lower()
-            next_drop     = (next_drop_raw == 'yes')
-
-            user = users_by_email.get(email.lower()) or users_by_id.get('usr-' + std_id)
-            if not user:
-                user = User(
-                    id='usr-' + std_id, email=email,
-                    password_hash=generate_password_hash('password123'),
-                    role='student', is_active=True, is_activated=False
-                )
-                db.session.add(user)
-                db.session.flush()
-                users_by_email[email.lower()] = user
-                users_by_id[user.id] = user
-            else:
-                user.email = email
-
-            student = students_by_id.get(std_id)
-            if not student:
-                student = Student(
-                    id=std_id, user_id=user.id, name=name, department_id=dept,
-                    completed_credits=credits, remaining_credits=rem_credits, cgpa=cgpa,
-                    phone_number=phone, present_address=present_addr, permanent_address=perm_addr,
-                    completed_courses_and_grades=comp_cg, current_courses=curr_courses,
-                    current_course_credit=curr_credit, next_semester_courses=next_courses,
-                    next_semester_course_credit=next_credit, profile_pic=prof_pic,
-                    outstanding_balance=0, financial_cleared=True, about=''
-                )
-                db.session.add(student)
-                db.session.flush()
-                students_by_id[std_id] = student
-            else:
-                student.name = name; student.department_id = dept
-                student.completed_credits = credits; student.remaining_credits = rem_credits
-                student.cgpa = cgpa; student.phone_number = phone
-                student.present_address = present_addr; student.permanent_address = perm_addr
-                student.completed_courses_and_grades = comp_cg
-                student.current_courses = curr_courses; student.current_course_credit = curr_credit
-                student.next_semester_courses = next_courses
-                student.next_semester_course_credit = next_credit
-                if prof_pic: student.profile_pic = prof_pic
-
-            assign_advisor_for_student(student, fac_users_cache, fac_recs_cache)
-
-            if comp_cg and comp_cg.lower() != 'none':
-                for part in re.split(r'[,;\n\r]+', comp_cg):
-                    part = part.strip()
-                    m = re.search(r'([A-Za-z0-9\s]+)[:\s]+([A-Za-z+\-]+)', part)
-                    if m:
-                        ccode  = m.group(1).strip().replace(' ', '')
-                        gletter = m.group(2).strip().upper()
-                        pts = {'A+':4.0,'A':4.0,'A-':3.7,'B+':3.3,'B':3.0,'B-':2.7,
-                               'C+':2.3,'C':2.0,'C-':1.7,'D+':1.3,'D':1.0,'F':0.0}
-                        gid = f"GRD-{std_id}-{ccode}"
-                        if gid not in grades_by_id:
-                            g = Grade(id=gid, student_id=std_id, section_id=ccode,
-                                      grade_letter=gletter, grade_point=pts.get(gletter, 0.0),
-                                      semester_id='completed')
-                            db.session.add(g); grades_by_id[gid] = g
-                        else:
-                            grades_by_id[gid].grade_letter = gletter
-                            grades_by_id[gid].grade_point = pts.get(gletter, 0.0)
-
-            curr_sem = get_current_semester()
-            if curr_courses and curr_courses.lower() != 'none':
-                for cc in re.split(r'[,;\s]+', curr_courses):
-                    cc = cc.strip()
-                    if not cc: continue
-                    sec = sections_by_code_sem.get((cc.upper(), curr_sem))
-                    if sec:
-                        rid = f"REG-{std_id}-{sec.id}"
-                        if rid not in regs_cache:
-                            nr = Registration(id=rid, student_id=std_id, section_id=sec.id,
-                                              semester_id=curr_sem, status='registered')
-                            db.session.add(nr)
-                            sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
-                            regs_cache[rid] = nr
-
-            if sched_str:
-                parse_and_apply_schedule(std_id, sched_str, fac_initial=fac_initial,
-                    fac_email=fac_email, curr_sem_drop=curr_drop, student_dept=dept,
-                    sections_cache=sections_cache, fac_users_cache=fac_users_cache,
-                    fac_recs_cache=fac_recs_cache, regs_cache=regs_cache, pac_cache=pac_cache)
-
-            if next_courses and next_courses.lower() != 'none':
-                next_sem = get_next_semester()
-                for cc in re.split(r'[,;\s]+', next_courses):
-                    cc = cc.strip()
-                    if not cc: continue
-                    sec = sections_by_code_sem.get((cc.upper(), next_sem))
-                    if sec:
-                        rid = f"REG-{std_id}-{sec.id}"
-                        status_next = 'dropped' if next_drop else 'registered'
-                        if rid not in regs_cache:
-                            nr = Registration(id=rid, student_id=std_id, section_id=sec.id,
-                                              semester_id=next_sem, status=status_next)
-                            db.session.add(nr)
-                            if status_next == 'registered':
-                                sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
-                            regs_cache[rid] = nr
-                        else:
-                            er = regs_cache[rid]
-                            if er.status != status_next:
-                                if er.status == 'registered': sec.enrolled_count = max(0, sec.enrolled_count - 1)
-                                else: sec.enrolled_count = min(sec.capacity, sec.enrolled_count + 1)
-                                er.status = status_next
-
-            imported_count += 1
-            batch_counter  += 1
-            if batch_counter >= 100:
-                db.session.commit()
-                batch_counter = 0
-
-        if batch_counter > 0:
-            db.session.commit()
-
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"Error in import_json_students: {e}")
-        raise e
-
-    return imported_count
-
-
-def import_json_schedule(json_path):
-    """Import schedule records from a JSON file (same schema as *_Schedule*.json)."""
-    import json as _json
-    import logging
-
-    imported_count = 0
-    try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = _json.load(f)
-
-        semester_id = get_next_semester()
-
-        # Iterate every sheet-level list in the JSON
-        for sheet_rows in data.values():
-            if not isinstance(sheet_rows, list):
-                continue
-
-            row_mapping  = {}
-            linked_pairs = []
-            batch_counter = 0
-
-            for row in sheet_rows:
-                if not isinstance(row, dict):
-                    continue
-
-                row_id   = row.get('ID')
-                ccode_raw = row.get('Course Code')
-                ccode    = str(ccode_raw or '').strip()
-                if not ccode or ccode.lower() == 'none':
-                    continue
-
-                section_val = row.get('Section')
-                if section_val is None:
-                    continue
-                try:
-                    snum = f"{int(section_val):02d}"
-                except (ValueError, TypeError):
-                    snum = str(section_val).strip()
-
-                sec_id = f"{ccode}-{snum}-{semester_id}"
-                if row_id is not None:
-                    row_mapping[row_id] = sec_id
-
-                linked_val = row.get('Linked Course ID')
-                if row_id is not None and linked_val is not None and str(linked_val).strip().lower() != 'none':
-                    try:
-                        linked_pairs.append((row_id, int(linked_val)))
-                    except ValueError:
-                        pass
-
-                credits_val = 3.0
-                try: credits_val = float(row.get('Credit', 3.0) or 3.0)
-                except (ValueError, TypeError): pass
-
-                dept_str = str(row.get('Dedicated Department', '') or '').strip()
-                depts    = [d.strip() for d in dept_str.split(',') if d.strip()]
-                first_dept = depts[0] if depts else 'CSE'
-
-                prereq_str = str(row.get('Pre-Requisite', '') or '').strip()
-                prereqs    = [p.strip() for p in prereq_str.split(',')
-                              if p.strip() and p.strip().lower() != 'none']
-
-                comp_cred_req = 0
-                try: comp_cred_req = int(row.get('Completed Credit Requirement', 0) or 0)
-                except (ValueError, TypeError): pass
-
-                fac_val = str(row.get('Faculty', '') or row.get('Faculty ID', '') or '').strip()
-                fac_id  = None
-                if fac_val and fac_val.lower() != 'none':
-                    fac = Faculty.query.get(fac_val) or Faculty.query.filter(Faculty.id.ilike(fac_val)).first()
-                    if fac:
-                        fac_id = fac.id
-
-                sched = str(row.get('Date & Time', 'TBA') or 'TBA').strip()
-                room  = str(row.get('Room', 'TBA') or 'TBA').strip()
-
-                cap_raw  = str(row.get('Seat Capacity', '30') or '30').strip()
-                try:
-                    capacity = int(cap_raw.split('/')[-1]) if '/' in cap_raw else int(cap_raw)
-                except (ValueError, TypeError):
-                    capacity = 30
-
-                is_lab = 'Lab' in ccode
-
-                course = PreAdvisingCourse.query.get(ccode)
-                if not course:
-                    course = PreAdvisingCourse(
-                        id=ccode, code=ccode, title=ccode,
-                        credits=credits_val, department_id=first_dept,
-                        completed_credit_requirement=comp_cred_req
-                    )
-                    course.prerequisites = prereqs
-                    db.session.add(course)
-                else:
-                    course.credits = credits_val; course.department_id = first_dept
-                    course.prerequisites = prereqs
-                    course.completed_credit_requirement = comp_cred_req
-
-                sec = SectionOffering.query.get(sec_id)
-                if not sec:
-                    sec = SectionOffering(
-                        id=sec_id, course_code=ccode, course_title=ccode,
-                        section_number=snum, credits=credits_val, schedule=sched,
-                        room=room, capacity=capacity, is_lab=is_lab,
-                        semester_id=semester_id,
-                        completed_credit_requirement=comp_cred_req
-                    )
-                    sec.dedicated_departments = depts
-                    sec.prerequisites = prereqs
-                    db.session.add(sec)
-                else:
-                    sec.credits = credits_val; sec.schedule = sched; sec.room = room
-                    sec.capacity = capacity; sec.dedicated_departments = depts
-                    sec.prerequisites = prereqs
-                    sec.completed_credit_requirement = comp_cred_req
-
-                if fac_id:
-                    conflict = False
-                    for a in SectionOffering.query.filter_by(faculty_id=fac_id, semester_id=semester_id).all():
-                        if a.id != sec_id and schedules_conflict(a.schedule, sched):
-                            conflict = True; break
-                    if not conflict:
-                        sec.faculty_id = fac_id
-
-                imported_count += 1
-                batch_counter  += 1
-                if batch_counter >= 100:
-                    db.session.commit()
-                    db.session.expunge_all()
-                    batch_counter = 0
-
-            if batch_counter > 0:
-                db.session.commit()
-                db.session.expunge_all()
-                batch_counter = 0
-
-            if linked_pairs:
-                for r_id, l_r_id in linked_pairs:
-                    s  = row_mapping.get(r_id)
-                    ls = row_mapping.get(l_r_id)
-                    if s and ls:
-                        sec = SectionOffering.query.get(s)
-                        if sec:
-                            sec.linked_section_id = ls
-                            batch_counter += 1
-                            if batch_counter >= 100:
-                                db.session.commit()
-                                db.session.expunge_all()
-                                batch_counter = 0
-                if batch_counter > 0:
-                    db.session.commit()
-                    db.session.expunge_all()
-
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"Error in import_json_schedule: {e}")
-        raise e
-
-    return imported_count
-
-# ── END JSON IMPORT FUNCTIONS ─────────────────────────────────────────────────
-
-def import_uploaded_json(file_storage, importer):
-    with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as temp_file:
-        file_storage.save(temp_file)
-        temp_path = temp_file.name
-    try:
-        return importer(temp_path)
-    finally:
-        os.unlink(temp_path)
-
 @app.route('/admin/upload-students', methods=['POST'])
 @login_required
 def upload_students():
@@ -7310,12 +6740,12 @@ def upload_students():
         flash('No file selected.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=students')
         
-    if not file.filename.lower().endswith('.json'):
-        flash('Invalid file format. Only JSON files (.json) are allowed.', 'error')
+    if not file.filename.endswith('.xlsx'):
+        flash('Invalid file format. Only Excel files (.xlsx) are allowed.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=students')
         
     try:
-        count = import_uploaded_json(file, import_json_students)
+        count = import_excel_students(file)
         flash(f'{count} students imported/updated successfully!', 'success')
     except Exception as e:
         flash(f'Error importing students: {str(e)}', 'error')
@@ -7333,12 +6763,12 @@ def upload_faculty():
         flash('No file selected.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=faculty')
         
-    if not file.filename.lower().endswith('.json'):
-        flash('Invalid file format. Only JSON files (.json) are allowed.', 'error')
+    if not file.filename.endswith('.xlsx'):
+        flash('Invalid file format. Only Excel files (.xlsx) are allowed.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=faculty')
         
     try:
-        count = import_uploaded_json(file, import_json_faculty)
+        count = import_excel_faculty(file)
         flash(f'{count} faculty imported/updated successfully!', 'success')
     except Exception as e:
         flash(f'Error importing faculty: {str(e)}', 'error')
@@ -7356,12 +6786,12 @@ def upload_schedule():
         flash('No file selected.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=course-management')
         
-    if not file.filename.lower().endswith('.json'):
-        flash('Invalid file format. Only JSON files (.json) are allowed.', 'error')
+    if not file.filename.endswith('.xlsx'):
+        flash('Invalid file format. Only Excel files (.xlsx) are allowed.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=course-management')
         
     try:
-        import_uploaded_json(file, import_json_schedule)
+        import_excel_schedule(file)
         flash('Course schedule imported successfully!', 'success')
     except Exception as e:
         flash(f'Error importing schedule: {str(e)}', 'error')
@@ -7386,38 +6816,35 @@ def upload_multi_excel():
         if not file or not file.filename.endswith('.xlsx'):
             continue
 
-        fname_lower = file.filename.lower()
         tmp_path, is_temp = get_temp_excel_file(file)
         wb_head = None
         try:
             wb_head = openpyxl.load_workbook(tmp_path, read_only=True, data_only=True)
             sheet = wb_head.active
             header_row = next(sheet.iter_rows(max_row=1, values_only=True), None)
-            headers_str = " ".join([str(val or '').lower() for val in header_row]) if header_row else ""
+            headers = [str(val or '').strip() for val in header_row] if header_row else []
             wb_head.close()
             wb_head = None
-
-            if 'faculty' in fname_lower or ('faculty' in headers_str and 'student' not in headers_str) or 'post' in headers_str:
+            
+            if any('Faculty Initial' in h for h in headers) and any('Email' in h for h in headers) and not any('Student ID' in h for h in headers):
                 c = import_excel_faculty(tmp_path)
-                imported_summary.append(f"Faculty ({file.filename}): {c} records imported")
-            elif 'student' in fname_lower or 'student id' in headers_str or 'student email' in headers_str:
+                imported_summary.append(f"Faculty File ({file.filename}): {c} records")
+            elif any('Student ID' in h for h in headers) or any('Student Email' in h for h in headers):
                 c = import_excel_students(tmp_path)
-                imported_summary.append(f"Students ({file.filename}): {c} records imported")
-            elif 'schedule' in fname_lower or 'course code' in headers_str or 'date & time' in headers_str or 'section' in headers_str:
+                imported_summary.append(f"Student File ({file.filename}): {c} records")
+            elif any('Course Code' in h for h in headers) or any('Date & Time' in h for h in headers) or any('Section' in h for h in headers):
                 c = import_excel_schedule(tmp_path)
-                imported_summary.append(f"Schedule ({file.filename}): {c} sections imported")
+                imported_summary.append(f"Schedule File ({file.filename}): {c} schedule sections imported")
             else:
-                imported_summary.append(f"Skipped ({file.filename}): Unrecognized format")
+                imported_summary.append(f"Skipped ({file.filename}): Unrecognized Excel format")
         except Exception as e:
             db.session.rollback()
             imported_summary.append(f"Failed ({file.filename}): {str(e)}")
         finally:
             cleanup_excel_resource(wb_head, tmp_path, is_temp)
-            import gc
-            gc.collect()
-
+            
     if imported_summary:
-        flash("Batch Import Results: " + " | ".join(imported_summary), "success")
+        flash("Batch Excel Results: " + " | ".join(imported_summary), "info")
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/edit-section/<sec_id>', methods=['POST'])
