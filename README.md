@@ -149,7 +149,7 @@ Furthermore, the portal integrates real-time student-faculty communication chann
 
 ## 🎬 Demo
 
-- **Live Hosted Application**: [https://ewu-portal-system.vercel.app](https://ewu-portal-system.vercel.app) *(Example Link)*
+- **Live Hosted Application**: [https://ewu-portal-system.vercel.app](https://ewu-portal.onrender.app) *(Example Link)*
 - **Full Video Demonstration**: [Watch YouTube Walkthrough](https://youtube.com) *(Example Link)*
 - **Demo Credentials** (Password for all accounts: `password123`):
 
