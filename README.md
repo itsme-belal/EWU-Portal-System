@@ -262,8 +262,8 @@ Beyond registration, the portal consolidates major academic and administrative s
 ## 🎬 Demo
 
 - **Live Hosted Application**: [https://ewubd-portal.onrender.com](https://ewubd-portal.onrender.app)
-- **Demo Video **: [Watch YouTube Walkthrough](https://youtu.be/ralzK9LL7T8?si=g82UFJZWQRV1C7Md) 
-- **Full Video Demonstration**: [Watch YouTube Walkthrough]((https://youtu.be/1BW0NEam_HI?si=1eF-7Gl6EUTy8K4P)) 
+- **Demo Video **: [Watch Demo Video](https://youtu.be/ralzK9LL7T8?si=g82UFJZWQRV1C7Md) 
+- **Full Video Demonstration**: [Watch Full Demonstration Video](https://youtu.be/1BW0NEam_HI?si=1eF-7Gl6EUTy8K4P) 
 - **Demo Credentials** :
 
 | Role | Email | User ID |
