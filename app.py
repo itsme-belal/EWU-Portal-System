@@ -6886,35 +6886,38 @@ def upload_multi_excel():
         if not file or not file.filename.endswith('.xlsx'):
             continue
 
+        fname_lower = file.filename.lower()
         tmp_path, is_temp = get_temp_excel_file(file)
         wb_head = None
         try:
             wb_head = openpyxl.load_workbook(tmp_path, read_only=True, data_only=True)
             sheet = wb_head.active
             header_row = next(sheet.iter_rows(max_row=1, values_only=True), None)
-            headers = [str(val or '').strip() for val in header_row] if header_row else []
+            headers_str = " ".join([str(val or '').lower() for val in header_row]) if header_row else ""
             wb_head.close()
             wb_head = None
-            
-            if any('Faculty Initial' in h for h in headers) and any('Email' in h for h in headers) and not any('Student ID' in h for h in headers):
+
+            if 'faculty' in fname_lower or ('faculty' in headers_str and 'student' not in headers_str) or 'post' in headers_str:
                 c = import_excel_faculty(tmp_path)
-                imported_summary.append(f"Faculty File ({file.filename}): {c} records")
-            elif any('Student ID' in h for h in headers) or any('Student Email' in h for h in headers):
+                imported_summary.append(f"Faculty ({file.filename}): {c} records imported")
+            elif 'student' in fname_lower or 'student id' in headers_str or 'student email' in headers_str:
                 c = import_excel_students(tmp_path)
-                imported_summary.append(f"Student File ({file.filename}): {c} records")
-            elif any('Course Code' in h for h in headers) or any('Date & Time' in h for h in headers) or any('Section' in h for h in headers):
+                imported_summary.append(f"Students ({file.filename}): {c} records imported")
+            elif 'schedule' in fname_lower or 'course code' in headers_str or 'date & time' in headers_str or 'section' in headers_str:
                 c = import_excel_schedule(tmp_path)
-                imported_summary.append(f"Schedule File ({file.filename}): {c} schedule sections imported")
+                imported_summary.append(f"Schedule ({file.filename}): {c} sections imported")
             else:
-                imported_summary.append(f"Skipped ({file.filename}): Unrecognized Excel format")
+                imported_summary.append(f"Skipped ({file.filename}): Unrecognized format")
         except Exception as e:
             db.session.rollback()
             imported_summary.append(f"Failed ({file.filename}): {str(e)}")
         finally:
             cleanup_excel_resource(wb_head, tmp_path, is_temp)
-            
+            import gc
+            gc.collect()
+
     if imported_summary:
-        flash("Batch Excel Results: " + " | ".join(imported_summary), "info")
+        flash("Batch Import Results: " + " | ".join(imported_summary), "success")
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/edit-section/<sec_id>', methods=['POST'])
