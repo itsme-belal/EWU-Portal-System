@@ -433,27 +433,7 @@ main canvas { color: var(--text-1); }
     </div>
   </div>
 
-  <!-- ── BATCH MULTI-EXCEL UPLOAD CARD ─────────────────────────────────── -->
-  <div class="glass-card p-5 space-y-3 border border-emerald-500/20 bg-emerald-950/10 dark:bg-emerald-950/20">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-emerald-500/15 pb-3">
-      <div>
-        <h3 class="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-2">
-          <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i>
-          Batch Multi-Excel Ingestion (Students, Faculty & Schedules)
-        </h3>
-        <p class="text-[0.7rem] text-slate-500 dark:text-slate-400 mt-0.5">
-          Select multiple Excel files at once (e.g. <code>Student_Records.xlsx</code>, <code>Faculty_Records.xlsx</code>, <code>Non_Departmental_Schedule.xlsx</code>). The system automatically detects file schemas and imports all records in one batch.
-        </p>
-      </div>
-      <span class="px-2.5 py-1 text-[0.62rem] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Auto-Detect Schemas</span>
-    </div>
-    <form action="/admin/upload-multi-excel" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row items-center gap-3">
-      <input type="file" name="excel_files" multiple accept=".xlsx" required class="w-full text-xs text-slate-600 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 file:cursor-pointer">
-      <button type="submit" class="w-full sm:w-auto text-xs px-5 py-2 font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 flex-shrink-0 shadow font-semibold">
-        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload & Import Batch
-      </button>
-    </form>
-  </div>
+
 
   <!-- ── MAIN GRID: Chart + System Status ──────────────────── -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
