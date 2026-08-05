@@ -195,13 +195,13 @@ The application follows a classic **Model-View-Controller (MVC)** design pattern
 
 ```mermaid
 graph TD
-    subgraph Client Layer
+    subgraph Client_Layer
         A[Student Browser]
         B[Faculty Advisor Browser]
         C[Admin Browser]
     end
 
-    subgraph Application Layer (Flask Backend)
+    subgraph Application_Layer (Flask Backend)
         D[Authentication & Session Manager]
         E[Role-Based Authorization Middleware]
         F[Advising Registration Engine]
@@ -209,7 +209,7 @@ graph TD
         H[Admin & Catalog Control Unit]
     end
 
-    subgraph Data & Storage Layer
+    subgraph Data_Storage_Layer
         I[(SQLAlchemy ORM)]
         J[(SQLite / PostgreSQL Database)]
         K[Cloudinary Storage]
