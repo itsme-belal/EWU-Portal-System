@@ -243,7 +243,7 @@ Beyond registration, the portal consolidates major academic and administrative s
 
 | Login & Authentication | Student Dashboard |
 | :---: | :---: |
-| ![Login Page](docs/login.png) | ![Student Dashboard](docs/student_dashboard.png) |
+| ![Login Page](doc/login.png) | ![Student Dashboard](doc/student_dashboard.png) |
 
 | Faculty Dashboard | Admin Dashboard |
 | :---: | :---: |
