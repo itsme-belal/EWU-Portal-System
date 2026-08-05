@@ -3,6 +3,7 @@ import json
 import random
 import threading
 import tempfile
+import time
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
@@ -16,7 +17,7 @@ def get_now():
 # Load environment variables from .env file
 load_dotenv()
 
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from sqlalchemy import inspect, text, event
@@ -47,6 +48,11 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.close()
 
+@event.listens_for(Engine, "before_cursor_execute")
+def count_admin_dashboard_queries(conn, cursor, statement, parameters, context, executemany):
+    if hasattr(g, 'admin_dashboard_query_count'):
+        g.admin_dashboard_query_count += 1
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'ewu_secret_key_123')
 
@@ -76,6 +82,20 @@ else:
     }
 
 db.init_app(app)
+
+@app.before_request
+def start_admin_dashboard_measurement():
+    if request.path == '/admin' and request.args.get('tab') == 'dashboard':
+        g.admin_dashboard_start = time.perf_counter()
+        g.admin_dashboard_query_count = 0
+        print('[ADMIN DASHBOARD] Request start')
+
+@app.after_request
+def finish_admin_dashboard_measurement(response):
+    if hasattr(g, 'admin_dashboard_start'):
+        elapsed = (time.perf_counter() - g.admin_dashboard_start) * 1000
+        print(f'[ADMIN DASHBOARD] Response returned; total execution time={elapsed:.2f} ms; SQL queries={g.admin_dashboard_query_count}')
+    return response
 
 # Flask-Mail configuration (Set MAIL_USERNAME & MAIL_PASSWORD in environment or .env)
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
