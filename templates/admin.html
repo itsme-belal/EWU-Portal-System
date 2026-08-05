@@ -699,14 +699,14 @@ main canvas { color: var(--text-1); }
         </div>
     </div>
 
-    <!-- Enhanced Batch Excel Upload Zone Dropzone -->
+    <!-- Enhanced Batch JSON Upload Zone Dropzone -->
     <div class="glass-card p-6 space-y-4 rounded-2xl border border-slate-200 dark:border-white/10">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200 dark:border-white/10 pb-3">
             <div>
                 <h3 class="font-extrabold text-sm uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i> Import Course Schedule (Batch Excel Upload)
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i> Import Course Schedule (JSON Upload)
                 </h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Upload department, common, or non-departmental schedule spreadsheets (.xlsx) for bulk section ingestion</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Upload department, common, or non-departmental schedule JSON files for bulk section ingestion</p>
             </div>
             <div class="flex items-center gap-2">
                 <span class="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[0.65rem] font-bold flex items-center gap-1">
@@ -716,15 +716,15 @@ main canvas { color: var(--text-1); }
         </div>
 
         <form action="{{ url_for('upload_schedule') }}" method="POST" enctype="multipart/form-data" class="space-y-3">
-            <div class="border-2 border-dashed border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-xl p-5 text-center transition-all bg-slate-50/50 dark:bg-slate-900/30 group cursor-pointer" onclick="document.getElementById('excel-schedule-input').click()">
-                <input type="file" id="excel-schedule-input" name="file" accept=".xlsx" required class="hidden" onchange="document.getElementById('file-chosen-name').textContent = this.files[0] ? this.files[0].name : 'No file chosen'">
+            <div class="border-2 border-dashed border-slate-300 dark:border-slate-700/80 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-xl p-5 text-center transition-all bg-slate-50/50 dark:bg-slate-900/30 group cursor-pointer" onclick="document.getElementById('json-schedule-input').click()">
+                <input type="file" id="json-schedule-input" name="file" accept=".json" required class="hidden" onchange="document.getElementById('file-chosen-name').textContent = this.files[0] ? this.files[0].name : 'No file chosen'">
                 <div class="flex flex-col items-center gap-2">
                     <div class="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
                         <i data-lucide="upload-cloud" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Click to browse or drag Excel file here</span>
-                        <p class="text-[0.68rem] text-slate-400 mt-0.5" id="file-chosen-name">Supported files: Schedules.xlsx, Faculty_Records.xlsx, Student_Records.xlsx</p>
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Click to browse or drag JSON file here</span>
+                        <p class="text-[0.68rem] text-slate-400 mt-0.5" id="file-chosen-name">Supported files: *_Schedule.json</p>
                     </div>
                     <div class="flex flex-wrap items-center justify-center gap-1.5 mt-1">
                         <span class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[0.62rem] font-mono">Course Code</span>
@@ -1587,14 +1587,14 @@ main canvas { color: var(--text-1); }
 
     <!-- Student Ingestion Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Excel Upload Card -->
+        <!-- JSON Upload Card -->
         <div class="lg:col-span-1 glass-card p-6 space-y-4">
-            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Bulk Excel Ingestion</h3>
-            <p class="text-xs text-slate-500">Upload a spreadsheet of students containing all profile fields (Student ID, Name, Email, Phone, Dept, CGPA, Addresses, etc.) to batch-create accounts instantly.</p>
+            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Bulk JSON Ingestion</h3>
+            <p class="text-xs text-slate-500">Upload a JSON file of students containing all profile fields (Student ID, Name, Email, Phone, Dept, CGPA, Addresses, etc.) to batch-create accounts instantly.</p>
             <form action="{{ url_for('upload_students') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
                 <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Student Excel File (.xlsx)</label>
-                    <input type="file" name="student_file" accept=".xlsx" required class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Student JSON File (.json)</label>
+                    <input type="file" name="student_file" accept=".json" required class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
                 </div>
                 <button type="submit" class="btn-primary w-full rounded-lg text-xs py-2">
                     <i data-lucide="upload" class="w-4 h-4"></i> Upload & Import Students
@@ -1878,14 +1878,14 @@ main canvas { color: var(--text-1); }
 
     <!-- Faculty Ingestion Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Excel Upload Card -->
+        <!-- JSON Upload Card -->
         <div class="lg:col-span-1 glass-card p-6 space-y-4">
-            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Bulk Excel Ingestion</h3>
-            <p class="text-xs text-slate-500">Upload a spreadsheet of faculty containing all profile fields (Faculty Initial, Name, Email, Department, Post, Present Address, Permanent Address, Profile Pic) to batch-create accounts instantly.</p>
+            <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300 border-b border-white/5 pb-2">Bulk JSON Ingestion</h3>
+            <p class="text-xs text-slate-500">Upload a JSON file of faculty containing all profile fields (Faculty Initial, Name, Email, Department, Post, Present Address, Permanent Address, Profile Pic) to batch-create accounts instantly.</p>
             <form action="{{ url_for('upload_faculty') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
                 <div>
-                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Faculty Excel File (.xlsx)</label>
-                    <input type="file" name="faculty_file" accept=".xlsx" required class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
+                    <label class="block text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Select Faculty JSON File (.json)</label>
+                    <input type="file" name="faculty_file" accept=".json" required class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 file:cursor-pointer">
                 </div>
                 <button type="submit" class="btn-primary w-full rounded-lg text-xs py-2">
                     <i data-lucide="upload" class="w-4 h-4"></i> Upload & Import Faculty

@@ -2,6 +2,7 @@ import os
 import json
 import random
 import threading
+import tempfile
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
@@ -7269,6 +7270,15 @@ def import_json_schedule(json_path):
 
 # ── END JSON IMPORT FUNCTIONS ─────────────────────────────────────────────────
 
+def import_uploaded_json(file_storage, importer):
+    with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as temp_file:
+        file_storage.save(temp_file)
+        temp_path = temp_file.name
+    try:
+        return importer(temp_path)
+    finally:
+        os.unlink(temp_path)
+
 @app.route('/admin/upload-students', methods=['POST'])
 @login_required
 def upload_students():
@@ -7280,12 +7290,12 @@ def upload_students():
         flash('No file selected.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=students')
         
-    if not file.filename.endswith('.xlsx'):
-        flash('Invalid file format. Only Excel files (.xlsx) are allowed.', 'error')
+    if not file.filename.lower().endswith('.json'):
+        flash('Invalid file format. Only JSON files (.json) are allowed.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=students')
         
     try:
-        count = import_excel_students(file)
+        count = import_uploaded_json(file, import_json_students)
         flash(f'{count} students imported/updated successfully!', 'success')
     except Exception as e:
         flash(f'Error importing students: {str(e)}', 'error')
@@ -7303,12 +7313,12 @@ def upload_faculty():
         flash('No file selected.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=faculty')
         
-    if not file.filename.endswith('.xlsx'):
-        flash('Invalid file format. Only Excel files (.xlsx) are allowed.', 'error')
+    if not file.filename.lower().endswith('.json'):
+        flash('Invalid file format. Only JSON files (.json) are allowed.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=faculty')
         
     try:
-        count = import_excel_faculty(file)
+        count = import_uploaded_json(file, import_json_faculty)
         flash(f'{count} faculty imported/updated successfully!', 'success')
     except Exception as e:
         flash(f'Error importing faculty: {str(e)}', 'error')
@@ -7326,12 +7336,12 @@ def upload_schedule():
         flash('No file selected.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=course-management')
         
-    if not file.filename.endswith('.xlsx'):
-        flash('Invalid file format. Only Excel files (.xlsx) are allowed.', 'error')
+    if not file.filename.lower().endswith('.json'):
+        flash('Invalid file format. Only JSON files (.json) are allowed.', 'error')
         return redirect(url_for('admin_dashboard') + '?tab=course-management')
         
     try:
-        import_excel_schedule(file)
+        import_uploaded_json(file, import_json_schedule)
         flash('Course schedule imported successfully!', 'success')
     except Exception as e:
         flash(f'Error importing schedule: {str(e)}', 'error')
