@@ -46,7 +46,7 @@
             <div class="flex items-center gap-4">
                 {% if student.profile_pic %}
                 <div class="w-14 h-14 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg shadow-blue-500/20 flex-shrink-0">
-                    <img src="{{ student.profile_pic | profile_pic_url }}" class="w-full h-full object-cover">
+                    <img src="{{ student.profile_pic | profile_pic_url }}" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling||this.parentElement.closest('.profile-pic-wrap')&&(this.style.display='none');this.parentElement.classList.add('bg-gradient-to-tr','from-blue-600','to-indigo-600','text-white','font-extrabold','text-2xl');this.parentElement.innerHTML='{{ student.name[0] | upper }}';">
                 </div>
                 {% else %}
                 <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-extrabold text-2xl shadow-lg shadow-blue-500/20 flex-shrink-0">

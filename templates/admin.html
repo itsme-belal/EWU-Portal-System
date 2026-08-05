@@ -1803,7 +1803,7 @@ main canvas { color: var(--text-1); }
                             <div class="flex items-center gap-2.5">
                                 <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
                                     {% if std.profile_pic %}
-                                    <img src="{{ std.profile_pic | profile_pic_url }}" class="w-full h-full object-cover">
+                                    <img src="{{ std.profile_pic | profile_pic_url }}" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML+='<i data-lucide=&quot;user&quot; class=&quot;w-4 h-4 text-slate-400&quot;></i>';if(window.lucide)lucide.createIcons();">
                                     {% else %}
                                     <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
                                     {% endif %}
@@ -2070,7 +2070,7 @@ main canvas { color: var(--text-1); }
                             <div class="flex items-center gap-2.5">
                                 <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-slate-800 flex-shrink-0 flex items-center justify-center">
                                     {% if fac.profile_pic %}
-                                    <img src="{{ fac.profile_pic | profile_pic_url }}" class="w-full h-full object-cover">
+                                    <img src="{{ fac.profile_pic | profile_pic_url }}" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML+='<i data-lucide=&quot;user&quot; class=&quot;w-4 h-4 text-slate-400&quot;></i>';if(window.lucide)lucide.createIcons();">
                                     {% else %}
                                     <i data-lucide="user" class="w-4 h-4 text-slate-400"></i>
                                     {% endif %}

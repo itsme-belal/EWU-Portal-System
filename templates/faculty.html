@@ -1213,7 +1213,7 @@
             <div class="relative group">
                 <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 border-2 border-purple-500/30 overflow-hidden flex items-center justify-center text-white font-black text-3xl shadow-xl flex-shrink-0">
                     {% if faculty.profile_pic %}
-                    <img src="{{ faculty.profile_pic | profile_pic_url }}" alt="{{ faculty.name }} profile picture" class="w-full h-full object-cover">
+                    <img src="{{ faculty.profile_pic | profile_pic_url }}" alt="{{ faculty.name }} profile picture" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML='{{ faculty.name[:1] | upper }}';">
                     {% else %}
                     {{ faculty.name[:1] | upper }}
                     {% endif %}
