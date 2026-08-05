@@ -647,7 +647,7 @@ def save_profile_pic_upload(file_storage, owner_prefix, required=False):
             if secure_url:
                 return secure_url
         except Exception as e:
-            print(f"[CLOUDINARY UPLOAD WARNING - Falling back to local storage] {e}")
+            raise ValueError(f"Cloudinary upload failed: {e}") from e
 
     # Fallback to local upload directory if Cloudinary is not used or fails
     safe_stem = stem or 'photo'
@@ -5548,7 +5548,8 @@ def admin_edit_faculty(fac_id):
             if new_pic:
                 fac.profile_pic = new_pic
         except Exception as e:
-            print(f"[EDIT FACULTY PIC ERROR] {e}")
+            flash(f"Faculty profile image upload failed: {e}", 'error')
+            return redirect(url_for('admin_dashboard') + '?tab=faculty')
             
     db.session.commit()
     flash(f"Faculty profile for '{fac.name}' updated successfully by Admin.", 'success')
@@ -5641,7 +5642,8 @@ def admin_edit_student(std_id):
             if new_pic:
                 std.profile_pic = new_pic
         except Exception as e:
-            print(f"[EDIT STUDENT PIC ERROR] {e}")
+            flash(f"Student profile image upload failed: {e}", 'error')
+            return redirect(url_for('admin_dashboard') + '?tab=students')
             
     db.session.commit()
     flash(f"Student profile for '{std.name}' updated successfully by Admin.", 'success')

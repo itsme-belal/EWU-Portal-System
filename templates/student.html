@@ -4086,9 +4086,11 @@
     }
 
     // Live Real-Time Advising Polling (Every 3s)
+    let liveAdvisingRequestInFlight = false;
     setInterval(() => {
         const advisingTab = document.getElementById('tab-advising');
-        if (advisingTab && !advisingTab.classList.contains('hidden')) {
+        if (advisingTab && !advisingTab.classList.contains('hidden') && !liveAdvisingRequestInFlight) {
+            liveAdvisingRequestInFlight = true;
             fetch('/api/live-advising-status')
             .then(res => res.json())
             .then(data => {
@@ -4106,7 +4108,8 @@
                     });
                 }
             })
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => { liveAdvisingRequestInFlight = false; });
         }
     }, 3000);
 
