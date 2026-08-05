@@ -680,10 +680,10 @@ This project was developed as a team effort under the guidance of our course ins
 
 | Name | Student ID | GitHub |
 |------|------------|--------|
-| **Belal Hossain** | *(2023-2-60-010)* | [@your-github](https://github.com/your-github) |
-| **Nusrat Jahan Tithy** | 2023-2-60-286 | [@your-github](https://github.com/nusrat-tithy) |
-| **Waseer Ahmed Badsha** | 2023-2-60-004 | [@your-github](https://github.com/waseerahmedbadsha-sketch) |
-| **Habibullah Farazy** | 2023-2-60-356 | [@your-github](https://github.com/Faraze7) |
+| **Belal Hossain** | *(2023-2-60-010)* | [github](https://github.com/itsme-belal) |
+| **Nusrat Jahan Tithy** | 2023-2-60-286 | [github](https://github.com/nusrat-tithy) |
+| **Waseer Ahmed Badsha** | 2023-2-60-004 | [github](https://github.com/waseerahmedbadsha-sketch) |
+| **Habibullah Farazy** | 2023-2-60-356 | [github](https://github.com/Faraze7) |
 
 ### ❤️ Special Thanks
 
