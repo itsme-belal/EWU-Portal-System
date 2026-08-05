@@ -247,15 +247,15 @@ Beyond registration, the portal consolidates major academic and administrative s
 
 | Faculty Dashboard | Admin Dashboard |
 | :---: | :---: |
-| ![Faculty Dashboard](docs/faculty_dashboard.png) | ![Admin Dashboard](doc/admin_dashboard.png) |
+| ![Faculty Dashboard](doc/faculty_dashboard.png) | ![Admin Dashboard](doc/admin_dashboard.png) |
 
 | Advising Panel | Faculty Grade Entry |
 | :---: | :---: |
-| ![Advising Panel](docs/advising_panel.png) | ![Final Advising Panel](docs/final_advising.png) |
+| ![Advising Panel](doc/advising_panel.png) | ![Final Advising Panel](doc/final_advising.png) |
 
 | Admin Window Control | Academic Transcript |
 | :---: | :---: |
-| ![Course Management](docs/course_management.png) | ![Faculty Approving](docs/faculty_approving.png) |
+| ![Course Management](doc/course_management.png) | ![Faculty Approving](doc/faculty_approving.png) |
 
 ---
 
