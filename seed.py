@@ -132,49 +132,43 @@ def seed_db():
             db.session.add(d)
         db.session.commit()
 
-        # Seed excel files dynamically from Data/ folder or root if present
-        print("Importing default Excel data files...")
-        from app import import_excel_faculty, import_excel_students, import_excel_schedule
+        # ── Import JSON data files from Data/ folder ─────────────────────────
+        print("Importing default JSON data files from Data/...")
+        from app import import_json_faculty, import_json_students, import_json_schedule
 
-        search_dirs = ['Data', '.', 'static/uploads']
+        data_dir = 'Data'
 
         # 1. Faculty Records
-        for sdir in search_dirs:
-            if os.path.exists(sdir):
-                for fname in os.listdir(sdir):
-                    if fname.endswith('.xlsx') and not fname.startswith('~$') and 'faculty' in fname.lower():
-                        fpath = os.path.join(sdir, fname)
-                        try:
-                            count = import_excel_faculty(fpath)
-                            print(f"Imported {count} faculty records from: {fname}")
-                        except Exception as e:
-                            print(f"Note: Could not import faculty {fname}: {e}")
+        for fname in sorted(os.listdir(data_dir)):
+            if fname.endswith('.json') and 'faculty' in fname.lower():
+                fpath = os.path.join(data_dir, fname)
+                try:
+                    count = import_json_faculty(fpath)
+                    print(f"Imported {count} faculty records from: {fname}")
+                except Exception as e:
+                    print(f"Note: Could not import faculty {fname}: {e}")
 
         # 2. Student Records
-        for sdir in search_dirs:
-            if os.path.exists(sdir):
-                for fname in os.listdir(sdir):
-                    if fname.endswith('.xlsx') and not fname.startswith('~$') and 'student' in fname.lower():
-                        fpath = os.path.join(sdir, fname)
-                        try:
-                            count = import_excel_students(fpath)
-                            print(f"Imported {count} student records from: {fname}")
-                        except Exception as e:
-                            print(f"Note: Could not import student {fname}: {e}")
+        for fname in sorted(os.listdir(data_dir)):
+            if fname.endswith('.json') and 'student' in fname.lower():
+                fpath = os.path.join(data_dir, fname)
+                try:
+                    count = import_json_students(fpath)
+                    print(f"Imported {count} student records from: {fname}")
+                except Exception as e:
+                    print(f"Note: Could not import student {fname}: {e}")
 
-        # 3. Schedules
-        for sdir in search_dirs:
-            if os.path.exists(sdir):
-                for fname in os.listdir(sdir):
-                    if fname.endswith('.xlsx') and not fname.startswith('~$') and 'schedule' in fname.lower():
-                        fpath = os.path.join(sdir, fname)
-                        try:
-                            import_excel_schedule(fpath)
-                            print(f"Imported schedule file: {fname}")
-                        except Exception as e:
-                            print(f"Note: Could not import schedule {fname}: {e}")
+        # 3. Schedule Files (all JSON files containing "schedule" in name)
+        for fname in sorted(os.listdir(data_dir)):
+            if fname.endswith('.json') and 'schedule' in fname.lower():
+                fpath = os.path.join(data_dir, fname)
+                try:
+                    count = import_json_schedule(fpath)
+                    print(f"Imported {count} sections from schedule: {fname}")
+                except Exception as e:
+                    print(f"Note: Could not import schedule {fname}: {e}")
 
-        print("Database successfully initialized and seeded with default Data. Done.")
+        print("Database successfully initialized and seeded. Done.")
 
 if __name__ == '__main__':
     seed_db()
