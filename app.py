@@ -1114,6 +1114,12 @@ def profile_pic_url_filter(path):
         return ''
     if path.startswith('http://') or path.startswith('https://') or path.startswith('//'):
         return path
+    cloud_name = (os.environ.get('CLOUDINARY_CLOUD_NAME') or '').strip()
+    cloudinary_url = (os.environ.get('CLOUDINARY_URL') or '').strip()
+    api_key = (os.environ.get('CLOUDINARY_API_KEY') or '').strip()
+    api_secret = (os.environ.get('CLOUDINARY_API_SECRET') or '').strip()
+    if HAS_CLOUDINARY and (cloudinary_url or (cloud_name and api_key and api_secret)):
+        return ''
     return f"/static/uploads/{path}"
 
 # ROUTES

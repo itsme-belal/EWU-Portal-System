@@ -3833,9 +3833,9 @@ main canvas { color: var(--text-1); }
         // Populate profile pic
         const picContainer = document.getElementById('modal-student-pic-container');
         if (picContainer) {
-            if (student.profile_pic && student.profile_pic !== '[Image]' && !student.profile_pic.includes('[')) {
-                const picUrl = (student.profile_pic.startsWith('http://') || student.profile_pic.startsWith('https://') || student.profile_pic.startsWith('//')) ? student.profile_pic : `/static/uploads/${student.profile_pic}`;
-                picContainer.innerHTML = `<img src="${picUrl}" class="w-full h-full object-cover">`;
+            if (student.profile_pic && (student.profile_pic.startsWith('http://') || student.profile_pic.startsWith('https://') || student.profile_pic.startsWith('//'))) {
+                const picUrl = (student.profile_pic.startsWith('http://') || student.profile_pic.startsWith('https://') || student.profile_pic.startsWith('//')) ? student.profile_pic : '';
+                picContainer.innerHTML = picUrl ? `<img src="${picUrl}" class="w-full h-full object-cover">` : `<i data-lucide="user" class="w-10 h-10 text-slate-500"></i>`;
             } else {
                 picContainer.innerHTML = `<i data-lucide="user" class="w-10 h-10 text-slate-500"></i>`;
             }
@@ -4203,10 +4203,10 @@ main canvas { color: var(--text-1); }
 
                     const initial = document.getElementById('edit-fac-initial');
                     const img = document.getElementById('edit-fac-avatar-img');
-                    if (data.profile_pic && data.profile_pic !== '[Image]' && !data.profile_pic.includes('[')) {
-                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : `/static/uploads/${data.profile_pic}`;
-                        if (img) { img.src = picUrl; img.classList.remove('hidden'); }
-                        if (initial) initial.classList.add('hidden');
+                    if (data.profile_pic && (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//'))) {
+                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : '';
+                        if (img && picUrl) { img.src = picUrl; img.classList.remove('hidden'); }
+                        if (initial && picUrl) initial.classList.add('hidden');
                     } else {
                         if (img) img.classList.add('hidden');
                         if (initial) { initial.textContent = (data.name ? data.name[0] : 'F').toUpperCase(); initial.classList.remove('hidden'); }
@@ -4268,10 +4268,10 @@ main canvas { color: var(--text-1); }
 
                     const initial = document.getElementById('edit-std-initial');
                     const img = document.getElementById('edit-std-avatar-img');
-                    if (data.profile_pic && data.profile_pic !== '[Image]' && !data.profile_pic.includes('[')) {
-                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : `/static/uploads/${data.profile_pic}`;
-                        if (img) { img.src = picUrl; img.classList.remove('hidden'); }
-                        if (initial) initial.classList.add('hidden');
+                    if (data.profile_pic && (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//'))) {
+                        const picUrl = (data.profile_pic.startsWith('http://') || data.profile_pic.startsWith('https://') || data.profile_pic.startsWith('//')) ? data.profile_pic : '';
+                        if (img && picUrl) { img.src = picUrl; img.classList.remove('hidden'); }
+                        if (initial && picUrl) initial.classList.add('hidden');
                     } else {
                         if (img) img.classList.add('hidden');
                         if (initial) { initial.textContent = (data.name ? data.name[0] : 'S').toUpperCase(); initial.classList.remove('hidden'); }
