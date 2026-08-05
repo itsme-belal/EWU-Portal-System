@@ -67,7 +67,7 @@ These limitations increase administrative workload, delay academic planning, and
 
 ---
 
-## ⚠️ Key Challenges
+##⚠️ Key Challenges
 
 - **High Concurrent Registration Traffic**
   - Thousands of students access the portal simultaneously during advising windows, causing server overload and the Thundering Herd Problem.
