@@ -67,7 +67,7 @@ These limitations increase administrative workload, delay academic planning, and
 
 ---
 
-## Challenges
+## ⚠️ Challenges
 
 - **High Concurrent Registration Traffic**
   - Thousands of students access the portal simultaneously during advising windows, causing server overload and the Thundering Herd Problem.
@@ -97,13 +97,100 @@ These limitations increase administrative workload, delay academic planning, and
 
 ## 💡 Proposed Solution
 
-The EWU Academic Management Portal delivers an intelligent, rule-based web platform that digitizes and automates the entire advising and registration pipeline while providing integrated academic management tools.
+The **EWU Academic Management Portal** transforms traditional university administration from **reactive manual management** into a **proactive, automated, and data-driven academic management platform**. Instead of relying on fragmented systems and manual validation, the portal centralizes advising, registration, financial verification, and academic administration into a unified rule-based workflow.
 
-The platform introduces a **Two-Phase Advising Workflow**:
-1. **Pre-Advising Phase**: Students select their preferred course roadmap (up to a 21-credit/6-course limit) before section offerings open. This provides administrators with real-time course demand analytics to optimize section counts and capacity allocations.
-2. **Final Advising & Section Registration Phase**: An intelligent advising engine executes real-time checks against student academic history, financial clearance status, credit completion brackets, prerequisite requirements, schedule time overlaps, dedicated department reservations, seat capacities, and automated lab-theory section coupling.
+### 📌 Phase 1: Pre-Advising (Predictive Capacity Planning)
 
-Furthermore, the portal integrates real-time student-faculty communication channels, multi-component custom grading schemes, automated attendance tracking, financial installment management, and automated email/OTP authentication into a single intuitive interface.
+Before official section schedules are published, students build a preferred academic roadmap (up to **21 credits / 6 courses**). This allows departments to forecast course demand before registration begins and optimize academic resources accordingly.
+
+**Key Benefits**
+- Predict future course demand before registration opens.
+- Optimize section offerings based on student demand.
+- Allocate larger classrooms where necessary.
+- Recruit additional faculty members before registration.
+- Reduce emergency section creation during registration periods.
+
+---
+
+### 📌 Phase 2: Automated Advising & Registration Engine
+
+During live registration, every registration request passes through a comprehensive real-time validation pipeline before a seat is reserved.
+
+#### 🎓 Academic Validation
+- Enforces credit-bracket registration windows.
+- Validates prerequisite completion and required grades.
+- Checks maximum credit limits.
+- Ensures degree progression compliance.
+
+#### 📅 Registration Validation
+- Performs real-time seat availability verification.
+- Detects schedule conflicts automatically.
+- Enforces department-specific enrollment policies.
+- Preserves reserved seats for major students.
+- Automatically validates theory–lab co-requisite enrollment.
+
+#### 💳 Financial Validation
+- Verifies tuition and financial clearance before registration.
+- Prevents students with active financial holds from reserving seats.
+
+#### 🔄 Atomic Registration
+Theory and laboratory sections are treated as a single transaction. If either section cannot be reserved, the entire registration is automatically rolled back, preventing invalid partial enrollments.
+
+---
+
+## 🎓 Integrated Academic Management Suite
+
+Beyond registration, the portal consolidates major academic and administrative services into a single unified platform.
+
+### 📊 Custom Grading System
+
+- Configurable grading components and assessment weights.
+- Flexible grading schemes for different courses.
+- Automatic GPA calculation.
+- Automatic letter grade generation.
+- Department-specific grading policies.
+
+---
+
+### 📅 Attendance Management
+
+- Digital attendance recording.
+- Real-time attendance statistics.
+- Automatic low-attendance alerts.
+- Academic risk monitoring for advisors.
+
+---
+
+### 💳 Financial Management
+
+- Tuition ledger and payment history.
+- Installment management.
+- Financial clearance tracking.
+- Automatic synchronization of financial holds with the registration system.
+
+---
+
+### 🔒 Security & Communication
+
+- Role-Based Access Control (RBAC).
+- Email OTP verification.
+- Google OAuth 2.0 authentication.
+- Secure password hashing.
+- Direct student–faculty communication.
+- Auditable advising and approval records.
+
+---
+
+## 🚀 Core Benefits
+
+- Automated academic policy enforcement.
+- High-concurrency registration support.
+- Predictive course demand analysis.
+- Reduced administrative workload.
+- Improved policy compliance.
+- Real-time registration validation.
+- Transparent approval workflows.
+- Centralized academic management platform.
 
 ---
 
