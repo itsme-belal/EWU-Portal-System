@@ -155,10 +155,9 @@ Furthermore, the portal integrates real-time student-faculty communication chann
 
 | Role | Email | User ID |
 | :--- | :--- | :--- |
-| **Student (Regular)** | `belal@std.ewubd.edu` | `2023-2-60-010` |
-| **Student (Financial Hold)** | `sarah@std.ewubd.edu` | `2023-2-60-011` |
-| **Faculty / Advisor** | `shamim@faculty.ewubd.edu` | `FAC-001` |
-| **System Admin** | `itsmebelalhossain@gmail.com` | `A001` |
+| **Student (Regular)** | `2023-2-60-010@std.ewubd.edu` | `2023-2-60-010` |
+| **Faculty / Advisor** | `ahmedbhr2001@gmail.com | `MMAH` |
+| **System Admin** | `itsmebelalhossain@gmail.com` | `NONE` |
 
 ---
 
