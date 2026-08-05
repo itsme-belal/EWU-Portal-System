@@ -56,11 +56,41 @@ For faculty advisors, the portal acts as a central workspace to oversee advisees
 
 ## 🎯 Problem Statement
 
-Traditional university administrative systems often struggle with severe bottlenecks during registration and advising cycles. In many institutions, advising relies on fragmented tools or legacy portals that experience severe performance degradation when thousands of students attempt to register simultaneously within tight timeframes.
+University course registration systems experience extreme traffic during advising and registration periods, where thousands of students simultaneously access the portal to search for courses, verify eligibility, and reserve seats. This flash-sale-like workload overwhelms application servers, resulting in increased latency, HTTP 500 errors, server crashes, and an overall poor user experience. Repeated page refreshes by users further amplify the load, creating the well-known Thundering Herd Problem.
 
-Additionally, existing legacy tools lack automated constraint validation at the moment of registration. Issues such as prerequisite oversights, time-slot scheduling conflicts, unauthorized cross-department course selections, unlinked theory and laboratory sections, and manual financial clearance tracking frequently result in administrative backlog, human error, and manual corrections by registrar staff.
+Beyond scalability challenges, traditional registration systems often fail to enforce academic policies consistently. Missing real-time validation allows students to enroll in courses without satisfying prerequisites, register for overlapping class schedules, bypass department-specific enrollment rules, or enroll in theory sections without the required laboratory components. Financial clearance checks are frequently disconnected from the registration workflow, allowing students with unpaid dues to occupy limited seats before being removed later through manual intervention.
 
-Without a real-time, policy-enforced platform connecting students directly with their assigned faculty advisors, exception handling—such as section swaps or seat expansion requests—becomes a tedious, paper-heavy, or email-bound process. The EWU Academic Management Portal was built to solve these systemic limitations through a unified, automated, and secure digital portal.
+Administrative exception handling is equally inefficient. Requests such as prerequisite waivers, section swaps, seat expansion approvals, and override permissions are typically managed through paper forms, email conversations, or in-person visits. This creates delays, inconsistent approval workflows, lost requests, and a lack of transparency for students.
+
+These limitations increase administrative workload, delay academic planning, and negatively impact both students and faculty. An integrated, automated advising and registration platform is therefore essential to ensure policy compliance, improve scalability, streamline approval workflows, and provide a reliable registration experience.
+
+---
+
+## ⚠️ Key Challenges
+
+- **High Concurrent Registration Traffic**
+  - Thousands of students access the portal simultaneously during advising windows, causing server overload and the Thundering Herd Problem.
+
+- **Prerequisite Validation**
+  - Prevent students from registering for advanced courses unless all prerequisite requirements are satisfied.
+
+- **Schedule Conflict Detection**
+  - Detect overlapping class schedules in real time before registration is confirmed.
+
+- **Cross-Department Enrollment Rules**
+  - Enforce major restrictions, department quotas, and reserved seat allocations.
+
+- **Theory–Lab Co-requisite Validation**
+  - Ensure theory and corresponding laboratory sections are enrolled together.
+
+- **Financial Clearance Verification**
+  - Prevent students with financial holds from registering until clearance requirements are met.
+
+- **Approval Workflow Automation**
+  - Replace manual paper forms and email-based approvals with structured digital workflows.
+
+- **Transparent Request Tracking**
+  - Allow students to monitor the status of advising requests, section swaps, and seat expansion approvals.
 
 ---
 
