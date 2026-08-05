@@ -1,6 +1,6 @@
 # 🎓 East West University Academic Management Portal
 
-> A modern, production-grade university academic management and automated advising portal for **East West University**, engineered with **Python Flask**, **SQLAlchemy ORM**, **Tailwind CSS**, and **PostgreSQL/SQLite**.
+> A production-grade academic management and automated advising portal for **East West University**, built with **Python Flask**, **SQLAlchemy ORM**, **Tailwind CSS**, and **PostgreSQL/SQLite**.
 
 ---
 
@@ -17,7 +17,7 @@
 
 - [Project Overview](#-project-overview)
 - [Problem Statement](#-problem-statement)
-- [Challenges](#challenges)
+- [Challenges](#-challenges)
 - [Proposed Solution](#-proposed-solution)
 - [Objectives](#-objectives)
 - [Key Features](#-key-features)
@@ -47,7 +47,7 @@
 
 ## 📖 Project Overview
 
-The **EWU Academic Management Portal** is an end-to-end, enterprise-ready web platform developed to modernize and streamline the academic lifecycle, advising routines, and administrative operations at **East West University (EWU)**. It offers a role-driven architecture designed specifically for three primary stakeholder groups: **Students**, **Faculty / Academic Advisors**, and **University Administrators**. 
+The **EWU Academic Management Portal** is an enterprise-ready web platform developed to modernize and streamline the academic lifecycle, advising routines, and administrative operations at **East West University (EWU)**. It offers a role-driven architecture designed specifically for three primary stakeholder groups: **Students**, **Faculty / Academic Advisors**, and **University Administrators**.
 
 Built to handle high-concurrency registration traffic during peak university advising windows, the portal combines a credit-bracket timed window scheduler with an automated advising policy execution engine. Students can construct pre-advising course roadmaps, monitor degree progress, review financial ledger standing, execute real-time section registrations, and request advisor overrides for constrained or seat-capped sections.
 
@@ -57,13 +57,7 @@ For faculty advisors, the portal acts as a central workspace to oversee advisees
 
 ## 🎯 Problem Statement
 
-University course registration systems experience extreme traffic during advising and registration periods, where thousands of students simultaneously access the portal to search for courses, verify eligibility, and reserve seats. This flash-sale-like workload overwhelms application servers, resulting in increased latency, HTTP 500 errors, server crashes, and an overall poor user experience. Repeated page refreshes by users further amplify the load, creating the well-known Thundering Herd Problem.
-
-Beyond scalability challenges, traditional registration systems often fail to enforce academic policies consistently. Missing real-time validation allows students to enroll in courses without satisfying prerequisites, register for overlapping class schedules, bypass department-specific enrollment rules, or enroll in theory sections without the required laboratory components. Financial clearance checks are frequently disconnected from the registration workflow, allowing students with unpaid dues to occupy limited seats before being removed later through manual intervention.
-
-Administrative exception handling is equally inefficient. Requests such as prerequisite waivers, section swaps, seat expansion approvals, and override permissions are typically managed through paper forms, email conversations, or in-person visits. This creates delays, inconsistent approval workflows, lost requests, and a lack of transparency for students.
-
-These limitations increase administrative workload, delay academic planning, and negatively impact both students and faculty. An integrated, automated advising and registration platform is therefore essential to ensure policy compliance, improve scalability, streamline approval workflows, and provide a reliable registration experience.
+University course registration systems face significant challenges during peak advising periods when thousands of students simultaneously access the platform to search for courses, verify eligibility, and reserve seats. This flash-sale-like workload often overwhelms application servers, resulting in increased latency, HTTP 500 errors, system crashes, and a frustrating user experience that is further exacerbated by the Thundering Herd Problem as students repeatedly refresh pages. Beyond these scalability concerns, traditional registration systems frequently fail to enforce academic policies consistently, allowing students to enroll in courses without satisfying prerequisites, register for overlapping class schedules, bypass department-specific enrollment rules, or enroll in theory sections without the required laboratory components. Financial clearance verification is typically disconnected from the registration workflow, enabling students with unpaid dues to occupy limited seats before being manually removed later through administrative intervention. Administrative exception handling remains equally inefficient, with requests such as prerequisite waivers, section swaps, seat expansion approvals, and override permissions often managed through paper forms, email conversations, or in-person visits—creating delays, inconsistent approval workflows, lost requests, and a lack of transparency for students tracking their submissions. These interconnected limitations increase administrative workload, delay academic planning, negatively impact student and faculty experiences, and ultimately undermine the reliability and efficiency of the entire academic management process, highlighting the critical need for an integrated, automated, and scalable platform that ensures policy compliance, streamlines approval workflows, and provides a seamless registration experience for all stakeholders.
 
 ---
 
@@ -97,13 +91,13 @@ These limitations increase administrative workload, delay academic planning, and
 
 ## 💡 Proposed Solution
 
-The **EWU Academic Management Portal** transforms traditional university administration from **reactive manual management** into a **proactive, automated, and data-driven academic management platform**. Instead of relying on fragmented systems and manual validation, the portal centralizes advising, registration, financial verification, and academic administration into a unified rule-based workflow.
+The **EWU Academic Management Portal** transforms traditional university administration from reactive manual management into a proactive, automated, and data-driven academic management platform. Instead of relying on fragmented systems and manual validation, the portal centralizes advising, registration, financial verification, and academic administration into a unified rule-based workflow.
 
 ### 📌 Phase 1: Pre-Advising (Predictive Capacity Planning)
 
 Before official section schedules are published, students build a preferred academic roadmap (up to **21 credits / 6 courses**). This allows departments to forecast course demand before registration begins and optimize academic resources accordingly.
 
-**Key Benefits**
+**Key Benefits:**
 - Predict future course demand before registration opens.
 - Optimize section offerings based on student demand.
 - Allocate larger classrooms where necessary.
@@ -143,7 +137,6 @@ Theory and laboratory sections are treated as a single transaction. If either se
 Beyond registration, the portal consolidates major academic and administrative services into a single unified platform.
 
 ### 📊 Custom Grading System
-
 - Configurable grading components and assessment weights.
 - Flexible grading schemes for different courses.
 - Automatic GPA calculation.
@@ -153,7 +146,6 @@ Beyond registration, the portal consolidates major academic and administrative s
 ---
 
 ### 📅 Attendance Management
-
 - Digital attendance recording.
 - Real-time attendance statistics.
 - Automatic low-attendance alerts.
@@ -162,7 +154,6 @@ Beyond registration, the portal consolidates major academic and administrative s
 ---
 
 ### 💳 Financial Management
-
 - Tuition ledger and payment history.
 - Installment management.
 - Financial clearance tracking.
@@ -171,7 +162,6 @@ Beyond registration, the portal consolidates major academic and administrative s
 ---
 
 ### 🔒 Security & Communication
-
 - Role-Based Access Control (RBAC).
 - Email OTP verification.
 - Google OAuth 2.0 authentication.
@@ -274,7 +264,7 @@ Beyond registration, the portal consolidates major academic and administrative s
 | Role | Email | User ID |
 | :--- | :--- | :--- |
 | **Student (Regular)** | `2023-2-60-010@std.ewubd.edu` | `2023-2-60-010` |
-| **Faculty / Advisor** | `ahmedbhr2001@gmail.com | `MMAH` |
+| **Faculty / Advisor** | `ahmedbhr2001@gmail.com` | `MMAH` |
 | **System Admin** | `itsmebelalhossain@gmail.com` | `NONE` |
 
 ---
