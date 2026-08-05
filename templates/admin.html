@@ -520,8 +520,8 @@ main canvas { color: var(--text-1); }
         <div class="flex items-center gap-3">
           <span class="font-mono text-[0.7rem] font-bold text-slate-300 w-20 flex-shrink-0">{{ course_code }}</span>
           <div class="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-            <div class="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-700"
-                 style="width: {{ d_pct }}%"></div>
+              <div class="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-700"
+                  data-progress-width="{{ d_pct }}"></div>
           </div>
           <span class="text-[0.68rem] font-bold text-amber-400 w-6 text-right flex-shrink-0">{{ count }}</span>
         </div>
@@ -664,7 +664,7 @@ main canvas { color: var(--text-1); }
             {% set fill_cls = 'bg-emerald-500' if fill_rate < 85 else ('bg-amber-500' if fill_rate < 100 else 'bg-red-500') %}
             {% set fill_w = [fill_rate, 100] | min %}
             <div class="capacity-progress-track mt-1.5 bg-slate-200 dark:bg-white/10">
-                <div class="capacity-progress-fill {{ fill_cls }}" style="width: {{ fill_w }}%"></div>
+                <div class="capacity-progress-fill {{ fill_cls }}" data-progress-width="{{ fill_w }}"></div>
             </div>
         </div>
 
@@ -1018,7 +1018,7 @@ main canvas { color: var(--text-1); }
                                 {% set pct_cls = 'bg-emerald-500' if pct < 85 else ('bg-amber-500' if pct < 100 else 'bg-red-500') %}
                                 {% set pct_w = [pct, 100] | min %}
                                 <div class="capacity-progress-track">
-                                    <div class="capacity-progress-fill {{ pct_cls }}" style="width: {{ pct_w }}%"></div>
+                                    <div class="capacity-progress-fill {{ pct_cls }}" data-progress-width="{{ pct_w }}"></div>
                                 </div>
                                 <div class="flex items-center justify-between text-[0.62rem] text-slate-400">
                                     <span>{{ pct }}% Filled</span>
@@ -1142,7 +1142,7 @@ main canvas { color: var(--text-1); }
                 {% set sec_pct_cls = 'bg-emerald-500' if pct < 85 else ('bg-amber-500' if pct < 100 else 'bg-red-500') %}
                 {% set sec_pct_w = [pct, 100] | min %}
                 <div class="capacity-progress-track">
-                    <div class="capacity-progress-fill {{ sec_pct_cls }}" style="width: {{ sec_pct_w }}%"></div>
+                    <div class="capacity-progress-fill {{ sec_pct_cls }}" data-progress-width="{{ sec_pct_w }}"></div>
                 </div>
             </div>
 
@@ -1344,7 +1344,7 @@ main canvas { color: var(--text-1); }
                     </div>
                     {% set bar_w = [percentage, 2] | max %}
                     <div class="w-full bg-slate-200 dark:bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-300 dark:border-white/5">
-                        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500" style="width: {{ bar_w }}%"></div>
+                        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500" data-progress-width="{{ bar_w }}"></div>
                     </div>
                     <div class="flex justify-between text-[0.68rem] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
                         <span>Share of Demand</span>
@@ -3020,7 +3020,7 @@ main canvas { color: var(--text-1); }
                 </div>
                 <div class="flex items-center gap-3 w-48 justify-end">
                     <div class="flex-1 h-2.5 bg-slate-200 dark:bg-slate-950 rounded-full overflow-hidden border border-slate-300 dark:border-white/5">
-                        <div class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full transition-all duration-500" style="width: {{ pct }}%"></div>
+                        <div class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full transition-all duration-500" data-progress-width="{{ pct }}"></div>
                     </div>
                     <span class="font-mono font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">{{ sec.enrolled_count }}/{{ sec.capacity }} ({{ pct }}%)</span>
                 </div>
@@ -3436,10 +3436,27 @@ main canvas { color: var(--text-1); }
         </form>
     </div>
 </div>
-
-
+<div id="admin-template-data" hidden data-fresh-login="{{ 'true' if fresh_login else 'false' }}">
+    {% for student in students %}
+    <span class="admin-student-data"
+          data-id="{{ student.id }}"
+          data-name="{{ student.name }}"
+          data-department-id="{{ student.department_id }}"
+          data-completed-credits="{{ student.completed_credits or 0.0 }}"
+          data-cgpa="{{ student.cgpa or 0.0 }}"
+          data-outstanding-balance="{{ student.outstanding_balance or 0 }}"
+          data-financial-cleared="{{ 'true' if student.financial_cleared else 'false' }}"
+          data-advising-status="{{ student.advising_status or 'not_started' }}"
+          data-profile-pic="{{ student.profile_pic or '' }}"
+          data-about="{{ student.about or '' }}"></span>
+    {% endfor %}
+</div>
 
 <script>
+    document.querySelectorAll('[data-progress-width]').forEach(element => {
+        element.style.width = `${element.dataset.progressWidth}%`;
+    });
+
     function validateSectionForm(form) {
         // Validate building name AB1, AB2, AB3, FUB, Main
         const room = form.room.value.trim();
@@ -3565,7 +3582,8 @@ main canvas { color: var(--text-1); }
         updateBreadcrumbs(tabId);
     }
 
-    const isFreshLogin = {{ 1 if fresh_login else 0 }} === 1;
+    const adminTemplateData = document.getElementById('admin-template-data');
+    const isFreshLogin = adminTemplateData.dataset.freshLogin === 'true';
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
 
@@ -3631,9 +3649,7 @@ main canvas { color: var(--text-1); }
 
     // ── CHART.JS ENROLLMENT DISTRIBUTION ─────────────────────
     const deptCounts = {};
-    const rawDepts = [
-        {% for s in students %}"{{ s.department_id }}"{{ "" if loop.last else "," }}{% endfor %}
-    ];
+    const rawDepts = Array.from(document.querySelectorAll('.admin-student-data'), student => student.dataset.departmentId);
     rawDepts.forEach(d => { if (d) deptCounts[d] = (deptCounts[d] || 0) + 1; });
 
     const labels = Object.keys(deptCounts);
@@ -3699,22 +3715,18 @@ main canvas { color: var(--text-1); }
         'SOC': 130.0, 'INF': 130.0, 'PPHS': 130.0
     };
 
-    const studentData = [
-        {% for std in students %}
-        {
-            id: {{ std.id | tojson }},
-            name: {{ std.name | tojson }},
-            department_id: {{ std.department_id | tojson }},
-            completed_credits: {{ (std.completed_credits or 0.0) | float }},
-            cgpa: {{ (std.cgpa or 0.0) | float }},
-            outstanding_balance: {{ (std.outstanding_balance or 0) | float }},
-            financial_cleared: {{ 1 if std.financial_cleared else 0 }} === 1,
-            advising_status: {{ (std.advising_status or 'not_started') | tojson }},
-            profile_pic: {{ (std.profile_pic or '') | tojson }},
-            about: {{ (std.about or '') | tojson }}
-        }{{ "" if loop.last else "," }}
-        {% endfor %}
-    ];
+    const studentData = Array.from(document.querySelectorAll('.admin-student-data'), student => ({
+        id: student.dataset.id,
+        name: student.dataset.name,
+        department_id: student.dataset.departmentId,
+        completed_credits: Number(student.dataset.completedCredits),
+        cgpa: Number(student.dataset.cgpa),
+        outstanding_balance: Number(student.dataset.outstandingBalance),
+        financial_cleared: student.dataset.financialCleared === 'true',
+        advising_status: student.dataset.advisingStatus,
+        profile_pic: student.dataset.profilePic,
+        about: student.dataset.about
+    }));
 
     const gradeData = [];
 
