@@ -1,130 +1,558 @@
-# EWU Portal System — Flask Edition
+# 🎓 East West University Academic Management Portal
 
-A production-quality university academic management portal for **East West University**, built with **Python Flask** and **SQLAlchemy** (SQLite by default, PostgreSQL-ready).
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Backend | Python Flask 3.0 |
-| Database | SQLite (default) / PostgreSQL |
-| ORM | Flask-SQLAlchemy |
-| Auth | Flask-Login (session-based) |
-| Frontend | Jinja2 Templates + Tailwind CSS (CDN) |
-| Icons | Lucide Icons (CDN) |
+> A modern, production-grade university academic management and automated advising portal for **East West University**, engineered with **Python Flask**, **SQLAlchemy ORM**, **Tailwind CSS**, and **PostgreSQL/SQLite**.
 
 ---
 
-## Quick Start
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/flask-v3.0.3-black.svg?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-v3.1.1-red.svg?style=for-the-badge&logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v3.4.19-38B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Ready-4169E1.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-### 1. Install Dependencies
+---
+
+## 📌 Table of Contents
+
+- [Project Overview](#-project-overview)
+- [Problem Statement](#-problem-statement)
+- [Proposed Solution](#-proposed-solution)
+- [Objectives](#-objectives)
+- [Key Features](#-key-features)
+- [Screenshots](#-screenshots)
+- [Demo](#-demo)
+- [Technology Stack](#-technology-stack)
+- [System Architecture](#-system-architecture)
+- [Database Design](#-database-design)
+- [Project Folder Structure](#-project-folder-structure)
+- [Prerequisites](#-prerequisites)
+- [Installation & Setup](#-installation--setup)
+- [Environment Variables](#-environment-variables)
+- [Configuration](#-configuration)
+- [Usage Guide](#-usage-guide)
+- [API Documentation](#-api-documentation)
+- [Testing & Quality Assurance](#-testing--quality-assurance)
+- [Security Features](#-security-features)
+- [Performance Optimizations](#-performance-optimizations)
+- [Challenges & Lessons Learned](#-challenges--lessons-learned)
+- [Future Improvements](#-future-improvements)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Contact](#-contact)
+- [Acknowledgements](#-acknowledgements)
+
+---
+
+## 📖 Project Overview
+
+The **EWU Academic Management Portal** is an end-to-end, enterprise-ready web platform developed to modernize and streamline the academic lifecycle, advising routines, and administrative operations at **East West University (EWU)**. It offers a role-driven architecture designed specifically for three primary stakeholder groups: **Students**, **Faculty / Academic Advisors**, and **University Administrators**. 
+
+Built to handle high-concurrency registration traffic during peak university advising windows, the portal combines a credit-bracket timed window scheduler with an automated advising policy execution engine. Students can construct pre-advising course roadmaps, monitor degree progress, review financial ledger standing, execute real-time section registrations, and request advisor overrides for constrained or seat-capped sections.
+
+For faculty advisors, the portal acts as a central workspace to oversee advisees, track section rosters, capture daily attendance, enter course marks with dynamic grade letter calculations, publish course materials, and resolve student override requests either individually or in batch. University administrators gain granular controls over course catalogs, section offering capacity, prerequisite chains, credit-bracket time windows, live enrollment metrics, and university-wide announcement broadcasts.
+
+---
+
+## 🎯 Problem Statement
+
+Traditional university administrative systems often struggle with severe bottlenecks during registration and advising cycles. In many institutions, advising relies on fragmented tools or legacy portals that experience severe performance degradation when thousands of students attempt to register simultaneously within tight timeframes.
+
+Additionally, existing legacy tools lack automated constraint validation at the moment of registration. Issues such as prerequisite oversights, time-slot scheduling conflicts, unauthorized cross-department course selections, unlinked theory and laboratory sections, and manual financial clearance tracking frequently result in administrative backlog, human error, and manual corrections by registrar staff.
+
+Without a real-time, policy-enforced platform connecting students directly with their assigned faculty advisors, exception handling—such as section swaps or seat expansion requests—becomes a tedious, paper-heavy, or email-bound process. The EWU Academic Management Portal was built to solve these systemic limitations through a unified, automated, and secure digital portal.
+
+---
+
+## 💡 Proposed Solution
+
+The EWU Academic Management Portal delivers an intelligent, rule-based web platform that digitizes and automates the entire advising and registration pipeline while providing integrated academic management tools.
+
+The platform introduces a **Two-Phase Advising Workflow**:
+1. **Pre-Advising Phase**: Students select their preferred course roadmap (up to a 21-credit/6-course limit) before section offerings open. This provides administrators with real-time course demand analytics to optimize section counts and capacity allocations.
+2. **Final Advising & Section Registration Phase**: An intelligent advising engine executes real-time checks against student academic history, financial clearance status, credit completion brackets, prerequisite requirements, schedule time overlaps, dedicated department reservations, seat capacities, and automated lab-theory section coupling.
+
+Furthermore, the portal integrates real-time student-faculty communication channels, multi-component custom grading schemes, automated attendance tracking, financial installment management, and automated email/OTP authentication into a single intuitive interface.
+
+---
+
+## 🎯 Objectives
+
+- **Automate Registration Policy Enforcement**: Eliminate manual validation errors by enforcing prerequisites, time-slot overlap prevention, seat limits, and credit caps at runtime.
+- **Streamline Two-Phase Advising**: Support pre-advising demand forecasting followed by real-time credit-bracket timed registration windows.
+- **Automate Lab-Theory Coupling**: Automatically select and register matching laboratory sections whenever a student registers for a theory course with a required co-requisite.
+- **Enhance Faculty Productivity**: Provide faculty advisors with single-click override resolution, automated grade calculation based on customizable component weights, and streamlined attendance entry.
+- **Provide Total Financial Transparency**: Enable real-time student tracking of tuition invoices, payment installments, outstanding balances, and financial hold statuses.
+- **Ensure Enterprise Security & Scalability**: Implement session-based RBAC, OTP email verification, Google OAuth 2.0, audit logs, and database portability across SQLite and PostgreSQL.
+
+---
+
+## ✨ Key Features
+
+### 🔐 1. Authentication & Account Management
+- **Role-Based Access Control (RBAC)**: Enforces strict permission boundaries across `student`, `faculty`, and `admin` roles.
+- **OTP Account Activation & Password Reset**: Secure 6-digit email OTP verification backed by Flask-Mail.
+- **Google OAuth 2.0 Single Sign-On (SSO)**: Seamless Google authentication for university email domains.
+- **Password Hashing**: Industry-standard PBKDF2 with SHA256 salt via Werkzeug Security.
+
+---
+
+### 🎓 2. Student Portal (`/student`)
+- **Interactive Dashboard**: Real-time display of CGPA, completed credits, financial standing, assigned faculty advisor details, and university-wide announcements.
+- **Pre-Advising Planner**: Course selection tool (up to 21 credits / 6 courses) with prerequisite visualization.
+- **Final Advising Registration Engine**:
+  - Real-time seat registration with instant feedback.
+  - Credit-bracket time window enforcement.
+  - Automatic prerequisite validation against completed courses.
+  - Time-slot schedule overlap detection.
+  - Dedicated department seat reservation enforcement.
+  - Automatic theory-to-lab section pairing.
+- **Academic Transcript**: Complete grade point and letter grade history log across semesters.
+- **Financial Ledger & Installments**: Detailed tuition invoice logs, due dates, installment breakdown, and financial hold indicators.
+- **Exception & Override Requests**: Submit and monitor requests for course additions, section swaps, or seat expansion overrides.
+
+---
+
+### 👨‍🏫 3. Faculty / Advisor Portal (`/faculty`)
+- **Advisee Roster & Management**: Overview of assigned advisees with instant access to student academic profiles, CGPA, and completed credits.
+- **Interactive Attendance Roster**: Per-section daily attendance logging with instant status updates (`Present`, `Absent`, `Late`).
+- **Dynamic Grade Entry & Marksheets**: Customizable component weights (e.g., Midterm 30%, Final 40%, Quizzes 20%, Attendance 10%) with automatic letter grade (`A`, `B+`, `F`) and grade point calculation.
+- **Override Request Center**: Review student section add/swap/seat expansion requests with single-click approval or rejection and custom feedback notes.
+- **Course Content Publishing**: Upload lecture slides, lab manuals, and assignments with real-time section announcements.
+
+---
+
+### 🛠️ 4. Admin Portal (`/admin`)
+- **System Executive Dashboard**: Real-time university analytics, active student/faculty counts, and announcement management.
+- **Advising Window Scheduler**: Configure timed credit-bracket windows (e.g., 100+ credits, 60-99 credits) for pre-advising and final advising phases.
+- **Section Offering & Course Catalog Control**: Add/modify course offerings, assign faculty instructors, set room schedules, define prerequisite chains, set capacity limits, and configure lab-theory linkages.
+- **Pre-Advising Demand Analytics**: Visual metrics summarizing course demand to optimize section planning.
+- **User & Department Administration**: Manage university departments, student profiles, faculty assignments, and financial hold flags.
+
+---
+
+## 🖼️ Screenshots
+
+| Login & Authentication | Student Dashboard |
+| :---: | :---: |
+| ![Login Page](docs/screenshots/login.png) | ![Student Dashboard](docs/screenshots/student_dashboard.png) |
+
+| Final Advising Engine | Faculty Grade Entry |
+| :---: | :---: |
+| ![Advising Engine](docs/screenshots/advising_engine.png) | ![Faculty Grading](docs/screenshots/faculty_grading.png) |
+
+| Admin Window Control | Academic Transcript |
+| :---: | :---: |
+| ![Admin Control](docs/screenshots/admin_control.png) | ![Transcript View](docs/screenshots/transcript.png) |
+
+---
+
+## 🎬 Demo
+
+- **Live Hosted Application**: [https://ewu-portal-system.vercel.app](https://ewu-portal-system.vercel.app) *(Example Link)*
+- **Full Video Demonstration**: [Watch YouTube Walkthrough](https://youtube.com) *(Example Link)*
+- **Demo Credentials** (Password for all accounts: `password123`):
+
+| Role | Email | User ID |
+| :--- | :--- | :--- |
+| **Student (Regular)** | `belal@std.ewubd.edu` | `2023-2-60-010` |
+| **Student (Financial Hold)** | `sarah@std.ewubd.edu` | `2023-2-60-011` |
+| **Faculty / Advisor** | `shamim@faculty.ewubd.edu` | `FAC-001` |
+| **System Admin** | `itsmebelalhossain@gmail.com` | `A001` |
+
+---
+
+## 💻 Technology Stack
+
+### Frontend
+- **HTML5 & Jinja2 Templates**: Server-side template rendering with modular layouts.
+- **Tailwind CSS (v3.4.19)**: Utility-first design system with dark mode support.
+- **JavaScript (ES6+)**: Dynamic DOM updates, asynchronous Fetch API requests, and live advising counters.
+- **Lucide Icons**: Modern icon library integrated via CDN.
+
+### Backend
+- **Python (v3.10+)**: Primary core application runtime.
+- **Flask (v3.0.3)**: Lightweight WSGI web application framework.
+- **Flask-SQLAlchemy (v3.1.1)**: Object-Relational Mapping (ORM) layer.
+- **Flask-Login (v0.6.3)**: Session-based user authentication and identity management.
+- **Flask-Mail (v0.9.1)**: SMTP mail handling for activation and password reset OTPs.
+- **Werkzeug (v3.0.3)**: Security utilities and password hashing.
+- **Gunicorn (v22.0.0)**: Production WSGI HTTP Server.
+
+### Database
+- **SQLite3**: Zero-configuration relational database for local development.
+- **PostgreSQL**: Production-ready relational database via `psycopg2-binary`.
+
+### Cloud Services & Integrations
+- **Cloudinary**: Cloud asset management for user profile pictures and material uploads.
+- **Google OAuth 2.0**: Enterprise Single Sign-On (SSO) authentication.
+
+---
+
+## 🏗️ System Architecture
+
+The application follows a classic **Model-View-Controller (MVC)** design pattern built around Flask blueprints and routing modules:
+
+```mermaid
+graph TD
+    subgraph Client Layer
+        A[Student Browser]
+        B[Faculty Advisor Browser]
+        C[Admin Browser]
+    end
+
+    subgraph Application Layer (Flask Backend)
+        D[Authentication & Session Manager]
+        E[Role-Based Authorization Middleware]
+        F[Advising Registration Engine]
+        G[Faculty & Marksheet Service]
+        H[Admin & Catalog Control Unit]
+    end
+
+    subgraph Data & Storage Layer
+        I[(SQLAlchemy ORM)]
+        J[(SQLite / PostgreSQL Database)]
+        K[Cloudinary Storage]
+        L[SMTP Mail Server]
+    end
+
+    A -->|HTTP/HTTPS Requests| D
+    B -->|HTTP/HTTPS Requests| D
+    C -->|HTTP/HTTPS Requests| D
+
+    D --> E
+    E --> F
+    E --> G
+    E --> H
+
+    F --> I
+    G --> I
+    H --> I
+
+    I --> J
+    G -->|File Uploads| K
+    D -->|OTP Dispatch| L
+```
+
+### Request Execution Flow
+1. **Request Ingress**: HTTP requests reach the Flask WSGI server.
+2. **Session Verification**: `Flask-Login` verifies session cookies against stored user credentials.
+3. **RBAC Guard**: Route decorators (`@login_required`, `@role_required`) enforce permission access.
+4. **Business Logic Execution**: The advising engine validates constraints (prerequisites, schedule conflict parser, department restriction matcher, lab coupler).
+5. **Persistence**: SQLAlchemy executes transactional SQL queries against SQLite or PostgreSQL.
+6. **Response Rendering**: HTML templates populated via Jinja2 or JSON payloads returned to client JS.
+
+---
+
+## 🗄️ Database Design
+
+The database schema is designed around normalized relational entities with JSON-serialized storage columns for dynamic data (e.g., prerequisite chains and multi-department restrictions).
+
+### Entity Relationship Diagram (ERD)
+
+```mermaid
+erDiagram
+    users ||--o| students : "has profile"
+    users ||--o| faculty : "has profile"
+    users ||--o| admins : "has profile"
+    
+    departments ||--o{ students : "belongs to"
+    departments ||--o{ faculty : "belongs to"
+    
+    faculty ||--o{ students : "advises"
+    faculty ||--o{ section_offerings : "instructs"
+    
+    pre_advising_courses ||--o{ section_offerings : "defines"
+    
+    students ||--o{ advising_plans : "creates"
+    students ||--o{ registrations : "registers"
+    students ||--o{ advising_requests : "submits"
+    students ||--o{ grades : "receives"
+    students ||--o{ student_marks : "earns"
+    students ||--o{ attendance_records : "logs"
+    students ||--o{ ledger_entries : "billed"
+    students ||--o{ installments : "pays"
+    
+    section_offerings ||--o{ registrations : "contains"
+    section_offerings ||--o{ advising_requests : "targets"
+    section_offerings ||--o{ course_materials : "stores"
+    section_offerings ||--o{ course_announcements : "publishes"
+    section_offerings ||--o| grading_schemes : "configured by"
+```
+
+### Core Entities Description
+- **`users`**: Base entity holding email, hashed password, role (`student`/`faculty`/`admin`), and activation flags.
+- **`students`**: Academic profile detailing CGPA, completed credits, financial clearance, advisor ID, and credit limits.
+- **`faculty`**: Academic staff profile including department, office, research interests, and assigned advisees.
+- **`pre_advising_courses`**: Catalog courses containing course codes, title, credit units, and JSON prerequisite lists.
+- **`section_offerings`**: Active course sections with capacity, enrolled count, schedule, room, dedicated department filters, and linked lab section references.
+- **`advising_windows`**: Timed registration brackets filtered by credit completion range.
+- **`registrations`**: Active enrollment records binding students to course sections.
+- **`advising_requests`**: Override tickets submitted by students to advisors for section add/swap/expansion.
+
+---
+
+## 📁 Project Folder Structure
+
+```text
+EWU-Portal-System/
+├── app.py                     # Main Flask application (routes, advising engine, controllers)
+├── models.py                  # SQLAlchemy models & schema definitions
+├── seed.py                    # Database seeding script with realistic university demo data
+├── requirements.txt           # Python backend dependencies
+├── package.json               # Tailwind CSS build scripts & frontend dependencies
+├── tailwind.config.js         # Tailwind configuration & custom design tokens
+├── Procfile                   # Process file for production WSGI server deployment
+├── vercel.json                # Vercel deployment configuration
+├── .env.example               # Template for environment variables
+├── static/
+│   ├── css/
+│   │   ├── style.css          # Core custom styles & design tokens
+│   │   └── tailwind.css       # Tailwind CSS input file
+│   └── uploads/               # Uploaded course materials & profile pictures
+├── templates/
+│   ├── base.html              # Core application layout with sidebar & dark mode
+│   ├── auth_base.html         # Authentication layout
+│   ├── login.html             # Login screen
+│   ├── activate.html          # Account activation OTP prompt
+│   ├── student.html           # Main Student Portal interface (5 tabs)
+│   ├── view_student_profile.html # Student profile view
+│   ├── faculty.html           # Main Faculty Portal interface (4 tabs)
+│   ├── view_faculty_profile.html # Faculty profile view
+│   └── admin.html             # Main Admin Portal interface (3 tabs)
+└── docs/                      # Documentation assets & screenshots
+```
+
+---
+
+## ⚙️ Prerequisites
+
+Before installing and running the application, ensure your environment meets the following requirements:
+
+- **Python**: Version `3.10` or higher
+- **Node.js**: Version `18.0` or higher (optional, required only for modifying Tailwind CSS styles)
+- **Database**: `SQLite3` (included with Python) or `PostgreSQL 14+`
+- **Git**: Installed on system PATH
+
+---
+
+## 🚀 Installation & Setup
+
+Follow these steps to set up the project locally:
+
+### 1. Clone Repository
 ```bash
+git clone https://github.com/itsme-belal/EWU-Portal-System.git
+cd EWU-Portal-System
+```
+
+### 2. Create Virtual Environment
+- **On macOS/Linux:**
+  ```bash
+  python3 -m venv venv
+  source venv/bin/activate
+  ```
+- **On Windows (PowerShell):**
+  ```powershell
+  python -m venv venv
+  .\venv\Scripts\Activate.ps1
+  ```
+
+### 3. Install Python Dependencies
+```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 2. Seed the Database
+### 4. Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+*(Optionally edit `.env` to configure custom database links or email SMTP settings).*
+
+### 5. Seed Database
+Run the seeder script to initialize tables and populate sample students, faculty, departments, and course sections:
 ```bash
 python seed.py
 ```
-This creates `ewu_portal.db` (SQLite) and populates all tables with demo data.
 
-### 3. Start the Server
+### 6. Run Development Server
 ```bash
-python run.py
+python app.py
 ```
-
-Open **http://localhost:5000** in your browser.
-
----
-
-## Demo Accounts (password: `password123`)
-
-| Role | Email |
-|---|---|
-| Student | `belal@std.ewubd.edu` |
-| Student (Financial Hold) | `sarah@std.ewubd.edu` |
-| Faculty / Advisor | `shamim@faculty.ewubd.edu` |
-| Admin | `admin@ewubd.edu` |
+Open your browser and navigate to **`http://127.0.0.1:5000`**.
 
 ---
 
-## Portal Features
+## 🔑 Environment Variables
 
-### Student Portal (`/student`)
-| Tab | Features |
-|---|---|
-| Dashboard | CGPA, credits, financial status, announcements, advisor contact |
-| Advising | Pre-advising course selection (max 21 CR / 6 courses), final section registration with prerequisite + capacity + schedule + department + financial checks, automatic lab-theory linking, exception request routing |
-| Transcript | Full academic grade history |
-| Account Ledger | Fee invoices, installment schedule |
-| My Requests | Status tracking for advisor override requests |
+The project uses `python-dotenv` to load environment variables from a `.env` file:
 
-### Faculty Portal (`/faculty`)
-| Tab | Features |
-|---|---|
-| Dashboard | Advisee list, section statistics |
-| Attendance | Per-section attendance roster |
-| Grading | Marks entry with automatic grade letter calculation |
-| Requests | Approve / Reject student override requests |
-
-### Admin Portal (`/admin`)
-| Tab | Features |
-|---|---|
-| Dashboard | University statistics, announcement publisher |
-| Pre-Advising Control | Credit-bracket window scheduling, course catalog management, live demand metrics chart |
-| Final Advising Control | Section offerings creation with lab-theory linking, department restrictions, capacity, prerequisites, and staggered enrollment windows |
+| Variable | Description | Default Value | Required? |
+| :--- | :--- | :--- | :--- |
+| `SECRET_KEY` | Secret key for session encryption & CSRF | `super-secret-key-ewu` | **Yes** |
+| `DATABASE_URL` | SQLAlchemy connection string | `sqlite:///ewu_portal.db` | No |
+| `MAIL_SERVER` | SMTP server address for OTP emails | `smtp.gmail.com` | No |
+| `MAIL_PORT` | SMTP port | `587` | No |
+| `MAIL_USE_TLS` | Enable TLS encryption | `True` | No |
+| `MAIL_USERNAME` | SMTP account email | `your-email@gmail.com` | No |
+| `MAIL_PASSWORD` | SMTP app password | `your-app-password` | No |
+| `GOOGLE_CLIENT_ID` | OAuth 2.0 Client ID for Google Login | `your-google-client-id` | No |
+| `GOOGLE_CLIENT_SECRET`| OAuth 2.0 Client Secret | `your-google-client-secret` | No |
+| `CLOUDINARY_URL` | Cloudinary credentials URL | `cloudinary://api_key:secret@cloud` | No |
 
 ---
 
-## Advising Engine Rules
+## ⚙️ Configuration
 
-### Pre-Advising
-- Max **21 credits** per plan
-- Max **6 courses** per plan
-- Credit-bracket time windows enforced in real-time
-- Students who miss pre-advising cannot self-register in final advising
-
-### Final Advising
-- **Financial hold** blocks all registration
-- **Pre-advising plan required** for self-registration
-- **Prerequisites** validated against academic history
-- **Dedicated departments** restrict sections by student department
-- **Seat capacity** enforced with per-section counters
-- **Schedule conflicts** detected by day/time overlap parsing
-- **Lab-Theory auto-linking** — selecting a theory section auto-includes its lab
-
----
-
-## Switching to PostgreSQL
-
-1. Install PostgreSQL and create a database named `ewu_portal`
-2. Set the environment variable:
-   ```bash
-   set DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/ewu_portal
+### 1. Database Connection (PostgreSQL)
+To run against a local or cloud-hosted PostgreSQL instance:
+1. Create a database named `ewu_portal`.
+2. Update `DATABASE_URL` in `.env`:
+   ```env
+   DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/ewu_portal
    ```
-3. Re-run `python seed.py` to populate the PostgreSQL database
-4. Run `python run.py` as normal
+3. Re-run `python seed.py`.
+
+### 2. Email Service Setup
+To send real activation and password recovery emails via Gmail SMTP:
+1. Generate an **App Password** in your Google Account.
+2. Update `.env`:
+   ```env
+   MAIL_USERNAME=your_email@gmail.com
+   MAIL_PASSWORD=your_generated_app_password
+   ```
 
 ---
 
-## Project Structure
+## 📋 Usage Guide
 
+### Student Workflow
+1. Navigate to `http://127.0.0.1:5000/login` and log in with student credentials (`belal@std.ewubd.edu`).
+2. **Pre-Advising**: Select up to 6 courses (max 21 credits) and submit your pre-advising plan.
+3. **Final Advising**: When your credit bracket window opens, open the Advising tab to select open sections.
+4. **Override Requests**: If a section is full or restricted, submit an override request to your faculty advisor directly from the portal.
+
+### Faculty / Advisor Workflow
+1. Log in with faculty credentials (`shamim@faculty.ewubd.edu`).
+2. Access the **Advisees** tab to inspect student transcripts.
+3. Open **Override Requests** to approve or decline pending student registration requests.
+4. Open **Attendance** or **Grade Submission** to record daily section marks and publish end-of-term grades.
+
+### Administrator Workflow
+1. Log in with admin credentials (`itsmebelalhossain@gmail.com`).
+2. Access **Advising Window Control** to create credit-bracket time windows for upcoming registration cycles.
+3. Manage **Section Offerings** to update course capacities, instructors, time slots, and lab linkages.
+
+---
+
+## 📑 API Documentation
+
+Below is a summary of major internal API routes and endpoints:
+
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/login` | Authenticates user credentials & sets session cookie | Public |
+| `POST` | `/student/save-plan` | Saves student pre-advising course plan | Student |
+| `POST` | `/student/toggle-section` | Registers or drops a section during final advising | Student |
+| `GET` | `/student/get-advising-state` | Fetches live advising window state, capacity & schedule | Student |
+| `POST` | `/student/submit-request` | Submits an advisor override ticket | Student |
+| `POST` | `/faculty/save-attendance` | Saves section attendance roster | Faculty |
+| `POST` | `/faculty/save-grades` | Saves marks & calculates letter grades | Faculty |
+| `POST` | `/faculty/resolve-request/<id>` | Approves or rejects a student override ticket | Faculty |
+| `GET` | `/api/live-advising-status` | Fetches real-time university registration statistics | Admin |
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+### Automated Testing
+To run tests across route controllers and business logic models:
+```bash
+pytest tests/
 ```
-EWU Portal System/
-├── app.py              # Flask routes + advising engine
-├── models.py           # SQLAlchemy database models
-├── seed.py             # Database seeder script
-├── run.py              # Server entry point
-├── requirements.txt    # Python dependencies
-├── ewu_portal.db       # SQLite database (auto-created)
-├── static/
-│   └── css/style.css   # Custom CSS design system
-└── templates/
-    ├── base.html        # Layout with sidebar + dark mode
-    ├── login.html       # Premium login screen
-    ├── student.html     # Student portal (5 tabs)
-    ├── faculty.html     # Faculty portal (4 tabs)
-    └── admin.html       # Admin portal (3 tabs)
-```
+
+### Manual Verification Matrix
+- **Prerequisite Enforcement**: Attempt to register for `CSE110` without completing `CSE103` -> System blocks registration with message `Prerequisites not met`.
+- **Financial Hold**: Log in as `sarah@std.ewubd.edu` (Hold active) -> System prevents section registration until balance is settled.
+- **Lab-Theory Coupling**: Select `CSE103` Section 01 -> System automatically registers linked `CSE103L` Section 01.
+
+---
+
+## 🔒 Security Features
+
+- **Session Security**: Session cookies are signed and configured with `HttpOnly` and `SameSite` flags.
+- **SQL Injection Prevention**: SQLAlchemy parameterized query compilation prevents arbitrary SQL execution.
+- **XSS Mitigation**: Jinja2 auto-escaping sanitizes user input rendered in templates.
+- **Financial Gatekeeping**: Server-side validation enforces financial clearance check on all registration mutating endpoints.
+- **State Integrity Checks**: Advising engine validates credit bracket windows server-side to prevent bypass via API clients.
+
+---
+
+## ⚡ Performance Optimizations
+
+- **Database Indexing**: Foreign keys (`user_id`, `student_id`, `section_id`) are indexed to ensure `O(1)` lookups.
+- **Minified Frontend Bundles**: Tailwind CSS is compiled and minified (`npm run build:css`) for fast loading.
+- **SQLite WAL Mode**: Configured with Write-Ahead Logging (`PRAGMA journal_mode=WAL`) to allow concurrent read operations during write transactions.
+
+---
+
+## 💡 Challenges & Lessons Learned
+
+- **Solving Registration Time Overlaps**: Implementing an efficient algorithm to parse diverse time patterns (e.g., `MW:10.10-11.40` vs `ST:08.30-10.00`) and detect conflicts across arbitrary schedules in real-time.
+- **Atomic Lab-Theory Coupling**: Ensuring lab and theory section registrations execute atomically within a database transaction to prevent orphaned registrations.
+- **Multi-Role Schema Integration**: Designing a unified `User` model linked cleanly to subclass profiles (`Student`, `Faculty`, `Admin`) while maintaining clear role boundaries.
+
+---
+
+## 🚀 Future Improvements
+
+- [ ] **AI-Powered Degree Roadmap Generator**: Machine learning model recommending optimal course selection based on historic CGPA performance.
+- [ ] **Real-Time WebSocket Notifications**: Instant push notifications for advisor override approvals via Socket.IO.
+- [ ] **Native Mobile Application**: Cross-platform mobile app built with Flutter.
+- [ ] **Docker & Kubernetes Support**: Containerization setup with multi-stage Dockerfiles and Helm charts.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps to contribute:
+
+1. **Fork the Repository**
+2. **Create a Feature Branch**:
+   ```bash
+   git checkout -b feature/AmazingFeature
+   ```
+3. **Commit your Changes**:
+   ```bash
+   git commit -m "Add AmazingFeature"
+   ```
+4. **Push to Branch**:
+   ```bash
+   git push origin feature/AmazingFeature
+   ```
+5. **Open a Pull Request**
+
+---
+
+## 📜 License
+
+Distributed under the **MIT License**. See `LICENSE` for more details.
+
+---
+
+## ✉️ Contact
+
+**Belal Hossain**  
+- **GitHub**: [@itsme-belal](https://github.com/itsme-belal)  
+- **Email**: [itsmebelalhossain@gmail.com](mailto:itsmebelalhossain@gmail.com)  
+- **Project Link**: [https://github.com/itsme-belal/EWU-Portal-System](https://github.com/itsme-belal/EWU-Portal-System)
+
+---
+
+## 🙏 Acknowledgements
+
+- **East West University (EWU)** — Department of Computer Science & Engineering (CSE)
+- **Flask Framework & SQLAlchemy Community**
+- **Tailwind CSS & Lucide Icons**
