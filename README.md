@@ -661,7 +661,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 **Belal Hossain**  
 - **GitHub**: [@itsme-belal](https://github.com/itsme-belal)  
 - **Email**: [itsmebelalhossain@gmail.com](mailto:itsmebelalhossain@gmail.com)  
-- **Github Profile**: [https://github.com/itsme-belal/](https://github.com/itsme-belal/)
 - **Linkdin**: [https://www.linkedin.com/in/itsme-belal/](https://www.linkedin.com/in/itsme-belal/)
 
 ---
