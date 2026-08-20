@@ -259,13 +259,12 @@ Beyond registration, the portal consolidates major academic and administrative s
 
 ---
 
-## 🎬 Demo
+## 🎬 Demo Video
 
-Click the thumbnail below to watch the complete penetration testing demonstration.
+Click the thumbnail below to watch the complete project demonstration.
 
-[![Watch Demo Video](https://img.youtube.com/vi/wSJx03No1XA/maxresdefault.jpg)](https://youtu.be/wSJx03No1XA)
+[![Watch Demo Video](https://img.youtube.com/vi/ralzK9LL7T8/maxresdefault.jpg)](https://youtu.be/ralzK9LL7T8)
 
-**▶️ [Watch Demo Video on YouTube](https://youtu.be/wSJx03No1XA)**
 - **Live Hosted Application**: [https://ewubd-portal.onrender.com](https://ewubd-portal.onrender.app)
 - **Demo Credentials** :
 
